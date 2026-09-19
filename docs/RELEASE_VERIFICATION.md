@@ -87,6 +87,42 @@ or completeness of all its contents. Review the release's validation record.
 The bootstrap verifies HTTPS downloads, checksums and native package identity;
 it does not perform these GitHub attestation checks automatically.
 
+## Maintainer draft verification
+
+A draft remains unpublished even if an authenticated maintainer can download it.
+Use the same `gh release download` and attestation commands above with an account
+that can read the draft. Record its numeric Release ID, tag, full source commit,
+workflow run ID and attempt before verification. The tag must resolve to the
+reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
+
+The exact expected asset set is 22 files:
+
+- `noderampart_0.4.0~alpha_amd64.deb` and `noderampart_0.4.0~alpha_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.1.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.1.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.1.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.1.fc44.aarch64.rpm`.
+- Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
+- `noderampart-0.4.0-0.alpha.1.fc44.src.rpm`.
+- `bootstrap.sh`, `release.json`, `SHA256SUMS`.
+
+Check names and identities, not only the count. GitHub's generated source ZIP/TAR
+links are not runtime assets. SHA256SUMS lists the other 21 files, not itself.
+Verify `release.json` version/commit/counts, native package version/architecture,
+ELF/Go metadata and package/program digests against the corresponding buildinfo
+and SBOM. `scripts/release_sbom.py` supplies read-only inspection and pair checks;
+never install or execute a downloaded target program as an identity check.
+Verify provenance for all assets, including buildinfo, source RPM and bootstrap,
+and verify each runtime package's SPDX attestation with the same repository,
+workflow, tag and independently reviewed commit constraints above.
+
+Keep the Release as **draft + prerelease** until these checks and the stated
+validation scope are reviewed. Record actual test results and unrun lifecycle
+or architecture cases in its notes; do not substitute historical private lab
+results for new tag acceptance. Public download 404s while the draft is private
+must be recorded as unavailable, not checksum or provenance passes. Publish the
+same verified draft only after a separate decision to make its assets public.
+
 ## Build-time generation
 
 The release workflow scans final DEB/RPM artifacts on a dedicated Linux amd64
