@@ -24,10 +24,10 @@ case "$COMMIT" in unknown) ;; ''|*[!0-9a-f]*) echo "invalid build commit" >&2; e
 case "$BUILD_DATE" in ''|*[!0-9TZ:+.-]*) echo "invalid build date" >&2; exit 1;; esac
 FULL_VERSION=$(tr -d '\n' < "$PROJECT_DIR/VERSION")
 case "$FULL_VERSION" in
-  [0-9]*-alpha) ;;
-  *) echo "VERSION must use the form X.Y.Z-alpha" >&2; exit 1 ;;
+  [0-9]*-alpha.1) RPM_VERSION=${FULL_VERSION%-alpha.1}; RPM_RELEASE=0.alpha.2;;
+  [0-9]*-alpha) RPM_VERSION=${FULL_VERSION%-alpha}; RPM_RELEASE=0.alpha.1;;
+  *) echo "VERSION must use the form X.Y.Z-alpha or X.Y.Z-alpha.1" >&2; exit 1 ;;
 esac
-RPM_VERSION=${FULL_VERSION%-alpha}
 case "$RPM_VERSION" in
   ''|*[!0-9.]*) echo "RPM version must contain only digits and dots" >&2; exit 1 ;;
 esac
@@ -43,18 +43,19 @@ TOPDIR=$(mktemp -d /tmp/noderampart-rpm.XXXXXX)
 trap 'rm -rf -- "$TOPDIR"' EXIT HUP INT TERM
 install -d "$TOPDIR/BUILD" "$TOPDIR/BUILDROOT" "$TOPDIR/RPMS" "$TOPDIR/SOURCES" "$TOPDIR/SPECS" "$TOPDIR/SRPMS"
 
-SOURCE_NAME="noderampart-${RPM_VERSION}-alpha.tar.gz"
-SOURCE_ROOT="$TOPDIR/NodeRampart-${RPM_VERSION}-alpha"
+SOURCE_NAME="noderampart-${FULL_VERSION}.tar.gz"
+SOURCE_ROOT="$TOPDIR/NodeRampart-${FULL_VERSION}"
 install -d "$SOURCE_ROOT"
 python3 "$PROJECT_DIR/scripts/stage-source.py" "$PROJECT_DIR" "$SOURCE_ROOT"
 # Resolve and verify only the staged module inputs. A checkout's existing
 # vendor directory and other unlisted local files never become build inputs.
 (cd "$SOURCE_ROOT" && go mod verify && go mod vendor -o "$SOURCE_ROOT/vendor")
-tar -C "$TOPDIR" -czf "$TOPDIR/SOURCES/$SOURCE_NAME" "NodeRampart-${RPM_VERSION}-alpha"
+tar -C "$TOPDIR" -czf "$TOPDIR/SOURCES/$SOURCE_NAME" "NodeRampart-${FULL_VERSION}"
 {
   printf '%%global noderampart_commit %s\n' "$COMMIT"
   printf '%%global noderampart_build_date %s\n' "$BUILD_DATE"
-  sed "s/^Version:[[:space:]].*/Version:        $RPM_VERSION/" "$PROJECT_DIR/packaging/rpm/noderampart.spec"
+  printf '%%global noderampart_version %s\n' "$FULL_VERSION"
+  sed -e "s/^Release:[[:space:]].*/Release:        $RPM_RELEASE%{?dist}/" -e "s/^Version:[[:space:]].*/Version:        $RPM_VERSION/" "$PROJECT_DIR/packaging/rpm/noderampart.spec"
 } > "$TOPDIR/SPECS/noderampart.spec"
 
 rpmbuild --target "$RPM_TARGET" --define "_topdir $TOPDIR" -ba "$TOPDIR/SPECS/noderampart.spec"

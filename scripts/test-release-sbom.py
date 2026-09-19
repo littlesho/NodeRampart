@@ -114,15 +114,15 @@ class SBOMTests(unittest.TestCase):
                 release.inspect_binary(binary, 'amd64')
 
     def test_source_rpm_and_arbitrary_package_names_are_rejected(self):
-        for name in ('noderampart-0.4.0-0.alpha.1.fc44.src.rpm', 'other_0.4.0~alpha_amd64.deb',
-                     'noderampart_0.4.0~alpha_amd64.deb/../escape', 'noderampart_0.4.0~alpha_i386.deb'):
+        for name in ('noderampart-0.4.0-0.alpha.2.fc44.src.rpm', 'other_0.4.0~alpha.1_amd64.deb',
+                     'noderampart_0.4.0~alpha.1_amd64.deb/../escape', 'noderampart_0.4.0~alpha.1_i386.deb'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 release.package_arch(name)
 
     def test_wrong_tool_digest_and_existing_outputs_are_rejected(self):
         tool = self.root / 'syft'
         tool.write_text('synthetic wrong tool')
-        package = self.root / 'noderampart_0.4.0~alpha_amd64.deb'
+        package = self.root / 'noderampart_0.4.0~alpha.1_amd64.deb'
         package.write_text('synthetic package')
         with patch.object(release, 'command') as command:
             with self.assertRaisesRegex(ValueError, 'verified Syft'):

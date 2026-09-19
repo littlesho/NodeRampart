@@ -43,6 +43,9 @@ jobs:
             --ignore-gitleaks-allow --redact=100 --no-banner
 
   test:
+    outputs:
+      commit: ${{ steps.metadata.outputs.commit }}
+      build_date: ${{ steps.metadata.outputs.build_date }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -50,6 +53,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Read verified source metadata
+        id: metadata
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: ./scripts/release-metadata.sh >> "$GITHUB_OUTPUT"
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -191,8 +200,14 @@ jobs:
         run: go test "$FUZZ_PACKAGE" -run='^$' -fuzz="^${FUZZ_TARGET}$" -fuzztime=30s -parallel=2 -timeout=2m
 
   rpm-package:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        fedora: [43, 44]
+        arch: [amd64, arm64]
     runs-on: ubuntu-latest
-    container: registry.fedoraproject.org/fedora:44
+    container: registry.fedoraproject.org/fedora:${{ matrix.fedora }}
     timeout-minutes: 25
     steps:
       - name: Install native Fedora build tools
@@ -201,18 +216,22 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Build native RPM and source RPM
+      - name: Build through the actual Release RPM entry point
         env:
           GOTOOLCHAIN: local
+          COMMIT: ${{ needs.test.outputs.commit }}
+          BUILD_DATE: ${{ needs.test.outputs.build_date }}
+          RELEASE_ARCH: ${{ matrix.arch }}
+          GIT_TEST_ASSUME_DIFFERENT_OWNER: "1"
         run: |
           go mod download
           go mod verify
-          ./scripts/build-rpm.sh
+          ./scripts/build-release.sh --rpm "$RELEASE_ARCH"
           python3 scripts/test-packaging.py
-          rpm -qp --requires dist/rpm/noderampart-*.x86_64.rpm
+          rpm -qp --requires dist/rpm/noderampart-*.rpm
       - name: Upload RPM artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: noderampart-fedora44-rpm
+          name: noderampart-fedora${{ matrix.fedora }}-${{ matrix.arch }}-rpm
           path: dist/rpm/*.rpm
           if-no-files-found: error

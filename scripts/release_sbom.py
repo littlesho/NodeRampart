@@ -18,7 +18,7 @@ import tempfile
 import urllib.request
 
 
-VERSION = "0.4.0-alpha"
+VERSION = "0.4.0-alpha.1"
 SYFT_VERSION = "1.51.1"
 SYFT_ARCHIVE_SHA256 = "8fcb33017a0dc1058298c923c436d19dfa68ae93968e0b423248542e3afb9fc3"
 SYFT_BINARY_SHA256 = "abca2def61de9952fa06d3977bb1e064818facb9badfce502b450d3d6846a91f"
@@ -46,18 +46,18 @@ file:
 
 
 def package_arch(name):
-    match = re.fullmatch(r"noderampart_0\.4\.0~alpha_(amd64|arm64)\.deb", name)
+    match = re.fullmatch(r"noderampart_0\.4\.0~alpha\.1_(amd64|arm64)\.deb", name)
     if match:
         return match[1]
-    match = re.fullmatch(r"noderampart-0\.4\.0-0\.alpha\.1\.fc(43|44)\.(x86_64|aarch64)\.rpm", name)
+    match = re.fullmatch(r"noderampart-0\.4\.0-0\.alpha\.2\.fc(43|44)\.(x86_64|aarch64)\.rpm", name)
     if match:
         return {"x86_64": "amd64", "aarch64": "arm64"}[match[2]]
     raise ValueError("unsupported runtime package name")
 
 
 def runtime_packages():
-    names = {f"noderampart_0.4.0~alpha_{arch}.deb" for arch in ("amd64", "arm64")}
-    names.update(f"noderampart-0.4.0-0.alpha.1.fc{fedora}.{arch}.rpm"
+    names = {f"noderampart_0.4.0~alpha.1_{arch}.deb" for arch in ("amd64", "arm64")}
+    names.update(f"noderampart-0.4.0-0.alpha.2.fc{fedora}.{arch}.rpm"
                  for fedora in (43, 44) for arch in ("x86_64", "aarch64"))
     return names
 
@@ -151,7 +151,7 @@ def inspect_package(package, destination):
     if package.suffix == ".deb":
         actual = [command(["dpkg-deb", "-f", str(package), field], capture_output=True, text=True).stdout.strip()
                   for field in ("Package", "Version", "Architecture")]
-        if actual != ["noderampart", "0.4.0~alpha", arch]:
+        if actual != ["noderampart", "0.4.0~alpha.1", arch]:
             raise ValueError("Debian package identity mismatch")
         args = ["dpkg-deb", "--fsys-tarfile", str(package)]
         unpack = unpack_tar
