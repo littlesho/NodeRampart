@@ -1,0 +1,4 @@
+# Use upstream detectors without repository-specific suppressions.
+# CI also disables inline allow comments and external ignore files.
+[extend]
+useDefault = true

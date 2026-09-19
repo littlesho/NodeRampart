@@ -1,0 +1,53 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+set -eu
+
+if [ "${1:-}" = purge ]; then
+  command -v mountpoint >/dev/null 2>&1 || { echo "mountpoint is required for safe purge" >&2; exit 1; }
+  command -v awk >/dev/null 2>&1 || { echo "awk is required for safe purge" >&2; exit 1; }
+  for path in /etc/noderampart /var/lib/noderampart /var/cache/noderampart; do
+    [ ! -L "$path" ] || { echo "refusing to purge symlink $path" >&2; exit 1; }
+    if mountpoint -q "$path"; then
+      echo "refusing to purge mount point $path" >&2
+      exit 1
+    fi
+    # --one-file-system does not protect same-device bind mounts below a target.
+    mount_state=$(awk -v target="$path" '
+      NF < 10 { invalid = 1; next }
+      $1 !~ /^[0-9]+$/ || $2 !~ /^[0-9]+$/ || $3 !~ /^[0-9]+:[0-9]+$/ ||
+        $4 !~ /^\// || $5 !~ /^\// || $(NF - 3) != "-" { invalid = 1 }
+      $5 == target || index($5, target "/") == 1 { mounted = 1 }
+      END {
+        if (NR == 0 || invalid) print "invalid"
+        else print mounted ? "mounted" : "clear"
+      }
+    ' /proc/self/mountinfo) || { echo "cannot inspect mounts for safe purge" >&2; exit 1; }
+    case "$mount_state" in
+      clear) ;;
+      mounted) echo "refusing to purge target containing a mount: $path" >&2; exit 1;;
+      *) echo "cannot validate mount information for safe purge" >&2; exit 1;;
+    esac
+  done
+  if [ -d /run/systemd/system ]; then
+    for unit in noderampart-sensor.service noderampartd.service; do
+      active_state=$(systemctl show --property=ActiveState --value "$unit")
+      case "$active_state" in
+        inactive|failed) ;;
+        *) deb-systemd-invoke stop "$unit";;
+      esac
+      active_state=$(systemctl show --property=ActiveState --value "$unit")
+      case "$active_state" in
+        inactive|failed) ;;
+        *) echo "refusing purge while $unit is $active_state" >&2; exit 1;;
+      esac
+    done
+  fi
+  for path in /etc/noderampart /var/lib/noderampart /var/cache/noderampart; do
+    [ ! -e "$path" ] || rm -rf --one-file-system -- "$path"
+  done
+  if id noderampart-sensor >/dev/null 2>&1; then userdel noderampart-sensor; fi
+  if id noderampart >/dev/null 2>&1; then userdel noderampart; fi
+  if getent group noderampart >/dev/null 2>&1; then groupdel noderampart; fi
+  deb-systemd-helper purge noderampartd.service noderampart-sensor.service >/dev/null
+fi
+systemctl daemon-reload >/dev/null 2>&1 || true

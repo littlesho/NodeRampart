@@ -1,0 +1,24 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+set -eu
+
+if [ "${1:-}" = remove ]; then
+  for path in /etc/systemd/system /etc/systemd/system/noderampartd.service.d; do
+    [ ! -L "$path" ] || { echo "refusing symlinked managed unit directory: $path" >&2; exit 1; }
+  done
+  if [ -d /run/systemd/system ]; then
+    for unit in noderampart-geoip-update.timer noderampart-geoip-update.service; do
+      if [ "$(systemctl show --property=LoadState --value "$unit")" != not-found ]; then
+        systemctl disable --now "$unit"
+      fi
+      state=$(systemctl show --property=ActiveState --value "$unit")
+      case "$state" in inactive|failed) ;; *) echo "refusing removal while $unit is $state" >&2; exit 1;; esac
+    done
+  fi
+  rm -f -- /etc/systemd/system/noderampart-geoip-update.service /etc/systemd/system/noderampart-geoip-update.timer /etc/systemd/system/noderampartd.service.d/90-noderampart-managed.conf
+fi
+if [ "${1:-}" = remove ] || [ "${1:-}" = deconfigure ]; then
+  if [ -d /run/systemd/system ]; then
+    deb-systemd-invoke stop noderampart-sensor.service noderampartd.service >/dev/null
+  fi
+fi

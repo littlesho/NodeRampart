@@ -1,0 +1,27 @@
+/bin/
+/dist/
+/coverage.out
+/*.test
+*.prof
+*.tmp
+.env
+.env.*
+!.env.example
+__pycache__/
+
+# Local governance and private release evidence are never product inputs.
+/AGENTS.md
+/STATUS.md
+/docs/ai/
+/docs/VALIDATION*.md
+/docs/REVIEW*.md
+/docs/*_PLAN.md
+/docs/V0.2_REVIEW_FIXES.md
+/package-lock.json
+*.pcap
+*.pcapng
+*.mmdb
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

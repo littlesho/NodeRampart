@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "example-custom-vps",
+  "provider": "custom",
+  "source_region": "example-region",
+  "currency": "USD",
+  "effective_date": "2026-01-01",
+  "source_url": "https://example.com/replace-with-provider-pricing-source",
+  "free_gb": 10,
+  "internet_egress": [
+    {
+      "up_to_gb": 1000,
+      "price_per_gb": 0.1
+    },
+    {
+      "up_to_gb": 0,
+      "price_per_gb": 0.08
+    }
+  ]
+}

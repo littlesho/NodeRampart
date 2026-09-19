@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "paths": {
+    "database": "/var/lib/noderampart/noderampart.db",
+    "sensor_socket": "/run/noderampart/sensor.sock",
+    "control_socket": "/run/noderampart/control.sock"
+  },
+  "sensor": {
+    "enabled": true,
+    "required": false,
+    "interface": "",
+    "interfaces": [],
+    "batch_interval": "1s",
+    "max_tracked_flows": 4096,
+    "receive_buffer_bytes": 4194304
+  },
+  "auth": {
+    "enabled": true,
+    "journalctl": "/usr/bin/journalctl",
+    "threshold": 8,
+    "window": "5m",
+    "cooldown": "15m"
+  },
+  "detection": {
+    "syn_packets_per_second": 5000,
+    "udp_packets_per_second": 10000,
+    "icmp_packets_per_second": 2000,
+    "bytes_per_second": 104857600,
+    "recovery_ratio": 0.5,
+    "recovery_windows": 3,
+    "update_interval": "5m",
+    "scan_unique_ports": 20,
+    "scan_window": "1m"
+  },
+  "geo": {
+    "city_mmdb": "",
+    "asn_mmdb": ""
+  },
+  "notifications": {
+    "merge_window": "10m",
+    "telegram": {
+      "enabled": false,
+      "token_file": "/etc/noderampart/telegram.token",
+      "chat_id": "",
+      "timeout": "10s"
+    }
+  },
+  "reports": {
+    "enabled": true,
+    "daily_at": "09:00",
+    "timezone": "Local",
+    "top_n": 10,
+    "backfill_days": 7
+  },
+  "privacy": {
+    "notification_ip": "prefix",
+    "store_ip": "prefix",
+    "hash_key_file": ""
+  },
+  "billing": {
+    "enabled": false,
+    "profile_path": ""
+  },
+  "storage": {
+    "max_bytes": 1073741824,
+    "min_free_bytes": 134217728
+  },
+  "alerts": {
+    "budget": {
+      "enabled": false,
+      "monthly_bytes": 0,
+      "monthly_cost": 0,
+      "daily_bytes": 0,
+      "daily_growth_ratio": 0,
+      "baseline_days": 7
+    },
+    "health": {
+      "enabled": false,
+      "grace_period": "2m",
+      "recovery_period": "1m",
+      "reminder_interval": "24h",
+      "geoip_failure_threshold": 2,
+      "geoip_stale_after": "72h"
+    }
+  }
+}

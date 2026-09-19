@@ -1,0 +1,56 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+set -eu
+
+case "${1:-}" in configure) ;; *) exit 0;; esac
+
+for path in /etc/noderampart /var/lib/noderampart; do
+  if [ -L "$path" ] || { [ -e "$path" ] && [ ! -d "$path" ]; }; then
+    echo "refusing non-directory or symlinked installation directory: $path" >&2
+    exit 1
+  fi
+done
+if [ -L /etc/noderampart/config.json ] || [ ! -f /etc/noderampart/config.json ]; then
+  echo "refusing non-regular configuration" >&2
+  exit 1
+fi
+
+getent group noderampart >/dev/null || groupadd --system noderampart
+id noderampart >/dev/null 2>&1 || useradd --system --gid noderampart --home-dir /var/lib/noderampart --shell /usr/sbin/nologin noderampart
+id noderampart-sensor >/dev/null 2>&1 || useradd --system --gid noderampart --home-dir /nonexistent --shell /usr/sbin/nologin noderampart-sensor
+getent group systemd-journal >/dev/null && usermod -a -G systemd-journal noderampart || true
+install -d -m 0750 -o root -g noderampart /etc/noderampart
+install -d -m 0750 -o noderampart -g noderampart /var/lib/noderampart
+chown root:noderampart /etc/noderampart/config.json
+chmod 0640 /etc/noderampart/config.json
+/usr/bin/noderampart config test --config /etc/noderampart/config.json >/dev/null
+
+for unit in noderampartd.service noderampart-sensor.service; do
+  if [ -L "/etc/systemd/system/$unit" ] && [ "$(readlink "/etc/systemd/system/$unit")" = /dev/null ]; then
+    continue
+  fi
+  if [ -z "${2:-}" ]; then
+    deb-systemd-helper enable "$unit" >/dev/null
+  else
+    # Do not re-enable administrator-disabled units, including upgrades from
+    # the old maintainer script that did not record helper state.
+    deb-systemd-helper update-state "$unit" >/dev/null
+  fi
+done
+systemctl daemon-reload >/dev/null 2>&1 || true
+if [ -d /run/systemd/system ]; then
+  if [ -z "${2:-}" ]; then
+    for unit in noderampartd.service noderampart-sensor.service; do
+      if [ -L "/etc/systemd/system/$unit" ] && [ "$(readlink "/etc/systemd/system/$unit")" = /dev/null ]; then
+        continue
+      fi
+      deb-systemd-invoke start "$unit" >/dev/null
+    done
+  else
+    for unit in noderampartd.service noderampart-sensor.service; do
+      if systemctl is-active --quiet "$unit"; then
+        deb-systemd-invoke restart "$unit" >/dev/null
+      fi
+    done
+  fi
+fi

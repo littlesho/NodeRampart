@@ -1,0 +1,10 @@
+Package: noderampart
+Version: @VERSION@
+Section: admin
+Priority: optional
+Architecture: @ARCH@
+Maintainer: NodeRampart maintainers <noreply@github.com>
+Depends: systemd, init-system-helpers (>= 1.54), passwd, tzdata, ca-certificates, util-linux
+Description: Security monitoring and traffic reporting agent for Linux VPS hosts
+ NodeRampart observes bounded packet metadata and OpenSSH authentication events,
+ sends optional Telegram alerts, and creates daily security and traffic reports.

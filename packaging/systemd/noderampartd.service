@@ -1,0 +1,46 @@
+[Unit]
+Description=NodeRampart security monitoring daemon
+Documentation=https://github.com/littlesho/NodeRampart
+After=network-online.target systemd-journald.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=noderampart
+Group=noderampart
+ExecStart=/usr/bin/noderampartd -config /etc/noderampart/config.json
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+UMask=0077
+RuntimeDirectory=noderampart
+RuntimeDirectoryMode=0750
+StateDirectory=noderampart
+StateDirectoryMode=0750
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateDevices=yes
+PrivateTmp=yes
+RemoveIPC=yes
+ProtectProc=invisible
+ProtectSystem=strict
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+ReadOnlyPaths=/etc/noderampart
+ReadWritePaths=/var/lib/noderampart /run/noderampart
+
+[Install]
+WantedBy=multi-user.target

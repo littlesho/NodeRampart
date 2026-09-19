@@ -1,0 +1,224 @@
+name: Release candidate
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require a matching version tag
+        env:
+          RELEASE_REF: ${{ github.ref }}
+        run: test "$RELEASE_REF" = "refs/tags/v$(cat VERSION)"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.8
+          cache: true
+      - name: Required validation
+        run: |
+          make fmt-check
+          go vet ./...
+          go test ./...
+          go test -race ./...
+          CGO_ENABLED=0 go build ./cmd/...
+          go mod verify
+          python3 scripts/test-packaging.py
+          python3 scripts/test-bootstrap.py
+          python3 scripts/test-release-sbom.py
+
+  deb:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.8
+          cache: true
+      - name: Build and inspect Debian package
+        env:
+          RELEASE_ARCH: ${{ matrix.arch }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          ./scripts/build-release.sh --deb "$RELEASE_ARCH"
+          PACKAGE="dist/noderampart_0.4.0~alpha_${RELEASE_ARCH}.deb"
+          test "$(dpkg-deb -f "$PACKAGE" Architecture)" = "$RELEASE_ARCH"
+          CHECK_DIR=$(mktemp -d)
+          trap 'rm -rf -- "$CHECK_DIR"' EXIT
+          dpkg-deb -x "$PACKAGE" "$CHECK_DIR"
+          for binary in noderampart noderampartd noderampart-sensor; do
+            go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "GOARCH=$RELEASE_ARCH"
+          done
+          test -x "$CHECK_DIR/usr/libexec/noderampart/manage-remove"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-deb-${{ matrix.arch }}
+          path: dist/*.deb
+          if-no-files-found: error
+
+  rpm:
+    needs: validate
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:${{ matrix.fedora }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        fedora: [43, 44]
+        arch: [amd64, arm64]
+    steps:
+      - name: Install distribution build dependencies
+        run: dnf install -y git golang rpm-build systemd-rpm-macros make python3 tar gzip diffutils findutils cpio
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and inspect Fedora package
+        env:
+          RELEASE_ARCH: ${{ matrix.arch }}
+          RELEASE_FEDORA: ${{ matrix.fedora }}
+          COMMIT: ${{ github.sha }}
+          GOTOOLCHAIN: local
+        run: |
+          go mod download
+          go mod verify
+          ./scripts/build-release.sh --rpm "$RELEASE_ARCH"
+          case "$RELEASE_ARCH" in amd64) RPM_ARCH=x86_64;; arm64) RPM_ARCH=aarch64;; esac
+          PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.1.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"
+          test "$(rpm -qp --qf '%{ARCH}' "$PACKAGE")" = "$RPM_ARCH"
+          CHECK_DIR=$(mktemp -d)
+          trap 'rm -rf -- "$CHECK_DIR"' EXIT
+          rpm2cpio "$PACKAGE" | (cd "$CHECK_DIR" && cpio -id --quiet --no-absolute-filenames './usr/bin/*' './usr/libexec/noderampart/*')
+          for binary in noderampart noderampartd noderampart-sensor; do
+            go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "GOARCH=$RELEASE_ARCH"
+          done
+          test -x "$CHECK_DIR/usr/libexec/noderampart/manage-remove"
+          python3 scripts/test-packaging.py
+          mkdir -p dist/publish
+          cp "$PACKAGE" dist/publish/
+          if [ "$RELEASE_FEDORA:$RELEASE_ARCH" = 44:amd64 ]; then
+            cp dist/rpm/noderampart-0.4.0-0.alpha.1.fc44.src.rpm dist/publish/
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-rpm-fc${{ matrix.fedora }}-${{ matrix.arch }}
+          path: dist/publish/*
+          if-no-files-found: error
+
+  sbom:
+    needs: [deb, rpm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.8
+          cache: true
+      - name: Install package inspection tools
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: release-*
+          path: release-input
+      - name: Fetch fixed verified Syft and inspect final packages
+        env:
+          COMMIT: ${{ github.sha }}
+        run: |
+          TOOL_PARENT=$(mktemp -d)
+          trap 'rm -rf -- "$TOOL_PARENT"' EXIT
+          python3 scripts/release_sbom.py --fetch-syft "$TOOL_PARENT/syft"
+          BUILD_DATE=$(git show -s --format=%cI HEAD)
+          export BUILD_DATE
+          while IFS= read -r -d '' PACKAGE; do
+            python3 scripts/release_sbom.py "$PACKAGE" --syft "$TOOL_PARENT/syft/syft" --output dist/sbom
+          done < <(find release-input -type f \( -name '*.deb' -o -name '*.rpm' \) ! -name '*.src.rpm' -print0)
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-sbom
+          path: dist/sbom/*
+          if-no-files-found: error
+
+  draft:
+    needs: sbom
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: release-*
+          path: release-input
+      - name: Collect complete asset set
+        env:
+          COMMIT: ${{ github.sha }}
+        run: ./scripts/build-release.sh --collect release-input
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: dist/release/*
+      - name: Attest Debian amd64 SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: dist/release/noderampart_0.4.0~alpha_amd64.deb
+          sbom-path: dist/release/noderampart_0.4.0~alpha_amd64.deb.spdx.json
+      - name: Attest Debian arm64 SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: dist/release/noderampart_0.4.0~alpha_arm64.deb
+          sbom-path: dist/release/noderampart_0.4.0~alpha_arm64.deb.spdx.json
+      - name: Attest Fedora 43 x86_64 SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.1.fc43.x86_64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.1.fc43.x86_64.rpm.spdx.json
+      - name: Attest Fedora 43 aarch64 SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.1.fc43.aarch64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.1.fc43.aarch64.rpm.spdx.json
+      - name: Attest Fedora 44 x86_64 SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.1.fc44.x86_64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.1.fc44.x86_64.rpm.spdx.json
+      - name: Attest Fedora 44 aarch64 SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.1.fc44.aarch64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.1.fc44.aarch64.rpm.spdx.json
+      - name: Create draft for maintainer review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          printf '%s\n' 'Release candidate: inspect provenance, package checksums and lab validation before publishing. ARM64 packages are cross-built; actual ARM64 runtime validation is separate.' > release-notes.txt
+          gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease --title "NodeRampart $RELEASE_TAG" --notes-file release-notes.txt dist/release/*

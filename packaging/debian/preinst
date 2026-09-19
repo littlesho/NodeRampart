@@ -1,0 +1,26 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+set -eu
+
+for path in /etc/noderampart /var/lib/noderampart; do
+  if [ -L "$path" ] || { [ -e "$path" ] && [ ! -d "$path" ]; }; then
+    echo "refusing non-directory or symlinked installation directory: $path" >&2
+    exit 1
+  fi
+done
+if [ -L /etc/noderampart/config.json ] || { [ -e /etc/noderampart/config.json ] && [ ! -f /etc/noderampart/config.json ]; }; then
+  echo "refusing non-regular existing configuration" >&2
+  exit 1
+fi
+
+for path in /usr/local/bin/noderampart /usr/local/bin/noderampartd /usr/local/bin/noderampart-sensor /etc/systemd/system/noderampartd.service /etc/systemd/system/noderampart-sensor.service; do
+  # Administrator masks are preserved. Other full unit overrides hide the
+  # package's unit; move customizations into drop-ins before installation.
+  if [ -L "$path" ] && [ "$(readlink "$path")" = /dev/null ]; then
+    case "$path" in /etc/systemd/system/*.service) continue;; esac
+  fi
+  if [ -e "$path" ] || [ -L "$path" ]; then
+    echo "source installation or full unit override conflicts with the package; run scripts/source-to-package.sh --prepare for owned source files" >&2
+    exit 1
+  fi
+done
