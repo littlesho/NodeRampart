@@ -7,7 +7,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 cd "$PROJECT_DIR"
 VERSION=$(tr -d '\n' < VERSION)
-[ "$VERSION" = 0.4.0-alpha.1 ] || { echo 'release tooling currently targets 0.4.0-alpha.1' >&2; exit 1; }
+[ "$VERSION" = 0.4.0-alpha.2 ] || { echo 'release tooling currently targets 0.4.0-alpha.2' >&2; exit 1; }
 # Release callers must supply metadata from the verified source checkout.
 # Empty job outputs must never fall back to local Git or the wall clock.
 COMMIT=${COMMIT-}
@@ -43,13 +43,11 @@ import hashlib, json, os, pathlib, shutil, stat, sys, tempfile
 source, project = (pathlib.Path(p).resolve(strict=True) for p in sys.argv[1:3])
 commit, build_date = sys.argv[3:5]
 sys.path.insert(0, str(project / 'scripts'))
-from release_sbom import runtime_packages, validate_pair
+from release_sbom import runtime_packages, release_assets, validate_pair
 if not source.is_dir():
     raise SystemExit('artifact input must be a directory')
 packages = runtime_packages()
-names = set(packages)
-names.update(name + suffix for name in packages for suffix in ('.spdx.json', '.buildinfo.json'))
-names.add('noderampart-0.4.0-0.alpha.2.fc44.src.rpm')
+names = release_assets() - {'bootstrap.sh', 'release.json', 'SHA256SUMS'}
 found = {}
 for path in source.rglob('*'):
     if path.name not in names:
@@ -74,7 +72,7 @@ try:
     for name, path in found.items():
         shutil.copyfile(path, stage / name)
     shutil.copyfile(project / 'scripts/bootstrap.sh', stage / 'bootstrap.sh')
-    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha.1',
+    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha.2',
         'commit': commit, 'build_date': build_date, 'package_count': 6,
         'source_package_count': 1, 'sbom_count': 6,
         'sbom_scope': 'packaged Go programs; runtime system dependencies excluded'}, indent=2) + '\n')

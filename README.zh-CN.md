@@ -8,7 +8,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.1：首次安装包候选版本。** 源码已经公开；安装包正在准备为草稿，尚不能公开下载安装。下面的固定版本命令仅在同一 Release 正式发布后可用。在此之前请使用经过审查的本地安装包。Alpha 版本应与现有安全措施配合使用。
+> **v0.4.0-alpha.2：首次安装包候选版本。** 源码已经公开；安装包正在准备为草稿，尚不能公开下载安装。下面的固定版本命令仅在同一 Release 正式发布后可用。在此之前请使用经过审查的本地安装包。Alpha 版本应与现有安全措施配合使用。
 
 ## 能帮你做什么？
 
@@ -30,7 +30,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载这一行命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。
 
 ~~~bash
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.1/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.1
+curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.2/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.2
 ~~~
 
 也可以先下载到独立目录，查看脚本后再决定是否执行：
@@ -38,11 +38,11 @@ curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/r
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.1/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.2/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # 查看并接受脚本行为后，再单独执行：
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.1
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.2
 ~~~
 
 安装包与证明的人工核验步骤见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。HTTPS 下载、同一 Release 的 SHA256 和 GitHub attestation 是不同检查；bootstrap 会检查包校验和与包身份，**不会自动执行 attestation 验证**。草稿未公开时下载入口可能返回 404，这不表示校验通过。

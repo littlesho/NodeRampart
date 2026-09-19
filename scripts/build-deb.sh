@@ -8,10 +8,11 @@ command -v go >/dev/null 2>&1 || { echo "Go is required to verify binary metadat
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-VERSION=$(tr -d '\n' < "$PROJECT_DIR/VERSION")
+PROJECT_VERSION=$(tr -d '\n' < "$PROJECT_DIR/VERSION")
 ARCH=${ARCH:-$(dpkg --print-architecture)}
-case "$VERSION" in *[!0-9A-Za-z.+~-]*) echo "invalid package version" >&2; exit 1;; esac
-case "$VERSION" in *-alpha.1) VERSION=${VERSION%-alpha.1}~alpha.1;; *-alpha) VERSION=${VERSION%-alpha}~alpha;; esac
+case "$PROJECT_VERSION" in ""|.*|*.|*[!0-9A-Za-z._-]*) echo "invalid package version" >&2; exit 1;; esac
+VERSION=$PROJECT_VERSION
+case "$VERSION" in *-alpha.2) VERSION=${VERSION%-alpha.2}~alpha.2;; *-alpha.1) VERSION=${VERSION%-alpha.1}~alpha.1;; *-alpha) VERSION=${VERSION%-alpha}~alpha;; esac
 case "$ARCH" in amd64|arm64) ;; *) echo "unsupported architecture: $ARCH" >&2; exit 1;; esac
 GO_ARCH=$ARCH
 
@@ -43,4 +44,4 @@ install -m 0644 "$PROJECT_DIR/THIRD_PARTY_NOTICES.md" "$PACKAGE_ROOT/usr/share/d
 install -m 0644 "$PROJECT_DIR"/third_party/licenses/* "$PACKAGE_ROOT/usr/share/doc/noderampart/third-party/"
 
 install -d "$PROJECT_DIR/dist"
-dpkg-deb --root-owner-group --build "$PACKAGE_ROOT" "$PROJECT_DIR/dist/noderampart_${VERSION}_${ARCH}.deb"
+dpkg-deb --root-owner-group --build "$PACKAGE_ROOT" "$PROJECT_DIR/dist/noderampart_${PROJECT_VERSION}_${ARCH}.deb"

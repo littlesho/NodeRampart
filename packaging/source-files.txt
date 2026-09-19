@@ -324,3 +324,4 @@ third_party/licenses/modernc.org_libc_LICENSE
 third_party/licenses/modernc.org_mathutil_LICENSE
 third_party/licenses/modernc.org_memory_LICENSE
 third_party/licenses/modernc.org_sqlite_LICENSE
+scripts/testdata/alpha1-uploaded-assets.json

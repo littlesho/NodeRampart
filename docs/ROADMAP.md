@@ -28,7 +28,7 @@
 - Offline pseudonymized metadata replay and threshold comparison.
 - See [v0.3 operations](V0.3_OPERATIONS.md) for the supported contracts.
 
-## `v0.4.0-alpha.1` — current development version
+## `v0.4.0-alpha.2` — current development version
 
 - Local terminal management, optional data-only GeoIP updates and public tariff caches.
 - Budget/health alerts, saved pricing evidence and bounded redacted local exports.

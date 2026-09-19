@@ -114,15 +114,15 @@ class SBOMTests(unittest.TestCase):
                 release.inspect_binary(binary, 'amd64')
 
     def test_source_rpm_and_arbitrary_package_names_are_rejected(self):
-        for name in ('noderampart-0.4.0-0.alpha.2.fc44.src.rpm', 'other_0.4.0~alpha.1_amd64.deb',
-                     'noderampart_0.4.0~alpha.1_amd64.deb/../escape', 'noderampart_0.4.0~alpha.1_i386.deb'):
+        for name in ('noderampart-0.4.0-0.alpha.3.fc44.src.rpm', 'other_0.4.0~alpha.2_amd64.deb',
+                     'noderampart_0.4.0-alpha.2_amd64.deb/../escape', 'noderampart_0.4.0-alpha.2_i386.deb'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 release.package_arch(name)
 
     def test_wrong_tool_digest_and_existing_outputs_are_rejected(self):
         tool = self.root / 'syft'
         tool.write_text('synthetic wrong tool')
-        package = self.root / 'noderampart_0.4.0~alpha.1_amd64.deb'
+        package = self.root / 'noderampart_0.4.0-alpha.2_amd64.deb'
         package.write_text('synthetic package')
         with patch.object(release, 'command') as command:
             with self.assertRaisesRegex(ValueError, 'verified Syft'):
@@ -147,6 +147,50 @@ class SBOMTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'checksum mismatch'):
                 release.fetch_syft(destination)
         self.assertFalse((destination / 'syft').exists())
+
+
+    def test_public_names_native_versions_and_uploaded_set(self):
+        document = {'tag_name': 'v' + release.VERSION, 'draft': True, 'prerelease': True}
+        assets = [{'name': name, 'state': 'uploaded'} for name in sorted(release.release_assets())]
+        self.assertEqual(len(assets), 22)
+        release.validate_uploaded(document, assets)
+        for arch in ('amd64', 'arm64'):
+            name = f'noderampart_0.4.0-alpha.2_{arch}.deb'
+            self.assertIn(name, release.runtime_packages())
+            self.assertEqual(release.package_identity(name),
+                             {'name': 'noderampart', 'version': '0.4.0~alpha.2', 'architecture': arch})
+        for changed in (assets[:-1], assets + [assets[0]],
+                        [dict(a, state='starter') if i == 0 else a for i, a in enumerate(assets)],
+                        [dict(a, name='extra.txt') if i == 0 else a for i, a in enumerate(assets)]):
+            with self.assertRaises(ValueError):
+                release.validate_uploaded(document, changed)
+        for name in ('bad~name', '.hidden', 'trailing.', 'a/b', 'a%20b', 'a b'):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                release.validate_uploaded(document, [dict(assets[0], name=name)] + assets[1:])
+
+    def test_actual_alpha1_upload_renaming_is_detected(self):
+        fixture = json.loads((Path(__file__).parent / 'testdata/alpha1-uploaded-assets.json').read_text())
+        # Exact old names expected by alpha.1's unchanged checksum manifest.
+        expected = {a['name'].replace('noderampart_0.4.0.alpha.1_', 'noderampart_0.4.0~alpha.1_')
+                    for a in fixture['assets']}
+        self.assertEqual(sum(a['name'] not in expected for a in fixture['assets']), 6)
+        with patch.object(release, 'VERSION', '0.4.0-alpha.1'), patch.object(release, 'release_assets', return_value=expected):
+            with self.assertRaisesRegex(ValueError, 'exact release set'):
+                release.validate_uploaded(fixture, fixture['assets'])
+
+    def test_valid_deb_filename_does_not_override_native_identity(self):
+        package = self.root / 'noderampart_0.4.0-alpha.2_amd64.deb'
+        package.write_bytes(b'synthetic package')
+        for values in (('other', '0.4.0~alpha.2', 'amd64'),
+                       ('noderampart', '0.4.0-alpha.2', 'amd64'),
+                       ('noderampart', '0.4.0~alpha.1', 'amd64'),
+                       ('noderampart', '0.4.0~alpha.2', 'arm64')):
+            def response(args, **kwargs):
+                self.assertEqual(args[:2], ['dpkg-deb', '-f'])
+                return subprocess.CompletedProcess(args, 0, values[('Package', 'Version', 'Architecture').index(args[-1])])
+            with self.subTest(values=values), patch.object(release, 'command', side_effect=response):
+                with self.assertRaisesRegex(ValueError, 'identity mismatch'):
+                    release.inspect_package(package, self.output)
 
 
 if __name__ == '__main__':

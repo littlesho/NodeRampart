@@ -85,7 +85,7 @@ transition with the checked-out script, then install the reviewed package:
 
 ```bash
 sudo ./scripts/source-to-package.sh --prepare
-sudo apt install ./dist/noderampart_0.4.0~alpha.1_amd64.deb
+sudo apt install ./dist/noderampart_0.4.0-alpha.2_amd64.deb
 sudo /usr/bin/noderampart doctor
 sudo /usr/bin/noderampart status
 ```
@@ -120,7 +120,7 @@ performing a lifecycle or recovery scenario:
 
 ```bash
 sudo ./scripts/lab-check.py --authorized-disposable-lab \
-  --install-kind package --expected-version 0.4.0-alpha.1 \
+  --install-kind package --expected-version 0.4.0-alpha.2 \
   --expected-commit COMMIT_HEX --output /absolute/new/path/runtime-check.json
 ```
 
