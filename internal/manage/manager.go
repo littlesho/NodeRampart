@@ -57,11 +57,15 @@ func New(path string, request RequestFunc) (*Manager, error) {
 	if err != nil {
 		return nil, errors.New("install the NodeRampart package before running setup")
 	}
+	daemonUID, err := checkedServiceID(uid)
+	if err != nil {
+		return nil, errors.New("NodeRampart service UID is invalid")
+	}
 	group, err := user.LookupGroup("noderampart")
 	if err != nil {
 		return nil, errors.New("NodeRampart service group is unavailable")
 	}
-	gid, err := strconv.Atoi(group.Gid)
+	gid, err := serviceGroupID(group.Gid)
 	if err != nil {
 		return nil, errors.New("NodeRampart service group is invalid")
 	}
@@ -73,8 +77,26 @@ func New(path string, request RequestFunc) (*Manager, error) {
 	if err != nil || binary != "/usr/bin/noderampart" && binary != "/usr/local/bin/noderampart" {
 		return nil, errors.New("run setup from the installed /usr/bin or /usr/local/bin noderampart")
 	}
-	return &Manager{ConfigPath: path, Request: request, Assets: &assets.Client{}, daemonUID: int(uid), daemonGID: gid,
+	return &Manager{ConfigPath: path, Request: request, Assets: &assets.Client{}, daemonUID: daemonUID, daemonGID: gid,
 		lockPath: "/run/noderampart-management.lock", unitDir: "/etc/systemd/system", tmpfilesDir: "/etc/tmpfiles.d", stateDir: "/var/lib/noderampart", runtimeDir: "/run/noderampart", binary: binary, sandbox: true}, nil
+}
+
+func serviceGroupID(value string) (int, error) {
+	id, err := strconv.ParseUint(value, 10, 32)
+	if err != nil {
+		return 0, errors.New("invalid service group ID")
+	}
+	return checkedServiceID(uint32(id))
+}
+
+func checkedServiceID(id uint32) (int, error) {
+	// Linux chown treats the all-ones UID/GID as "leave unchanged". A service
+	// identity must also fit the int accepted by our ownership APIs without
+	// becoming negative on a 32-bit build.
+	if id == ^uint32(0) || uint64(id) > uint64(^uint(0)>>1) {
+		return 0, errors.New("service ID cannot be used for file ownership")
+	}
+	return int(id), nil
 }
 
 func decodeConfig(data []byte) (config.Config, error) {
