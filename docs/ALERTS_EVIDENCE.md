@@ -1,6 +1,6 @@
 # Budget alerts, health alerts and local evidence / 告警与离线证据
 
-These features are included in the unpublished `0.4.0-alpha` working version.
+These features are included in the `0.4.0-alpha.1` package candidate (source public, packages not yet published).
 Both new alert groups are **off by default**. Open `sudo noderampart tui
 --language zh` for Chinese or `sudo noderampart tui --language en` for English.
 All settings below are available under **Configuration / 功能配置**. Validate,

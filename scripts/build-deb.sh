@@ -11,7 +11,7 @@ PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 VERSION=$(tr -d '\n' < "$PROJECT_DIR/VERSION")
 ARCH=${ARCH:-$(dpkg --print-architecture)}
 case "$VERSION" in *[!0-9A-Za-z.+~-]*) echo "invalid package version" >&2; exit 1;; esac
-case "$VERSION" in *-alpha) VERSION=${VERSION%-alpha}~alpha;; esac
+case "$VERSION" in *-alpha.1) VERSION=${VERSION%-alpha.1}~alpha.1;; *-alpha) VERSION=${VERSION%-alpha}~alpha;; esac
 case "$ARCH" in amd64|arm64) ;; *) echo "unsupported architecture: $ARCH" >&2; exit 1;; esac
 GO_ARCH=$ARCH
 

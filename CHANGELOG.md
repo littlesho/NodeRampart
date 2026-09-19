@@ -2,6 +2,22 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.1 - Unreleased
+
+- Carry forward the 0.4.0 feature set, PR #5 UID/GID validation fix, and bilingual
+  installation documentation. This candidate changes release packaging, not
+  product capabilities.
+- Read the verified source commit and its timestamp once in validation, then
+  pass them to every package, SBOM and collection job. Fedora builds no longer
+  depend on a container shell's checkout ownership exception.
+- Project version `0.4.0-alpha.1` maps to Debian `0.4.0~alpha.1` and RPM
+  `0.4.0-0.alpha.2%{?dist}`; embedded program versions retain the full project
+  version. Both native package versions sort after the original preview.
+- The immutable `v0.4.0-alpha` tag is retained. Its Release run failed before
+  completing the package set; it was not a published installation release.
+  This replacement candidate remains a draft until independently verified
+  and explicitly published. No publication date is assigned yet.
+
 ## 0.4.0-alpha - Unreleased
 
 ### Added

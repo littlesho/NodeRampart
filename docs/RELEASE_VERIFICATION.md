@@ -1,6 +1,6 @@
 # Verify a NodeRampart release
 
-The public `v0.4.0-alpha` download and its GitHub attestations have **not been
+The public `v0.4.0-alpha.1` download and its GitHub attestations have **not been
 published**. The workflow creates a draft for a maintainer to inspect; writing
 or testing the workflow does not publish a release. The commands below apply
 after the intended release and attestations are available.
@@ -43,18 +43,18 @@ independent evidence of the expected source.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.1 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0~alpha_amd64.deb
+PACKAGE=noderampart_0.4.0~alpha.1_amd64.deb
 EXPECTED_COMMIT='REPLACE_WITH_REVIEWED_FULL_COMMIT_SHA'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha \
+  --source-ref refs/tags/v0.4.0-alpha.1 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -63,7 +63,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha \
+  --source-ref refs/tags/v0.4.0-alpha.1 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document \
   --deny-self-hosted-runners
@@ -72,7 +72,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha \
+  --source-ref refs/tags/v0.4.0-alpha.1 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -97,13 +97,13 @@ reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 
 The exact expected asset set is 22 files:
 
-- `noderampart_0.4.0~alpha_amd64.deb` and `noderampart_0.4.0~alpha_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.1.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.1.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.1.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.1.fc44.aarch64.rpm`.
+- `noderampart_0.4.0~alpha.1_amd64.deb` and `noderampart_0.4.0~alpha.1_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.2.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.2.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.2.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.2.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.1.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.2.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
 
 Check names and identities, not only the count. GitHub's generated source ZIP/TAR
@@ -141,7 +141,7 @@ python3 scripts/release_sbom.py --fetch-syft "$TOOLS_DIR/syft"
 COMMIT=$(git rev-parse HEAD)
 BUILD_DATE=$(git show -s --format=%cI HEAD)
 export COMMIT BUILD_DATE
-python3 scripts/release_sbom.py dist/noderampart_0.4.0~alpha_amd64.deb \
+python3 scripts/release_sbom.py dist/noderampart_0.4.0~alpha.1_amd64.deb \
   --syft "$TOOLS_DIR/syft/syft" --output dist/sbom
 ```
 
@@ -201,3 +201,17 @@ execution. Only the Go binary cataloger is selected. See the
 [fixed-version configuration implementation](https://github.com/anchore/syft/blob/v1.51.1/cmd/syft/internal/options/golang.go)
 and [GitHub attestation action](https://github.com/actions/attest) for the upstream
 interfaces used here.
+
+## Candidate metadata and package revision
+
+The `v0.4.0-alpha.1` candidate replaces the incomplete build of the immutable
+`v0.4.0-alpha` tag; no complete installation release was published for that tag.
+The project version is `0.4.0-alpha.1`, Debian version `0.4.0~alpha.1`, and
+RPM Version/Release `0.4.0` / `0.alpha.2%{?dist}`. Program version strings keep
+`0.4.0-alpha.1`. The validation job checks checkout HEAD against the expected
+source commit (peeling a tag object if necessary), then sends that full SHA and
+the commit's timestamp to DEB, RPM, SBOM and collection jobs through direct
+job dependencies. Release builds reject absent or invalid metadata; they do
+not substitute the current time. When building locally, explicitly export
+`COMMIT=$(git rev-parse HEAD)` and
+`BUILD_DATE=$(git show -s --format=%cI "$COMMIT")` from the reviewed checkout.

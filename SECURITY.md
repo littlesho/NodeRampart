@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-`0.4.0-alpha` is under development. Security fixes are applied to the latest alpha branch only until a stable support policy is published.
+`0.4.0-alpha.1` is under development. Security fixes are applied to the latest alpha branch only until a stable support policy is published.
 
 ## Reporting a vulnerability
 

@@ -5,12 +5,13 @@
 Name:           noderampart
 %{!?noderampart_commit:%global noderampart_commit unknown}
 %{!?noderampart_build_date:%global noderampart_build_date unknown}
+%{!?noderampart_version:%global noderampart_version 0.4.0-alpha.1}
 Version:        0.4.0
-Release:        0.alpha.1%{?dist}
+Release:        0.alpha.2%{?dist}
 Summary:        Security monitoring and traffic reporting agent for Linux VPS hosts
 License:        MIT AND BSD-3-Clause AND ISC AND Apache-2.0
 URL:            https://github.com/littlesho/NodeRampart
-Source0:        %{name}-%{version}-alpha.tar.gz
+Source0:        %{name}-%{noderampart_version}.tar.gz
 BuildRequires:  golang >= 1.25
 BuildRequires:  systemd-rpm-macros
 ExclusiveArch:  x86_64 aarch64
@@ -28,7 +29,7 @@ NodeRampart observes bounded packet metadata and OpenSSH authentication events,
 sends optional Telegram alerts, and creates daily security and traffic reports.
 
 %prep
-%autosetup -n NodeRampart-%{version}-alpha
+%autosetup -n NodeRampart-%{noderampart_version}
 
 %build
 export CGO_ENABLED=0
@@ -40,7 +41,7 @@ case '%{_target_cpu}' in
 esac
 export GOFLAGS="-mod=vendor -buildvcs=false -buildmode=pie -trimpath"
 for binary in noderampart noderampartd noderampart-sensor; do
-  go build -ldflags "-s -w -X github.com/littlesho/NodeRampart/internal/version.Version=%{version}-alpha -X github.com/littlesho/NodeRampart/internal/version.Commit=%{noderampart_commit} -X github.com/littlesho/NodeRampart/internal/version.BuildDate=%{noderampart_build_date}" -o "bin/$binary" "./cmd/$binary"
+  go build -ldflags "-s -w -X github.com/littlesho/NodeRampart/internal/version.Version=%{noderampart_version} -X github.com/littlesho/NodeRampart/internal/version.Commit=%{noderampart_commit} -X github.com/littlesho/NodeRampart/internal/version.BuildDate=%{noderampart_build_date}" -o "bin/$binary" "./cmd/$binary"
 done
 
 %install

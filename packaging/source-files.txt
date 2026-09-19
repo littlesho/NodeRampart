@@ -294,6 +294,7 @@ scripts/build-rpm.sh
 scripts/install.sh
 scripts/lab-check.py
 scripts/manage-remove.sh
+scripts/release-metadata.sh
 scripts/release_sbom.py
 scripts/source-to-package.sh
 scripts/stage-source.py

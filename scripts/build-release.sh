@@ -7,11 +7,20 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 cd "$PROJECT_DIR"
 VERSION=$(tr -d '\n' < VERSION)
-[ "$VERSION" = 0.4.0-alpha ] || { echo 'release tooling currently targets 0.4.0-alpha' >&2; exit 1; }
-COMMIT=${COMMIT:-$(git rev-parse HEAD)}
-BUILD_DATE=${BUILD_DATE:-$(git show -s --format=%cI HEAD)}
-case "$COMMIT" in ''|*[!0-9a-f]*) echo 'invalid commit' >&2; exit 1;; esac
-case "$BUILD_DATE" in ''|*[!0-9TZ:+.-]*) echo 'invalid build date' >&2; exit 1;; esac
+[ "$VERSION" = 0.4.0-alpha.1 ] || { echo 'release tooling currently targets 0.4.0-alpha.1' >&2; exit 1; }
+# Release callers must supply metadata from the verified source checkout.
+# Empty job outputs must never fall back to local Git or the wall clock.
+COMMIT=${COMMIT-}
+BUILD_DATE=${BUILD_DATE-}
+python3 - "$COMMIT" "$BUILD_DATE" <<'METADATA'
+import datetime, re, sys
+commit, date = sys.argv[1:]
+if not re.fullmatch(r"[0-9a-f]{40}", commit):
+    raise SystemExit('invalid commit: full source SHA required')
+if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:Z|[+-][0-9]{2}:[0-9]{2})", date):
+    raise SystemExit('invalid build date: source commit timestamp required')
+datetime.datetime.fromisoformat(date.replace('Z', '+00:00'))
+METADATA
 export COMMIT BUILD_DATE
 [ "$#" -eq 2 ] || { echo 'usage: build-release.sh {--deb|--rpm} {amd64|arm64} | --collect ARTIFACT_DIRECTORY' >&2; exit 1; }
 case "$1" in
@@ -40,7 +49,7 @@ if not source.is_dir():
 packages = runtime_packages()
 names = set(packages)
 names.update(name + suffix for name in packages for suffix in ('.spdx.json', '.buildinfo.json'))
-names.add('noderampart-0.4.0-0.alpha.1.fc44.src.rpm')
+names.add('noderampart-0.4.0-0.alpha.2.fc44.src.rpm')
 found = {}
 for path in source.rglob('*'):
     if path.name not in names:
@@ -65,7 +74,7 @@ try:
     for name, path in found.items():
         shutil.copyfile(path, stage / name)
     shutil.copyfile(project / 'scripts/bootstrap.sh', stage / 'bootstrap.sh')
-    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha',
+    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha.1',
         'commit': commit, 'build_date': build_date, 'package_count': 6,
         'source_package_count': 1, 'sbom_count': 6,
         'sbom_scope': 'packaged Go programs; runtime system dependencies excluded'}, indent=2) + '\n')

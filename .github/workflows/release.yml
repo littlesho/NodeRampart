@@ -14,6 +14,9 @@ concurrency:
 
 jobs:
   validate:
+    outputs:
+      commit: ${{ steps.metadata.outputs.commit }}
+      build_date: ${{ steps.metadata.outputs.build_date }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -24,6 +27,11 @@ jobs:
         env:
           RELEASE_REF: ${{ github.ref }}
         run: test "$RELEASE_REF" = "refs/tags/v$(cat VERSION)"
+      - name: Read verified source metadata
+        id: metadata
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: ./scripts/release-metadata.sh >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: 1.26.8
@@ -59,10 +67,11 @@ jobs:
       - name: Build and inspect Debian package
         env:
           RELEASE_ARCH: ${{ matrix.arch }}
-          COMMIT: ${{ github.sha }}
+          COMMIT: ${{ needs.validate.outputs.commit }}
+          BUILD_DATE: ${{ needs.validate.outputs.build_date }}
         run: |
           ./scripts/build-release.sh --deb "$RELEASE_ARCH"
-          PACKAGE="dist/noderampart_0.4.0~alpha_${RELEASE_ARCH}.deb"
+          PACKAGE="dist/noderampart_0.4.0~alpha.1_${RELEASE_ARCH}.deb"
           test "$(dpkg-deb -f "$PACKAGE" Architecture)" = "$RELEASE_ARCH"
           CHECK_DIR=$(mktemp -d)
           trap 'rm -rf -- "$CHECK_DIR"' EXIT
@@ -97,14 +106,15 @@ jobs:
         env:
           RELEASE_ARCH: ${{ matrix.arch }}
           RELEASE_FEDORA: ${{ matrix.fedora }}
-          COMMIT: ${{ github.sha }}
+          COMMIT: ${{ needs.validate.outputs.commit }}
+          BUILD_DATE: ${{ needs.validate.outputs.build_date }}
           GOTOOLCHAIN: local
         run: |
           go mod download
           go mod verify
           ./scripts/build-release.sh --rpm "$RELEASE_ARCH"
           case "$RELEASE_ARCH" in amd64) RPM_ARCH=x86_64;; arm64) RPM_ARCH=aarch64;; esac
-          PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.1.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"
+          PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.2.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"
           test "$(rpm -qp --qf '%{ARCH}' "$PACKAGE")" = "$RPM_ARCH"
           CHECK_DIR=$(mktemp -d)
           trap 'rm -rf -- "$CHECK_DIR"' EXIT
@@ -117,7 +127,7 @@ jobs:
           mkdir -p dist/publish
           cp "$PACKAGE" dist/publish/
           if [ "$RELEASE_FEDORA:$RELEASE_ARCH" = 44:amd64 ]; then
-            cp dist/rpm/noderampart-0.4.0-0.alpha.1.fc44.src.rpm dist/publish/
+            cp dist/rpm/noderampart-0.4.0-0.alpha.2.fc44.src.rpm dist/publish/
           fi
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -126,7 +136,7 @@ jobs:
           if-no-files-found: error
 
   sbom:
-    needs: [deb, rpm]
+    needs: [validate, deb, rpm]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -145,13 +155,12 @@ jobs:
           path: release-input
       - name: Fetch fixed verified Syft and inspect final packages
         env:
-          COMMIT: ${{ github.sha }}
+          COMMIT: ${{ needs.validate.outputs.commit }}
+          BUILD_DATE: ${{ needs.validate.outputs.build_date }}
         run: |
           TOOL_PARENT=$(mktemp -d)
           trap 'rm -rf -- "$TOOL_PARENT"' EXIT
           python3 scripts/release_sbom.py --fetch-syft "$TOOL_PARENT/syft"
-          BUILD_DATE=$(git show -s --format=%cI HEAD)
-          export BUILD_DATE
           while IFS= read -r -d '' PACKAGE; do
             python3 scripts/release_sbom.py "$PACKAGE" --syft "$TOOL_PARENT/syft/syft" --output dist/sbom
           done < <(find release-input -type f \( -name '*.deb' -o -name '*.rpm' \) ! -name '*.src.rpm' -print0)
@@ -162,7 +171,7 @@ jobs:
           if-no-files-found: error
 
   draft:
-    needs: sbom
+    needs: [validate, sbom]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -179,7 +188,8 @@ jobs:
           path: release-input
       - name: Collect complete asset set
         env:
-          COMMIT: ${{ github.sha }}
+          COMMIT: ${{ needs.validate.outputs.commit }}
+          BUILD_DATE: ${{ needs.validate.outputs.build_date }}
         run: ./scripts/build-release.sh --collect release-input
       - name: Attest build provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
@@ -188,33 +198,33 @@ jobs:
       - name: Attest Debian amd64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart_0.4.0~alpha_amd64.deb
-          sbom-path: dist/release/noderampart_0.4.0~alpha_amd64.deb.spdx.json
+          subject-path: dist/release/noderampart_0.4.0~alpha.1_amd64.deb
+          sbom-path: dist/release/noderampart_0.4.0~alpha.1_amd64.deb.spdx.json
       - name: Attest Debian arm64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart_0.4.0~alpha_arm64.deb
-          sbom-path: dist/release/noderampart_0.4.0~alpha_arm64.deb.spdx.json
+          subject-path: dist/release/noderampart_0.4.0~alpha.1_arm64.deb
+          sbom-path: dist/release/noderampart_0.4.0~alpha.1_arm64.deb.spdx.json
       - name: Attest Fedora 43 x86_64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.1.fc43.x86_64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.1.fc43.x86_64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.2.fc43.x86_64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.2.fc43.x86_64.rpm.spdx.json
       - name: Attest Fedora 43 aarch64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.1.fc43.aarch64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.1.fc43.aarch64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.2.fc43.aarch64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.2.fc43.aarch64.rpm.spdx.json
       - name: Attest Fedora 44 x86_64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.1.fc44.x86_64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.1.fc44.x86_64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.2.fc44.x86_64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.2.fc44.x86_64.rpm.spdx.json
       - name: Attest Fedora 44 aarch64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.1.fc44.aarch64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.1.fc44.aarch64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.2.fc44.aarch64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.2.fc44.aarch64.rpm.spdx.json
       - name: Create draft for maintainer review
         env:
           GH_TOKEN: ${{ github.token }}
