@@ -164,6 +164,7 @@ internal/manage/geo_health.go
 internal/manage/geo_health_test.go
 internal/manage/geo_test.go
 internal/manage/geo_unchanged_test.go
+internal/manage/identity_test.go
 internal/manage/lab_test.go
 internal/manage/manager.go
 internal/manage/manager_test.go

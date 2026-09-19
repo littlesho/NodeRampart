@@ -4,11 +4,11 @@
 
 NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成日报，并可通过 Telegram 通知你。安装后用中文终端菜单完成配置、查看状态和报告，无需搭建 Web 面板。
 
-它负责观察和提醒，不会自动封禁 IP 或修改防火墙，不保存或分析应用层通信内容，也不会新增 Web 监听端口。
+它负责观察和提醒，不会自动封禁 IP 或修改防火墙，不保存或分析应用层通信内容，也不会新增 Web 监听端口。它不是 DDoS 防护或流量清洗服务。
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
-> 当前开发版本：**v0.4.0-alpha**。本次源码公开不包含安装包 Release；下面的一键命令需要另行发布对应版本及其制品后才能使用。在此之前请使用经过审查的本地构建。Alpha 版本应与现有安全措施配合使用。
+> **v0.4.0-alpha：首次安装包候选版本。** 源码已经公开；安装包正在准备为草稿，尚不能公开下载安装。下面的固定版本命令仅在同一 Release 正式发布后可用。在此之前请使用经过审查的本地安装包。Alpha 版本应与现有安全措施配合使用。
 
 ## 能帮你做什么？
 
@@ -32,6 +32,20 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 ~~~bash
 curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha
 ~~~
+
+也可以先下载到独立目录，查看脚本后再决定是否执行：
+
+~~~bash
+INSTALL_DIR=$(mktemp -d)
+curl --proto '=https' --tlsv1.2 -fsSL \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha/bootstrap.sh \
+  -o "$INSTALL_DIR/bootstrap.sh"
+less "$INSTALL_DIR/bootstrap.sh"
+# 查看并接受脚本行为后，再单独执行：
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha
+~~~
+
+安装包与证明的人工核验步骤见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。HTTPS 下载、同一 Release 的 SHA256 和 GitHub attestation 是不同检查；bootstrap 会检查包校验和与包身份，**不会自动执行 attestation 验证**。草稿未公开时下载入口可能返回 404，这不表示校验通过。
 
 安装器会识别系统和 CPU，下载对应 DEB/RPM，核对 SHA256、版本和架构，通过包管理器安装，随后进入配置向导。已有配置和服务启用/禁用状态会保留；下载源或制品尚未发布时会明确报错并停止。
 
@@ -127,7 +141,9 @@ GeoIP：需要你自己的 [MaxMind GeoLite 账户](https://www.maxmind.com/en/g
 
 网卡 TX 不一定全是云厂商收费的公网出站。免费额度和阶梯也可能与其他主机、服务共享。请只分配本机应占的整月额度，默认按 **0** 计算；不要为每台机器重复填写整个账户的免费额度。每个价格 GB 对应多少字节会明确显示为可修改的计算假设。[计算边界](docs/V0.4_OPERATIONS.md#egress-estimates)。
 
-## 怎么卸载？
+## 怎样升级和卸载？
+
+NodeRampart 不会自动更新可执行程序。主动升级安装包前，请创建并验证数据库备份，单独妥善保存必要配置和凭据，并保留旧安装包。使用包管理器或目标 Release 的 bootstrap 升级。数据库会自动迁移到 schema 6，旧程序不能打开迁移后的数据库；配置恢复不会降级数据。源码安装必须先按[源码转安装包说明](docs/V0.4_OPERATIONS.md#upgrades-and-removal)迁移，不能直接覆盖源码安装拥有的文件。
 
 在**服务与卸载**中选择：
 
@@ -144,7 +160,7 @@ sudo /usr/libexec/noderampart/manage-remove --purge
 
 工具通过 apt/dnf 卸载，不移除系统依赖。RPM 卸载后，修改过的配置可能保存为 config.json.rpmsave；重装不会自动恢复此文件，需要自行检查并恢复所需设置。保留文件不等于自动启用旧设置。[升级与卸载细节](docs/V0.4_OPERATIONS.md#upgrades-and-removal)。
 
-## 遇到问题和参与开发
+## 遇到问题怎么排查？
 
 ~~~bash
 sudo noderampart doctor
@@ -154,12 +170,20 @@ sudo journalctl -u noderampartd -u noderampart-sensor --since today
 
 SSH 会话没有终端时，可用 ssh -t 分配终端，或使用原有的非交互命令。下载失败、GeoIP 缺失、数据不完整等情况见[操作说明](docs/V0.4_OPERATIONS.md)。事件、备份和回放的详细命令仍可查阅 [v0.3 操作手册](docs/V0.3_OPERATIONS.md)。
 
-开发资料：[开发指南](docs/DEVELOPMENT.md)、[架构](docs/ARCHITECTURE.md)、[威胁模型](docs/THREAT_MODEL.md)、[贡献说明](CONTRIBUTING.md)。普通测试不需要抓包权限；特权测试仅在可丢弃的授权实验虚拟机中进行。
-
-项目原创代码采用 [MIT License](LICENSE)。编译依赖保留各自许可证，见[第三方声明](THIRD_PARTY_NOTICES.md)；MaxMind 数据使用独立的数据许可。
-
 新生成的日报会保存完整单价、来源、免费额度、字节单位和观测流量，便于复算。
 历史补报使用生成时配置的价格，已有存档不会重新计价。数据库自动迁移到 schema 6，新增持久化告警状态与裁剪台账；
 升级前请备份，旧版程序不能直接打开已迁移的数据库。
 
 发布产物将附带 Go 依赖 SBOM 与 GitHub 来源证明，验证步骤见[发布验证](docs/RELEASE_VERIFICATION.md)。
+
+## 安全与 Alpha 限制
+
+传感器使用 AF_PACKET 和 `CAP_NET_RAW`，守护进程使用独立服务身份。配置管理、服务管理和装卸包需要 root。尚未实现 eBPF 采集器或程序自动更新；防火墙和 SSH 访问控制仍需独立配置。
+
+构建目标是 Debian 12/13、Fedora 43/44 的 amd64/arm64。交叉编译或检查包内容不等于真实运行测试。过去私有 Debian 13/Fedora 44 amd64 实验结果仅适用于当时快照，不代表当前 tag 已通过新的安装、升级、卸载验收，也不代表真实 ARM64 运行通过。[剩余验收与功能限制](docs/ALPHA_LIMITATIONS.md)和[安全问题报告](SECURITY.md)说明了边界。扫描成功或证明有效均不代表不存在漏洞。
+
+## 开发与许可
+
+开发资料：[开发指南](docs/DEVELOPMENT.md)、[架构](docs/ARCHITECTURE.md)、[威胁模型](docs/THREAT_MODEL.md)、[贡献说明](CONTRIBUTING.md)。普通测试不需要抓包权限；特权测试仅在可丢弃的授权实验虚拟机中进行。
+
+项目原创代码采用 [MIT License](LICENSE)。编译依赖保留各自许可证，见[第三方声明](THIRD_PARTY_NOTICES.md)；MaxMind 数据使用独立的数据许可。

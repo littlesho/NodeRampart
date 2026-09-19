@@ -29,6 +29,15 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 
 ### Fixed
 
+- PR #5: parse service GIDs as unsigned 32-bit values before permission and
+  ownership operations; reject negative, out-of-range and malformed values.
+  Shared UID/GID checks also reject the chown reserved value and values that
+  cannot fit a native int. Invalid identities fail manager construction without
+  falling back to root. Boundary tests preserve valid identity/DAC behavior and
+  verify the existing safe model conversion bounds.
+- Include the service identity regression tests in the explicit source-package
+  manifest. The first installation-package candidate includes the merged PR #5 fix.
+
 - R44–R49: bounded month-end budget closing with recorded policy; notification
   admission uses actual time; indexed retention queries and cheaper monitor
   coverage; independent GeoIP update/schedule health; precise fractional-time
@@ -56,8 +65,11 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 - Configuration/API schema 1 gains optional alerts and additive commands. SQLite
   schema 6 adds monitor state and retention accounting after schema 5 pricing inputs; old reports remain without a fabricated price history. Billing profiles
   gain optional `unit_bytes`; omitted/zero preserves decimal GB calculations.
-- Public bootstrap becomes usable when the repository and matching release
-  assets are public. No publication is performed by this development task.
+- This is the first public installation-package candidate. The source is public;
+  packages are prepared as a draft prerelease. Fixed-version bootstrap downloads
+  become available only when that same release is published. No release date is
+  assigned while this entry is Unreleased; earlier alpha headings describe
+  development milestones, not dated public package releases.
 - MaxMind requires the user's own account, enrollment and license acceptance;
   databases and credentials are not bundled. Estimates are not cloud invoices.
 

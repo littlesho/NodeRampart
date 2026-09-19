@@ -4,11 +4,11 @@
 
 NodeRampart watches your server in the background. It records events, builds daily reports and can notify you through Telegram. A terminal menu guides you through setup and everyday management over SSH.
 
-It observes and reports. It does not block IP addresses, change your firewall, inspect application payloads or open a web dashboard port.
+It observes and reports. It does not block IP addresses, change your firewall, inspect application payloads or open a web dashboard port. It is not DDoS mitigation or a traffic-scrubbing service.
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
-> Development version: **v0.4.0-alpha**. This source publication does not include a package release. The download command below requires a separately published, matching release and its assets. Until then, use a reviewed local build. Use alpha software alongside your existing security controls.
+> **v0.4.0-alpha — first installation-package candidate.** The source is public; the package release is being prepared as a draft and is not yet available for public installation. The fixed-version commands below work only after that same release is published. Until then, use a reviewed local package. Alpha software belongs alongside your existing security controls.
 
 ## What can it do?
 
@@ -32,6 +32,20 @@ The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64**
 ~~~bash
 curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha
 ~~~
+
+Alternatively, download into a separate directory and inspect the script before deciding to execute it:
+
+~~~bash
+INSTALL_DIR=$(mktemp -d)
+curl --proto '=https' --tlsv1.2 -fsSL \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha/bootstrap.sh \
+  -o "$INSTALL_DIR/bootstrap.sh"
+less "$INSTALL_DIR/bootstrap.sh"
+# Run separately, after reviewing and accepting the script:
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha
+~~~
+
+For manual package and provenance checks, see [release verification](docs/RELEASE_VERIFICATION.md#download-and-verify). HTTPS download, same-release SHA256 and GitHub attestation are distinct checks: bootstrap checks package checksums and identity but **does not automatically verify attestations**. A download URL may return 404 while the draft is unpublished; that is not successful verification.
 
 This downloads the package for your distribution and CPU, checks its SHA256 and package identity, installs it with your package manager, then opens setup. Existing configuration and service enable/disable choices are preserved. If the release is unavailable, installation stops with an explanation.
 
@@ -138,7 +152,9 @@ The menu shows official tariff sources, retrieval/effective dates, calculation u
 
 Guest TX is not identical to billable Internet egress. Free allowances and pricing tiers may be shared with other services or hosts. Assign only this host's monthly share; the default is **zero**. The selectable bytes-per-GB assumption is displayed rather than treated as a verified provider meter. [Calculation details](docs/V0.4_OPERATIONS.md#egress-estimates).
 
-## Uninstall
+## Upgrades and uninstall
+
+NodeRampart does not update its own executable. Before an explicit package upgrade, create and verify a database backup, separately protect required configuration and credentials, and retain the previous package. Use the package manager or the bootstrap from the intended release. Schema 6 migrations are automatic; older binaries cannot open the migrated database. Configuration recovery does not downgrade data. Source installations require the documented [source-to-package transition](docs/V0.4_OPERATIONS.md#upgrades-and-removal), not installation over the source-owned files.
 
 Open **Services and uninstall** in the menu:
 
@@ -155,7 +171,7 @@ sudo /usr/libexec/noderampart/manage-remove --purge
 
 It uses apt/dnf without removing system dependencies. RPM may save edited configuration as config.json.rpmsave; reinstalling does not restore this file automatically. Review and restore needed settings yourself. Retaining files does not guarantee that old settings will be active. [Removal and upgrades](docs/V0.4_OPERATIONS.md#upgrades-and-removal).
 
-## Troubleshooting and development
+## Troubleshooting
 
 ~~~bash
 sudo noderampart doctor
@@ -168,6 +184,14 @@ For an SSH session without a terminal, allocate one with ssh -t, or use the exis
 New daily archives retain the full tariff, source, free allowance, byte unit and observed bytes used for their estimate. Backfilled reports use the tariff configured when generated; old archives are not re-priced. Database schema 6 migrates automatically; back up before upgrading because older binaries cannot open the migrated database.
 
 Published packages will include a Go dependency SBOM and GitHub attestations; see [verify a release](docs/RELEASE_VERIFICATION.md).
+
+## Security and alpha limits
+
+The sensor uses AF_PACKET with `CAP_NET_RAW`; the daemon runs as a separate service identity. Setup and service/package management require root. No eBPF collector or automatic program updater is implemented. Keep your firewall and SSH access controls independently configured.
+
+The build targets are Debian 12/13 and Fedora 43/44 on amd64/arm64. Cross-compiling or inspecting a package is not a runtime test. Earlier private Debian 13/Fedora 44 amd64 lab results apply only to those snapshots, not to this tag. Fresh installation/upgrade/removal acceptance for the candidate and real ARM64 runtime validation are not claimed. See [remaining validation and functional limits](docs/ALPHA_LIMITATIONS.md) and [security reporting](SECURITY.md). Successful scans or valid attestations do not prove absence of vulnerabilities.
+
+## Development and license
 
 Contributors: [development guide](docs/DEVELOPMENT.md), [architecture](docs/ARCHITECTURE.md), [threat model](docs/THREAT_MODEL.md), [contributing](CONTRIBUTING.md). Ordinary tests do not need packet-capture privileges; privileged checks belong in disposable lab VMs.
 
