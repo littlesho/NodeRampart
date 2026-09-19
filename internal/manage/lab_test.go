@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -290,15 +289,19 @@ func installedLabManager(t *testing.T) *Manager {
 	if err != nil {
 		t.Fatal("installed daemon identity is unavailable")
 	}
+	daemonUID, err := checkedServiceID(uid)
+	if err != nil {
+		t.Fatal("installed daemon identity is invalid")
+	}
 	group, err := user.LookupGroup("noderampart")
 	if err != nil {
 		t.Fatal("installed service group is unavailable")
 	}
-	gid, err := strconv.Atoi(group.Gid)
+	gid, err := serviceGroupID(group.Gid)
 	if err != nil {
 		t.Fatal("installed service group is invalid")
 	}
-	m := &Manager{ConfigPath: "/etc/noderampart/config.json", daemonUID: int(uid), daemonGID: gid, lockPath: "/run/noderampart-management.lock", unitDir: "/etc/systemd/system", tmpfilesDir: "/etc/tmpfiles.d", stateDir: "/var/lib/noderampart", runtimeDir: "/run/noderampart", binary: "/usr/bin/noderampart", sandbox: true}
+	m := &Manager{ConfigPath: "/etc/noderampart/config.json", daemonUID: daemonUID, daemonGID: gid, lockPath: "/run/noderampart-management.lock", unitDir: "/etc/systemd/system", tmpfilesDir: "/etc/tmpfiles.d", stateDir: "/var/lib/noderampart", runtimeDir: "/run/noderampart", binary: "/usr/bin/noderampart", sandbox: true}
 	if _, err := readFile(m.binary, 128<<20, false, -1); err != nil {
 		t.Fatal("trusted native package executable is unavailable")
 	}

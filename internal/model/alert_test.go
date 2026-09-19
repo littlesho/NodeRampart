@@ -5,6 +5,7 @@ package model
 import (
 	"encoding/json"
 	"math"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -72,6 +73,49 @@ func TestProjectAlertContextPreservesRecordedZeroAndRejectsMissingValues(t *test
 	data, err = json.Marshal(got)
 	if err != nil || got.Availability != "partial" || got.ObservedBytes != nil || got.ObservedCost != nil || strings.Contains(string(data), `"observed_bytes"`) || strings.Contains(string(data), `"observed_cost"`) {
 		t.Fatal("absent observations were fabricated as zero")
+	}
+}
+
+func TestProjectAlertContextIntegerConversionBounds(t *testing.T) {
+	for _, tc := range []struct {
+		kind, field string
+		allowed     map[string]int
+		read        func(*AlertContext) *int
+	}{
+		{"budget_month_bytes", "milestone", map[string]int{"0": 0, "80": 80, "100": 100}, func(a *AlertContext) *int { return a.Milestone }},
+		{"budget_day_growth", "baseline_days", map[string]int{"0": 0, "1": 1, "29": 29, "30": 30}, func(a *AlertContext) *int { return a.BaselineDays }},
+	} {
+		for _, value := range []string{"", "0", "1", "29", "30", "31", "79", "80", "81", "100", "101", "2147483648", "4294967296", "9223372036854775808", "18446744073709551615", "18446744073709551616", "-1", "+1", "1.5", "invalid"} {
+			t.Run(tc.field+"/"+value, func(t *testing.T) {
+				fields := alertFields(tc.kind)
+				fields[tc.field] = value
+				got := ProjectAlertContext(tc.kind, fields)
+				converted := tc.read(got)
+				want, valid := tc.allowed[value]
+				if valid {
+					if converted == nil || *converted != want || got.Availability != "recorded" {
+						t.Fatal("bounded integer did not survive projection exactly")
+					}
+				} else if converted != nil || got.Availability != "partial" {
+					t.Fatal("out-of-domain integer was converted or fabricated")
+				}
+				if err := got.Validate(tc.kind); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	}
+}
+
+func TestProjectAlertContextPreservesFullWidthByteCounters(t *testing.T) {
+	fields := alertFields("budget_month_bytes")
+	fields["observed_bytes"], fields["threshold_bytes"] = strconv.FormatUint(math.MaxUint64, 10), strconv.FormatUint(math.MaxUint64, 10)
+	got := ProjectAlertContext("budget_month_bytes", fields)
+	if got.ObservedBytes == nil || *got.ObservedBytes != math.MaxUint64 || got.ThresholdBytes == nil || *got.ThresholdBytes != math.MaxUint64 || got.Availability != "recorded" {
+		t.Fatal("64-bit byte counters were narrowed")
+	}
+	if err := got.Validate("budget_month_bytes"); err != nil {
+		t.Fatal(err)
 	}
 }
 
