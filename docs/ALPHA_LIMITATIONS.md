@@ -1,4 +1,4 @@
-# `v0.4.0-alpha.1` limitations
+# `v0.4.0-alpha.2` limitations
 
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.

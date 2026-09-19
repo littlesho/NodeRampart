@@ -1,0 +1,95 @@
+{
+  "tag_name": "v0.4.0-alpha.1",
+  "draft": true,
+  "prerelease": true,
+  "assets": [
+    {
+      "name": "bootstrap.sh",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc43.aarch64.rpm",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc43.aarch64.rpm.buildinfo.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc43.aarch64.rpm.spdx.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc43.x86_64.rpm",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc43.x86_64.rpm.buildinfo.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc43.x86_64.rpm.spdx.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc44.aarch64.rpm",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc44.aarch64.rpm.buildinfo.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc44.aarch64.rpm.spdx.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc44.src.rpm",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc44.x86_64.rpm",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc44.x86_64.rpm.buildinfo.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart-0.4.0-0.alpha.2.fc44.x86_64.rpm.spdx.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart_0.4.0.alpha.1_amd64.deb",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart_0.4.0.alpha.1_amd64.deb.buildinfo.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart_0.4.0.alpha.1_amd64.deb.spdx.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart_0.4.0.alpha.1_arm64.deb",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart_0.4.0.alpha.1_arm64.deb.buildinfo.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "noderampart_0.4.0.alpha.1_arm64.deb.spdx.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "release.json",
+      "state": "uploaded"
+    },
+    {
+      "name": "SHA256SUMS",
+      "state": "uploaded"
+    }
+  ]
+}

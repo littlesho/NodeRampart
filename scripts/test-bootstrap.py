@@ -60,7 +60,7 @@ elif name == 'curl':
     if args[-1].endswith('/SHA256SUMS'):
         digest = hashlib.sha256(payload).hexdigest()
         if scenario == 'hash': digest = '0' * 64
-        asset = os.environ.get('MOCK_ASSET', 'noderampart_0.4.0~alpha.1_amd64.deb')
+        asset = os.environ.get('MOCK_ASSET', 'noderampart_0.4.0-alpha.2_amd64.deb')
         text = f'{digest}  {asset}\n'
         if scenario == 'duplicate': text *= 2
         if scenario == 'manifest': text += '../not-a-digest bad\n'
@@ -81,11 +81,11 @@ elif name == 'dpkg-query':
         else: print(os.environ.get('MOCK_DEB_STATUS', 'install ok installed'))
     else: sys.exit(1)
 elif name == 'dpkg-deb':
-    values = {'Package':'noderampart', 'Version':'0.4.0~alpha.1', 'Architecture':os.environ.get('MOCK_USER_ARCH', 'amd64')}
-    print('malformed' if scenario == 'identity' else values[args[-1]])
+    values = {'Package':'noderampart', 'Version':'0.4.0~alpha.2', 'Architecture':os.environ.get('MOCK_USER_ARCH', 'amd64')}
+    print('malformed' if scenario == 'identity' or scenario == 'wrong-' + args[-1].lower() else values[args[-1]])
 elif name == 'rpm':
     if '-qp' in args:
-        print('malformed' if scenario == 'identity' else os.environ.get('MOCK_RPM_IDENTITY', 'noderampart:0.4.0:0.alpha.2.fc44:x86_64'))
+        print('malformed' if scenario == 'identity' else os.environ.get('MOCK_RPM_IDENTITY', 'noderampart:0.4.0:0.alpha.3.fc44:x86_64'))
     elif not os.environ.get('MOCK_RPM_INSTALLED'):
         print('package noderampart is not installed')
         sys.exit(1)
@@ -201,7 +201,7 @@ class InstallerTests(unittest.TestCase):
 
     def test_fedora_fresh_install_preserves_signature_policy(self):
         self.write(self.root / 'etc/os-release', 'ID=fedora\nVERSION_ID=44\n')
-        self.env['MOCK_ASSET'] = 'noderampart-0.4.0-0.alpha.2.fc44.x86_64.rpm'
+        self.env['MOCK_ASSET'] = 'noderampart-0.4.0-0.alpha.3.fc44.x86_64.rpm'
         result = self.run_script('bootstrap.sh', '--non-interactive')
         self.assertEqual(result.returncode, 0, result.stderr)
         install = [row for row in self.commands() if row[:2] == ['dnf', 'install']]
@@ -210,10 +210,11 @@ class InstallerTests(unittest.TestCase):
 
     def test_fedora_candidate_upgrade_and_downgrade(self):
         self.write(self.root / 'etc/os-release', 'ID=fedora\nVERSION_ID=44\n')
-        self.env.update(MOCK_ASSET='noderampart-0.4.0-0.alpha.2.fc44.x86_64.rpm', MOCK_RPM_INSTALLED='1')
+        self.env.update(MOCK_ASSET='noderampart-0.4.0-0.alpha.3.fc44.x86_64.rpm', MOCK_RPM_INSTALLED='1')
         for installed, accepted in (('0.4.0-0.alpha.1.fc44', True),
                                     ('0.4.0-0.alpha.2.fc44', True),
-                                    ('0.4.0-0.alpha.3.fc44', False)):
+                                    ('0.4.0-0.alpha.3.fc44', True),
+                                    ('0.4.0-0.alpha.4.fc44', False)):
             with self.subTest(installed=installed):
                 self.env['MOCK_RPM_VERSION'] = installed
                 result = self.run_script('bootstrap.sh', '--no-setup')
@@ -222,13 +223,13 @@ class InstallerTests(unittest.TestCase):
                     self.assertIn('downgrade', result.stderr)
 
     def test_arm64_package_selection(self):
-        self.env.update(MOCK_MACHINE='aarch64', MOCK_USER_ARCH='arm64', MOCK_ASSET='noderampart_0.4.0~alpha.1_arm64.deb')
+        self.env.update(MOCK_MACHINE='aarch64', MOCK_USER_ARCH='arm64', MOCK_ASSET='noderampart_0.4.0-alpha.2_arm64.deb')
         result = self.run_script('bootstrap.sh', '--no-setup')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(any(row[0] == 'curl' and row[-1].endswith('_arm64.deb') for row in self.commands()))
 
     def test_download_failures_never_install(self):
-        for scenario in ('404', 'transport', 'redirect_bad', 'redirect_http', 'redirect_loop', 'hash', 'duplicate', 'manifest', 'oversize', 'missing_asset', 'identity'):
+        for scenario in ('404', 'transport', 'redirect_bad', 'redirect_http', 'redirect_loop', 'hash', 'duplicate', 'manifest', 'oversize', 'missing_asset', 'identity', 'wrong-package', 'wrong-version', 'wrong-architecture'):
             with self.subTest(scenario=scenario):
                 self.env['SCENARIO'] = scenario
                 result = self.run_script('bootstrap.sh', '--no-setup')
@@ -552,18 +553,20 @@ class ReleaseAssetTests(unittest.TestCase):
         (self.project / 'scripts').mkdir()
         for name in ('build-release.sh', 'bootstrap.sh', 'release_sbom.py'):
             shutil.copyfile(REPO / 'scripts' / name, self.project / 'scripts' / name)
-        (self.project / 'VERSION').write_text('0.4.0-alpha.1\n')
+        (self.project / 'VERSION').write_text('0.4.0-alpha.2\n')
         self.input = self.project / 'input'
         self.input.mkdir()
-        names = [f'noderampart_0.4.0~alpha.1_{arch}.deb' for arch in ('amd64', 'arm64')]
-        names += [f'noderampart-0.4.0-0.alpha.2.fc{fedora}.{arch}.rpm'
+        names = [f'noderampart_0.4.0-alpha.2_{arch}.deb' for arch in ('amd64', 'arm64')]
+        names += [f'noderampart-0.4.0-0.alpha.3.fc{fedora}.{arch}.rpm'
                   for fedora in (43, 44) for arch in ('x86_64', 'aarch64')]
-        names += ['noderampart-0.4.0-0.alpha.2.fc44.src.rpm']
+        names += ['noderampart-0.4.0-0.alpha.3.fc44.src.rpm']
         for name in names:
             (self.input / name).write_text('synthetic package\n')
         self.env = dict(os.environ, COMMIT='1234567890abcdef1234567890abcdef12345678', BUILD_DATE='2026-09-12T00:00:00Z')
         scope = 'Go programs embedded in this package only; runtime system dependencies are not inventoried.'
         for name in names[:-1]:
+            native_version = '0.4.0~alpha.2' if name.endswith('.deb') else name.removeprefix('noderampart-').rsplit('.', 2)[0]
+            native_arch = name.removesuffix('.deb').rsplit('_', 1)[1] if name.endswith('.deb') else name.split('.')[-2]
             sha = hashlib.sha256((self.input / name).read_bytes()).hexdigest()
             arch = 'arm64' if any(part in name for part in ('arm64', 'aarch64')) else 'amd64'
             paths = ['usr/bin/' + binary for binary in ('noderampart', 'noderampartd', 'noderampart-sensor')]
@@ -571,10 +574,11 @@ class ReleaseAssetTests(unittest.TestCase):
                          'build_settings': {'GOARCH': arch, 'GOOS': 'linux'}} for path in paths]
             (self.input / (name + '.buildinfo.json')).write_text(json.dumps({'format': 1, 'package': name,
                 'sha256': sha, 'architecture': arch, 'scope': scope, 'binaries': binaries,
-                'declared_build': {'version': '0.4.0-alpha.1', 'commit': self.env['COMMIT'], 'build_date': self.env['BUILD_DATE']}}))
+                'package_identity': {'name': 'noderampart', 'version': native_version, 'architecture': native_arch},
+                'declared_build': {'version': '0.4.0-alpha.2', 'commit': self.env['COMMIT'], 'build_date': self.env['BUILD_DATE']}}))
             (self.input / (name + '.spdx.json')).write_text(json.dumps({'spdxVersion': 'SPDX-2.3',
                 'dataLicense': 'CC0-1.0', 'comment': f'{scope} Package: {name}; SHA256: {sha}.',
-                'packages': [{'name': name, 'versionInfo': '0.4.0-alpha.1'}],
+                'packages': [{'name': name, 'versionInfo': native_version}],
                 'files': [{'fileName': path, 'checksums': [{'algorithm': 'SHA256', 'checksumValue': 'a' * 64}]} for path in paths]}))
 
     def run_collect(self):
@@ -587,6 +591,7 @@ class ReleaseAssetTests(unittest.TestCase):
         release = self.project / 'dist/release'
         checksums = (release / 'SHA256SUMS').read_text().splitlines()
         self.assertEqual(len(checksums), 21)
+        self.assertEqual(subprocess.run(['sha256sum', '-c', 'SHA256SUMS'], cwd=release, capture_output=True).returncode, 0)
         for line in checksums:
             digest, name = line.split()
             self.assertEqual(digest, hashlib.sha256((release / name).read_bytes()).hexdigest())
@@ -633,7 +638,7 @@ class ReleaseAssetTests(unittest.TestCase):
         package = next(self.input.glob('*.deb'))
         inspection = self.input / (package.name + '.buildinfo.json')
         original = inspection.read_text()
-        for field, value in (('sha256', '0' * 64), ('architecture', 'wrong'), ('declared_build', {})):
+        for field, value in (('sha256', '0' * 64), ('architecture', 'wrong'), ('declared_build', {}), ('package_identity', {}), ('package', 'other.deb')):
             with self.subTest(field=field):
                 content = json.loads(original)
                 content[field] = value

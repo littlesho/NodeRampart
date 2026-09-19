@@ -101,6 +101,7 @@ elif name == "go" and args == ["mod", "verify"]:
 elif name == "dpkg":
     print("amd64")
 elif name == "dpkg-deb":
+    (lab / "deb-output").write_text(pathlib.Path(args[-1]).name)
     (lab / "deb-control").write_text((pathlib.Path(args[-2]) / "DEBIAN/control").read_text())
     assert (pathlib.Path(args[-2]) / "DEBIAN/preinst").is_file()
     helpers = list(pathlib.Path(args[-2]).rglob("usr/libexec/noderampart/manage-remove"))
@@ -179,7 +180,7 @@ class PackagingTests(unittest.TestCase):
         path = self.lab / "commands.jsonl"
         return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
-    def prepare_rpm_source(self, version="0.4.0-alpha.1"):
+    def prepare_rpm_source(self, version="0.4.0-alpha.2"):
         files = ["LICENSE", "README.md", "README.zh-CN.md", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md",
                  "SECURITY.md", "CONTRIBUTING.md", "Makefile", "go.mod", "go.sum", "VERSION",
                  "docs/public-guide.md", "configs/noderampart.json", "packaging/rpm/noderampart.spec",
@@ -491,12 +492,13 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
 
     def test_candidate_debian_mapping_and_native_order(self):
-        self.write(self.project / "VERSION", "0.4.0-alpha.1\n")
+        self.write(self.project / "VERSION", "0.4.0-alpha.2\n")
         result = self.run_script("scripts/build-deb.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Version: 0.4.0~alpha.1\n", (self.lab / "deb-control").read_text())
+        self.assertIn("Version: 0.4.0~alpha.2\n", (self.lab / "deb-control").read_text())
+        self.assertEqual((self.lab / "deb-output").read_text(), "noderampart_0.4.0-alpha.2_amd64.deb")
         if shutil.which("dpkg"):
-            for lower, higher in (("0.4.0~alpha", "0.4.0~alpha.1"), ("0.4.0~alpha.1", "0.4.0")):
+            for lower, higher in (("0.4.0~alpha.1", "0.4.0~alpha.2"), ("0.4.0~alpha.2", "0.4.0")):
                 self.assertEqual(subprocess.run([shutil.which("dpkg"), "--compare-versions", lower, "lt", higher]).returncode, 0)
 
     def test_candidate_rpm_mapping_preserves_full_program_version(self):
@@ -504,20 +506,20 @@ class PackagingTests(unittest.TestCase):
         result = self.run_script("scripts/build-rpm.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
         spec = (self.lab / "rpm-spec").read_text()
-        for expected in ("%global noderampart_version 0.4.0-alpha.1", "Version:        0.4.0",
-                         "Release:        0.alpha.2%{?dist}", "Source0:        %{name}-%{noderampart_version}.tar.gz",
+        for expected in ("%global noderampart_version 0.4.0-alpha.2", "Version:        0.4.0",
+                         "Release:        0.alpha.3%{?dist}", "Source0:        %{name}-%{noderampart_version}.tar.gz",
                          "%autosetup -n NodeRampart-%{noderampart_version}",
                          "internal/version.Version=%{noderampart_version}"):
             self.assertIn(expected, spec)
         names = json.loads((self.lab / "rpm-source-files.json").read_text())
-        self.assertTrue(all(name.split('/')[0] == 'NodeRampart-0.4.0-alpha.1' for name in names))
+        self.assertTrue(all(name.split('/')[0] == 'NodeRampart-0.4.0-alpha.2' for name in names))
 
     @unittest.skipUnless(shutil.which("rpm"), "native RPM tooling is unavailable")
     def test_candidate_native_rpm_order(self):
         for fedora in (43, 44):
             result = subprocess.run([shutil.which("rpm"), "--eval",
-                '%{lua: print(rpm.vercmp("0.4.0-0.alpha.1.fc' + str(fedora) +
-                '", "0.4.0-0.alpha.2.fc' + str(fedora) + '"))}'],
+                '%{lua: print(rpm.vercmp("0.4.0-0.alpha.2.fc' + str(fedora) +
+                '", "0.4.0-0.alpha.3.fc' + str(fedora) + '"))}'],
                 text=True, capture_output=True, check=False)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.strip(), '-1')
@@ -607,10 +609,12 @@ class PackagingTests(unittest.TestCase):
 
     def test_debian_arm64_package_checks_binary_architecture(self):
         self.env.update(ARCH="arm64", MOCK_GOARCH="arm64")
-        self.write(self.project / "VERSION", "0.4.0-alpha.1\n")
+        self.write(self.project / "VERSION", "0.4.0-alpha.2\n")
         result = self.run_script("scripts/build-deb.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Architecture: arm64\n", (self.lab / "deb-control").read_text())
+        self.assertIn("Version: 0.4.0~alpha.2\n", (self.lab / "deb-control").read_text())
+        self.assertEqual((self.lab / "deb-output").read_text(), "noderampart_0.4.0-alpha.2_arm64.deb")
         self.env["MOCK_GOARCH"] = "amd64"
         result = self.run_script("scripts/build-deb.sh")
         self.assertNotEqual(result.returncode, 0)

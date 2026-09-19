@@ -2,6 +2,19 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.2 - Unreleased
+
+- Separate public asset filenames from Debian's internal version: download
+  `noderampart_0.4.0-alpha.2_ARCH.deb`, while dpkg checks `0.4.0~alpha.2`.
+  SBOM, buildinfo, checksums and attestations use the final public filename.
+- Verify the exact uploaded asset names and states before considering the
+  Release workflow successful. The alpha.1 draft remains unpublished: GitHub
+  changed its tilde-containing filenames, breaking the download/checksum chain.
+- Retain the UID/GID fix, bilingual documentation and verified source timestamp
+  propagation. RPM Version/Release is `0.4.0` / `0.alpha.3%{?dist}`; program
+  version is `0.4.0-alpha.2`. No new installation or ARM64 runtime acceptance
+  is claimed. Both earlier tags remain immutable.
+
 ## 0.4.0-alpha.1 - Unreleased
 
 - Carry forward the 0.4.0 feature set, PR #5 UID/GID validation fix, and bilingual
