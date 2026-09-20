@@ -1,4 +1,4 @@
-# `v0.4.0-alpha.4` candidate limitations
+# `v0.4.0-alpha.4` limitations
 
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
@@ -28,9 +28,12 @@ validation. See [release verification](RELEASE_VERIFICATION.md).
 alpha.3 已完成匿名下载校验及隔离 Debian VM 内实际 x86_64 包内 CLI 检查。
 源码伪终端、中文输入/长度边界回归不等于安装生命周期、ARM64 实机或用户客户端验收。
 
-## GeoIP alpha.4 candidate
+## GeoIP alpha.4 validation
 
-alpha.4 is not yet published; alpha.3 remains the current installation download.
+alpha.4 was published at `2026-09-20T13:02:35Z`. All 22 assets passed anonymous
+download and checksum checks against the verified draft; existing package and
+attestation evidence applies to identical bytes. The alpha.4 packaged programs
+have not been executed; installation lifecycle and ARM64 runtime remain untested.
 PR #14's matching candidate passed complete offline validation of the same real
 City and ASN archives. City took 22.779 s (17.929 s in `reader.Verify`) with an
 observed diagnostic-process peak RSS of 408,584,192 bytes; ASN took 1.915 s.
@@ -52,7 +55,8 @@ update group; failed validation does not partially activate one database.
 Actual credentialed download, activation and daily updates are still unverified.
 Upstream HTTP 451 legal/compliance refusals are not fixed or bypassed.
 
-alpha.4 候选尚未公开，默认安装入口仍为 alpha.3。匹配候选对两份现场
+alpha.4 已于 `2026-09-20T13:02:35Z` 公开，22 个资产匿名下载字节与已验收草稿
+一致，复用其包内容和证明结果；本版本包内程序尚未运行。匹配候选对两份现场
 City/ASN 归档的完整离线校验通过，不等于新包或用户正式下载、激活和每日更新通过。
 预检查 6400 万次、逻辑展开 1.28 亿次、累计分配收费 8 GiB、数据缓存 5 MiB
 分别受限；后两者均不是整个进程的 RSS 上限。同步 Verify 取消需等待调用返回；

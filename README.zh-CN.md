@@ -8,9 +8,9 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.3：UTF-8 修复版预发布安装包现已提供。** 可从[公开 Release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.3) 或以下固定版本命令下载。匿名下载及校验和已经验证；本版本尚未执行安装生命周期及 ARM64 实机验收。用于生产前，请先在隔离环境中验证。Alpha 版本应与现有安全措施配合使用。
+> **v0.4.0-alpha.4：GeoIP 校验修复版预发布安装包现已提供。** 可从[公开 Release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.4) 或以下固定版本命令下载。匿名下载及校验和已经验证；本版本尚未执行安装生命周期及 ARM64 实机验收。用于生产前，请先在隔离环境中验证。Alpha 版本应与现有安全措施配合使用。
 
-> **下一候选：v0.4.0-alpha.4（尚未公开）。** 包含 PR #14 的 GeoIP 共享 MMDB 校验修复及安全的资源预算错误提示。匹配候选已完成 City/ASN 全部离线校验；用户正式下载、激活及每日更新尚未验证。下方命令仍安装已发布的 alpha.3。详见[候选范围与资源限制](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-candidate)。
+> **GeoIP 修复范围：** alpha.4 修复共享 MMDB 数据重复解析造成的预算误拒绝，并提供安全的 MMDB 校验/资源预算错误提示。匹配候选对 City/ASN 的完整离线校验通过；用户正式下载、激活和每日更新尚未验证，本版本包内程序尚未运行。详见[验证范围与资源限制](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)及[升级与 GeoIP 验收](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance)。
 
 ## 能帮你做什么？
 
@@ -32,7 +32,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载这一行命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。
 
 ~~~bash
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.3/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.3
+curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.4/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.4
 ~~~
 
 也可以先下载到独立目录，查看脚本后再决定是否执行：
@@ -40,11 +40,11 @@ curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/r
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.3/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.4/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # 查看并接受脚本行为后，再单独执行：
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.3
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.4
 ~~~
 
 安装包与证明的人工核验步骤见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。HTTPS 下载、同一 Release 的 SHA256 和 GitHub attestation 是不同检查；bootstrap 会检查包校验和与包身份，**不会自动执行 attestation 验证**。

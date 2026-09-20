@@ -1,8 +1,8 @@
 # Verify a NodeRampart release
 
-[v0.4.0-alpha.3](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.3)
+[v0.4.0-alpha.4](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.4)
 is published as a prerelease, with 22 assets and their GitHub attestations.
-The release source commit is `fc5630f398b622a98fd7f062efe8c1505ec3424e`.
+The release source commit is `cd61b30a622e0d2c65b398db8c24d2dcea7519f0`.
 All assets were downloaded anonymously under their original public names and
 matched the verified draft bytes; `sha256sum -c SHA256SUMS` passed directly.
 The existing package-content and attestation checks therefore apply to those
@@ -48,18 +48,18 @@ independent evidence of the expected source.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.3 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.4 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.3_amd64.deb
+PACKAGE=noderampart_0.4.0-alpha.4_amd64.deb
 EXPECTED_COMMIT='REPLACE_WITH_REVIEWED_FULL_COMMIT_SHA'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.3 \
+  --source-ref refs/tags/v0.4.0-alpha.4 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -68,7 +68,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.3 \
+  --source-ref refs/tags/v0.4.0-alpha.4 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document \
   --deny-self-hosted-runners
@@ -77,7 +77,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.3 \
+  --source-ref refs/tags/v0.4.0-alpha.4 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -102,13 +102,13 @@ reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 
 The exact expected asset set is 22 files:
 
-- `noderampart_0.4.0-alpha.3_amd64.deb` and `noderampart_0.4.0-alpha.3_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.4.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.4.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.4.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.4.fc44.aarch64.rpm`.
+- `noderampart_0.4.0-alpha.4_amd64.deb` and `noderampart_0.4.0-alpha.4_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.5.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.5.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.5.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.5.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.4.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.5.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
 
 Check names and identities, not only the count. GitHub's generated source ZIP/TAR
@@ -146,7 +146,7 @@ python3 scripts/release_sbom.py --fetch-syft "$TOOLS_DIR/syft"
 COMMIT=$(git rev-parse HEAD)
 BUILD_DATE=$(git show -s --format=%cI HEAD)
 export COMMIT BUILD_DATE
-python3 scripts/release_sbom.py dist/noderampart_0.4.0-alpha.3_amd64.deb \
+python3 scripts/release_sbom.py dist/noderampart_0.4.0-alpha.4_amd64.deb \
   --syft "$TOOLS_DIR/syft/syft" --output dist/sbom
 ```
 
@@ -279,13 +279,15 @@ unverified.
 ARM64 实机及用户具体 SSH 客户端/字体尚未验证。
 
 
-## alpha.4 candidate verification
+## alpha.4 publication verification
 
-The current source tooling targets the unpublished `v0.4.0-alpha.4` candidate.
-Public installation commands above intentionally remain on published alpha.3;
-use its tag when applying those version-specific source-tool examples.
-For alpha.4, authenticate to the same draft, retain original remote names and
-verify exactly 22 assets: two `noderampart_0.4.0-alpha.4_{amd64,arm64}.deb`, four
+Release `392429426` was published at `2026-09-20T13:02:35Z` from tag
+`v0.4.0-alpha.4`, source `cd61b30a622e0d2c65b398db8c24d2dcea7519f0`,
+and Release run `35511091913`, attempt 1. Its 22 public assets were downloaded
+anonymously under their original names and matched all accepted draft bytes.
+`sha256sum -c SHA256SUMS` passed without renaming. Existing package-content,
+source-RPM and 28 attestation results therefore apply to those same bytes.
+The exact asset set contains two `noderampart_0.4.0-alpha.4_{amd64,arm64}.deb`, four
 `noderampart-0.4.0-0.alpha.5.fc{43,44}.{x86_64,aarch64}.rpm`, six SBOM/buildinfo
 pairs, `noderampart-0.4.0-0.alpha.5.fc44.src.rpm`, `bootstrap.sh`, `release.json`
 and `SHA256SUMS`. Debian's internal Version is `0.4.0~alpha.4`; the embedded
@@ -300,6 +302,7 @@ is not a substitute for inspecting new release artifacts. Reusing algorithm
 and real-sample evidence does not establish new-package download, activation,
 scheduling, installation lifecycle or ARM64 runtime acceptance.
 
-alpha.4 尚未公开。草稿需认证下载，按远端原名验证 22 个资产及 28 项证明；
-匿名下载留待另行授权公开后执行。已有候选 City/ASN 离线通过仅作为算法证据，
-不能替代本次新包及其源提交、源码清单和证明核验。
+alpha.4 已公开，22 项资产已按远端原名匿名下载并直接通过校验和，字节与验收草稿
+一致，复用对应包内容、源码及 28 项证明。已有候选 City/ASN 离线通过仅作为算法
+证据；本版本包内程序未运行，用户真实下载、激活、每日更新、安装生命周期及
+ARM64 实机仍未验收。
