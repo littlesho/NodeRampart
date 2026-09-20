@@ -8,10 +8,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.2：首次预发布安装包现已提供。** 可从[公开 Release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.2) 或以下固定版本命令下载。匿名下载及校验和已经验证；本版本尚未执行安装生命周期及 ARM64 实机验收。用于生产前，请先在隔离环境中验证。Alpha 版本应与现有安全措施配合使用。
-
-> **下一候选版：v0.4.0-alpha.3** 将包含 PR #11 的 UTF-8 终端修复，目前尚未公开。以下可用下载仍为 alpha.2，其单次命令 UTF-8 临时绕过方法继续有效。
-
+> **v0.4.0-alpha.3：UTF-8 修复版预发布安装包现已提供。** 可从[公开 Release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.3) 或以下固定版本命令下载。匿名下载及校验和已经验证；本版本尚未执行安装生命周期及 ARM64 实机验收。用于生产前，请先在隔离环境中验证。Alpha 版本应与现有安全措施配合使用。
 
 ## 能帮你做什么？
 
@@ -33,7 +30,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载这一行命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。
 
 ~~~bash
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.2/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.2
+curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.3/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.3
 ~~~
 
 也可以先下载到独立目录，查看脚本后再决定是否执行：
@@ -41,11 +38,11 @@ curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/r
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.2/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.3/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # 查看并接受脚本行为后，再单独执行：
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.2
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.3
 ~~~
 
 安装包与证明的人工核验步骤见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。HTTPS 下载、同一 Release 的 SHA256 和 GitHub attestation 是不同检查；bootstrap 会检查包校验和与包身份，**不会自动执行 attestation 验证**。
@@ -165,14 +162,17 @@ sudo /usr/libexec/noderampart/manage-remove --purge
 
 ## 遇到问题怎么排查？
 
-**中文显示为问号：** `--language zh` 选择界面语言，不决定终端编码。
+**中文显示为问号：** alpha.3 已修复安装器/菜单的 locale 处理和 UTF-8 输出边界截断。
+下面是未改变的 **alpha.2** 包的临时办法，alpha.3 的 C/POSIX 环境无需此绕过。
+
+`--language zh` 选择界面语言，不决定终端编码。
 已发布 alpha.2 的安装器可能把 `LC_ALL=C` 传给 setup。使用 UTF-8 SSH 客户端时，
 先检查 `LC_ALL=C.UTF-8 locale charmap`，再运行
 `sudo env LC_ALL=C.UTF-8 noderampart setup --language zh`；主菜单可把 `setup` 换成 `tui`。
 若该 locale 不可用，从 `locale -a` 中选择可用的 UTF-8 名称，无需中文语言包。
 sudo 可能重置 locale，应对本次命令指定，不使用 `sudo -E` 或修改系统默认值。
 [终端编码排障](docs/V0.4_OPERATIONS.md#terminal-encoding--终端编码)说明了客户端/字体检查，
-以及源码修复与尚未改变的 alpha.2 安装包的区别。
+以及 alpha.3 已包含的修复。
 
 ~~~bash
 sudo noderampart doctor

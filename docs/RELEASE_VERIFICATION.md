@@ -1,8 +1,8 @@
 # Verify a NodeRampart release
 
-[v0.4.0-alpha.2](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.2)
+[v0.4.0-alpha.3](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.3)
 is published as a prerelease, with 22 assets and their GitHub attestations.
-The release source commit is `bddd84f05fe79dd67dea09dcd8c384afa9fc6b7d`.
+The release source commit is `fc5630f398b622a98fd7f062efe8c1505ec3424e`.
 All assets were downloaded anonymously under their original public names and
 matched the verified draft bytes; `sha256sum -c SHA256SUMS` passed directly.
 The existing package-content and attestation checks therefore apply to those
@@ -48,18 +48,18 @@ independent evidence of the expected source.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.2 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.3 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.2_amd64.deb
+PACKAGE=noderampart_0.4.0-alpha.3_amd64.deb
 EXPECTED_COMMIT='REPLACE_WITH_REVIEWED_FULL_COMMIT_SHA'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.2 \
+  --source-ref refs/tags/v0.4.0-alpha.3 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -68,7 +68,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.2 \
+  --source-ref refs/tags/v0.4.0-alpha.3 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document \
   --deny-self-hosted-runners
@@ -77,7 +77,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.2 \
+  --source-ref refs/tags/v0.4.0-alpha.3 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -102,13 +102,13 @@ reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 
 The exact expected asset set is 22 files:
 
-- `noderampart_0.4.0-alpha.2_amd64.deb` and `noderampart_0.4.0-alpha.2_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.3.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.3.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.3.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.3.fc44.aarch64.rpm`.
+- `noderampart_0.4.0-alpha.3_amd64.deb` and `noderampart_0.4.0-alpha.3_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.4.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.4.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.4.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.4.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.3.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.4.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
 
 Check names and identities, not only the count. GitHub's generated source ZIP/TAR
@@ -146,7 +146,7 @@ python3 scripts/release_sbom.py --fetch-syft "$TOOLS_DIR/syft"
 COMMIT=$(git rev-parse HEAD)
 BUILD_DATE=$(git show -s --format=%cI HEAD)
 export COMMIT BUILD_DATE
-python3 scripts/release_sbom.py dist/noderampart_0.4.0-alpha.2_amd64.deb \
+python3 scripts/release_sbom.py dist/noderampart_0.4.0-alpha.3_amd64.deb \
   --syft "$TOOLS_DIR/syft/syft" --output dist/sbom
 ```
 
@@ -213,7 +213,7 @@ The `v0.4.0-alpha.2` prerelease replaces two unpublished candidates. The immutab
 `v0.4.0-alpha` build failed; the `v0.4.0-alpha.1` draft has a filename/checksum
 mismatch because the upload changed tilde-containing names. Neither is a
 published installation release. Do not repair alpha.1 by renaming downloads.
-The project version is `0.4.0-alpha.2`, Debian version `0.4.0~alpha.2`, and
+For that historical alpha.2 release, the project version is `0.4.0-alpha.2`, Debian version `0.4.0~alpha.2`, and
 RPM Version/Release `0.4.0` / `0.alpha.3%{?dist}`. Program version strings keep
 `0.4.0-alpha.2`. The validation job checks checkout HEAD against the expected
 source commit (peeling a tag object if necessary), then sends that full SHA and
@@ -240,11 +240,13 @@ fixed-version links; public download and installation checks remain separate.
 
 ## alpha.3 draft verification
 
-The next candidate `v0.4.0-alpha.3` includes PR #11's terminal UTF-8 fix.
-It is not yet public. The public download examples above deliberately remain
-alpha.2; its verification results are not evidence for the new candidate.
-For authenticated review of the alpha.3 draft, use its actual Release ID and
-original asset names. The exact set remains 22 assets: DEBs
+`v0.4.0-alpha.3` includes PR #11's terminal UTF-8 fix and was published on
+2026-09-20 at 05:39:54 UTC. Release ID `392320863`, source commit
+`fc5630f398b622a98fd7f062efe8c1505ec3424e`, and Release run `35490792825`
+(attempt 1) were verified before publication. The prior draft checks used
+authenticated downloads; subsequent anonymous downloads matched all 22 verified
+asset byte streams without renaming. Its 22 provenance and six SBOM attestation
+checks remain valid for those identical bytes. The exact set remains 22 assets: DEBs
 `noderampart_0.4.0-alpha.3_{amd64,arm64}.deb`, Fedora 43/44 RPMs
 `noderampart-0.4.0-0.alpha.4.fc{43,44}.{x86_64,aarch64}.rpm`, their six
 SBOM/buildinfo pairs, `noderampart-0.4.0-0.alpha.4.fc44.src.rpm`, and
@@ -258,7 +260,20 @@ that tag's independently verified source SHA for the attestation commands.
 The current collector/SBOM tooling targets alpha.3; inspect an older release
 with the tools from its matching tag. Do not rename assets or reuse old proofs.
 
-alpha.3 草稿需通过认证下载，并按新 tag、完整提交、构建运行及原始文件名
-重新核验全部 22 个资产和证明。草稿公开前匿名下载不可用属预期状态。
+alpha.3 已公开：此前通过认证验收草稿的全部 22 个资产和 28 项证明；
+公开后再次按原名匿名下载，全部字节与已验收内容一致，SHA256SUMS 直接通过。
 源码伪终端测试、包内二进制交互检查、真实安装生命周期和用户 SSH 客户端/
 字体实测是不同的验收项目；未执行的项目不能写成通过。
+
+Actual x86_64 CLIs extracted from the Debian package and Fedora 43/44 RPMs
+passed 12 bounded C/POSIX × setup/tui cases with Chinese → English → Chinese
+output in an isolated Debian 13 VM. These were package-binary checks, not
+Fedora OS or package installation lifecycle tests. The 13 source PTY scenarios
+use a test subprocess; Chinese input and output-length boundaries are covered
+by source regressions. ARM64 hardware and the user's SSH client/font remain
+unverified.
+
+在隔离 Debian 13 VM 中，从 DEB 和 Fedora 43/44 RPM 提取的实际 x86_64 CLI
+通过 12 项 C/POSIX、setup/tui 与中英切换检查；这不是 Fedora 系统或安装生命周期
+验收。13 项源码伪终端场景使用测试子进程；中文输入和长度边界依据源码回归。
+ARM64 实机及用户具体 SSH 客户端/字体尚未验证。
