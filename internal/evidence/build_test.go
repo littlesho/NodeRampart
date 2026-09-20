@@ -5,7 +5,9 @@ package evidence
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -27,24 +29,152 @@ func TestProjectionExcludesFreeTextAndRekeysEveryIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, _ := json.Marshal(b)
-	for _, secret := range []string{"private_", "198.51.100.0/24", "991"} {
-		if strings.Contains(string(data), secret) {
-			t.Fatalf("excluded fixture string appeared: %q", secret)
-		}
+	data, err := json.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if b.Events[0].Alias != b.RelatedSSH[0].Alias || b.Events[0].SourceAlias != b.RelatedSSH[0].SourceAlias || b.Events[0].IncidentAlias != b.Incident.Alias {
+	if err := checkFixturePrivacy(data); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(b.Events[0], b.RelatedSSH[0]) || b.Events[0].IncidentAlias != b.Incident.Alias {
 		t.Fatal("within-bundle references were not preserved")
 	}
 	if b.Events[0].Count != 7 || b.Events[0].Delivery.Attempts != 2 || b.Monitors[0].State != "incident_active" || b.Coverage.Components[0].Name != "unknown" || b.Coverage.Gaps[0].Reason != "unknown" {
 		t.Fatal("allowlisted evidence was lost or unknown text retained")
 	}
 	next, err := Build(raw)
-	if err != nil || next.Events[0].Alias == b.Events[0].Alias || next.Events[0].SourceAlias == b.Events[0].SourceAlias {
-		t.Fatal("independent snapshots reused pseudonyms", err)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if raw.Timeline.Events[0].ID != "private_event_id" {
+	for name, pair := range map[string][2]string{
+		"event":        {b.Events[0].Alias, next.Events[0].Alias},
+		"incident":     {b.Incident.Alias, next.Incident.Alias},
+		"source":       {b.Events[0].SourceAlias, next.Events[0].SourceAlias},
+		"notification": {b.Events[0].Delivery.NotificationAlias, next.Events[0].Delivery.NotificationAlias},
+		"silence":      {b.Events[0].Delivery.SilenceAlias, next.Events[0].Delivery.SilenceAlias},
+		"monitor":      {b.Monitors[0].IncidentAlias, next.Monitors[0].IncidentAlias},
+	} {
+		if pair[0] == "" || pair[0] == pair[1] {
+			t.Errorf("independent snapshots reused %s pseudonym", name)
+		}
+	}
+	if !reflect.DeepEqual(raw, rawFixture()) {
 		t.Fatal("projection mutated raw input")
+	}
+}
+
+// checkFixturePrivacy checks the wire representation, not a DTO that would
+// silently discard extra JSON fields. Numeric substrings are not identities:
+// counts, timestamps and random hexadecimal aliases may legitimately contain 991.
+func checkFixturePrivacy(data []byte) error {
+	for _, secret := range []string{"private_", "198.51.100.0/24"} {
+		if strings.Contains(string(data), secret) {
+			return fmt.Errorf("excluded fixture string appeared: %q", secret)
+		}
+	}
+	var document map[string]any
+	if err := json.Unmarshal(data, &document); err != nil {
+		return err
+	}
+	// Independently enumerate this fixture's entire retention projection,
+	// including the exact entry fields and values. Never derive this expectation
+	// by marshaling Retention or RetentionEntry: that could mask an added ID field.
+	want := map[string]any{
+		"tracking_started_utc": "2026-09-12T12:00:00Z",
+		"entries": []any{map[string]any{
+			"action_day_utc":     "2026-09-12T00:00:00Z",
+			"dataset":            "events",
+			"reason":             "time_expiry",
+			"operations":         float64(1),
+			"affected_rows":      float64(2),
+			"aggregate_survives": "unknown",
+		}},
+		"lifetime_totals":   []any{},
+		"retained_datasets": []any{},
+		"entries_truncated": false,
+		"evicted_entries":   float64(0),
+		"detail_limit":      float64(0),
+		"qualification":     retentionNotice,
+	}
+	if !reflect.DeepEqual(document["retention"], want) {
+		return fmt.Errorf("retention projection differs from fixture allowlist: %v", document["retention"])
+	}
+	return nil
+}
+
+func TestFixturePrivacyAssertion(t *testing.T) {
+	b, err := Build(rawFixture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(map[string]any)
+		reject bool
+	}{
+		{"legitimate_alias_contains_991", func(doc map[string]any) {
+			alias := "event_991" + strings.Repeat("0", 29)
+			doc["events"].([]any)[0].(map[string]any)["alias"] = alias
+			doc["related_ssh"].([]any)[0].(map[string]any)["alias"] = alias
+		}, false},
+		{"legitimate_count_contains_991", func(doc map[string]any) {
+			doc["events"].([]any)[0].(map[string]any)["count"] = float64(991)
+			doc["related_ssh"].([]any)[0].(map[string]any)["count"] = float64(991)
+		}, false},
+		{"legitimate_time_contains_991", func(doc map[string]any) {
+			doc["snapshot_at_utc"] = "2026-09-12T12:00:00.991Z"
+		}, false},
+		{"raw_entry_id", func(doc map[string]any) {
+			doc["retention"].(map[string]any)["entries"].([]any)[0].(map[string]any)["id"] = float64(991)
+		}, true},
+		{"raw_retention_id", func(doc map[string]any) {
+			doc["retention"].(map[string]any)["id"] = float64(991)
+		}, true},
+		{"extra_entry_field", func(doc map[string]any) {
+			doc["retention"].(map[string]any)["entries"].([]any)[0].(map[string]any)["extra"] = "unexpected"
+		}, true},
+		{"changed_entry_value", func(doc map[string]any) {
+			doc["retention"].(map[string]any)["entries"].([]any)[0].(map[string]any)["reason"] = "unexpected"
+		}, true},
+		{"private_text", func(doc map[string]any) {
+			doc["note"] = "private_summary_token"
+		}, true},
+		{"raw_address", func(doc map[string]any) {
+			doc["source_range"] = "198.51.100.0/24"
+		}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var doc map[string]any
+			if err := json.Unmarshal(data, &doc); err != nil {
+				t.Fatal(err)
+			}
+			tc.mutate(doc)
+			modified, err := json.Marshal(doc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := checkFixturePrivacy(modified); (err != nil) != tc.reject {
+				t.Fatalf("privacy assertion error = %v, want rejection = %v", err, tc.reject)
+			}
+			if !tc.reject {
+				// The positive examples must also be valid public bundles. This DTO
+				// check supplements, rather than replaces, the raw JSON assertion.
+				var allowed Bundle
+				if err := json.Unmarshal(modified, &allowed); err != nil {
+					t.Fatal(err)
+				}
+				if err := allowed.Validate(); err != nil {
+					t.Fatal(err)
+				}
+				if !strings.Contains(string(modified), "991") {
+					t.Fatal("positive example did not exercise the old substring rejection")
+				}
+			}
+		})
 	}
 }
 
@@ -59,7 +189,10 @@ func TestUnknownCategoriesAndMonitorStateDoNotLeak(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, _ := json.Marshal(b)
+	data, err := json.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if strings.Contains(string(data), "private_") || b.Monitors[0].State != "unknown" || b.Events[0].Kind != "unknown" {
 		t.Fatal("unknown categories or state escaped projection")
 	}
@@ -132,7 +265,10 @@ func TestStoredSensitiveEventDoesNotEnterSharingDTO(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, _ := json.Marshal(b)
+	data, err := json.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if strings.Contains(string(data), "synthetic_") || strings.Contains(string(data), "2001:db8") || len(b.Events) != 1 {
 		t.Fatal("stored private event fields reached sharing DTO")
 	}
