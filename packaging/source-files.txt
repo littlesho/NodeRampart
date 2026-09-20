@@ -96,6 +96,7 @@ internal/console/fields.go
 internal/console/prices.go
 internal/console/results.go
 internal/console/retention.go
+internal/console/terminal_linux_test.go
 internal/daemon/app.go
 internal/daemon/app_test.go
 internal/daemon/control_features.go

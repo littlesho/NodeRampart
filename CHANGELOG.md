@@ -2,6 +2,13 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## Unreleased
+
+- Keep interactive setup/tui in UTF-8 when the effective locale is C/POSIX,
+  without changing installer machine parsing or management subprocess policy.
+  Preserve Chinese output/input and document the per-command workaround for
+  unchanged alpha.2 packages.
+
 ## 0.4.0-alpha.2 - 2026-09-20 (UTC)
 
 - First public installation-package prerelease, published at

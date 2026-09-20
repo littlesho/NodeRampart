@@ -173,6 +173,17 @@ It uses apt/dnf without removing system dependencies. RPM may save edited config
 
 ## Troubleshooting
 
+**Chinese appears as question marks:** `--language zh` selects the UI language,
+not the terminal encoding. The published alpha.2 installer can pass `LC_ALL=C`
+to setup. For a UTF-8 SSH client, check `LC_ALL=C.UTF-8 locale charmap`, then run
+`sudo env LC_ALL=C.UTF-8 noderampart setup --language zh` (or replace `setup` with
+`tui`). If that locale is unavailable, select a UTF-8 name from `locale -a`.
+No Chinese language pack is required. sudo may reset locale variables; set the
+locale for this command instead of using `sudo -E` or changing system defaults.
+See [terminal encoding troubleshooting](docs/V0.4_OPERATIONS.md#terminal-encoding--终端编码)
+for client/font checks and the distinction between the source fix and unchanged
+alpha.2 packages.
+
 ~~~bash
 sudo noderampart doctor
 sudo noderampart status
