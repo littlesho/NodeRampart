@@ -10,6 +10,9 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 > **v0.4.0-alpha.2 — first installation-package prerelease, now available.** Download the [published packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.2) using the fixed-version commands below. Anonymous downloads and checksums have been verified; this version has not undergone installation lifecycle or ARM64 hardware acceptance testing. Validate it in an isolated environment before production use. Alpha software belongs alongside your existing security controls.
 
+> **Next candidate: v0.4.0-alpha.3** packages the UTF-8 terminal fix from PR #11. It is not yet published; the available downloads below remain alpha.2, including its per-command UTF-8 workaround.
+
+
 ## What can it do?
 
 | You want to know… | NodeRampart shows… |

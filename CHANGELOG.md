@@ -2,12 +2,19 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-## Unreleased
+## 0.4.0-alpha.3 - Unreleased
 
 - Keep interactive setup/tui in UTF-8 when the effective locale is C/POSIX,
   without changing installer machine parsing or management subprocess policy.
   Preserve Chinese output/input and document the per-command workaround for
   unchanged alpha.2 packages.
+- Initialize manual setup/tui encoding before interactive work, diagnose explicit
+  non-UTF-8 charsets, and avoid splitting Chinese runes at the output byte limit.
+
+- Candidate package mapping: project `0.4.0-alpha.3`, Debian internal
+  `0.4.0~alpha.3` with public filenames using `0.4.0-alpha.3`, RPM
+  `0.4.0-0.alpha.4%{?dist}`. The alpha.3 draft is not yet published.
+  The existing alpha.2 packages and their temporary UTF-8 workaround remain unchanged.
 
 ## 0.4.0-alpha.2 - 2026-09-20 (UTC)
 

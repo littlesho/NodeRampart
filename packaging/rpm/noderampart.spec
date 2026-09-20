@@ -5,9 +5,9 @@
 Name:           noderampart
 %{!?noderampart_commit:%global noderampart_commit unknown}
 %{!?noderampart_build_date:%global noderampart_build_date unknown}
-%{!?noderampart_version:%global noderampart_version 0.4.0-alpha.2}
+%{!?noderampart_version:%global noderampart_version 0.4.0-alpha.3}
 Version:        0.4.0
-Release:        0.alpha.3%{?dist}
+Release:        0.alpha.4%{?dist}
 Summary:        Security monitoring and traffic reporting agent for Linux VPS hosts
 License:        MIT AND BSD-3-Clause AND ISC AND Apache-2.0
 URL:            https://github.com/littlesho/NodeRampart

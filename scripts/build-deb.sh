@@ -12,7 +12,7 @@ PROJECT_VERSION=$(tr -d '\n' < "$PROJECT_DIR/VERSION")
 ARCH=${ARCH:-$(dpkg --print-architecture)}
 case "$PROJECT_VERSION" in ""|.*|*.|*[!0-9A-Za-z._-]*) echo "invalid package version" >&2; exit 1;; esac
 VERSION=$PROJECT_VERSION
-case "$VERSION" in *-alpha.2) VERSION=${VERSION%-alpha.2}~alpha.2;; *-alpha.1) VERSION=${VERSION%-alpha.1}~alpha.1;; *-alpha) VERSION=${VERSION%-alpha}~alpha;; esac
+case "$VERSION" in *-alpha.3) VERSION=${VERSION%-alpha.3}~alpha.3;; *-alpha.2) VERSION=${VERSION%-alpha.2}~alpha.2;; *-alpha.1) VERSION=${VERSION%-alpha.1}~alpha.1;; *-alpha) VERSION=${VERSION%-alpha}~alpha;; esac
 case "$ARCH" in amd64|arm64) ;; *) echo "unsupported architecture: $ARCH" >&2; exit 1;; esac
 GO_ARCH=$ARCH
 
