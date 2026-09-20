@@ -257,7 +257,7 @@ Require the new tag's full commit, commit-derived BUILD_DATE, actual Release run
 and original downloaded names throughout checksums, package identity, payload,
 SBOM/buildinfo and both attestation types. Use `refs/tags/v0.4.0-alpha.3` and
 that tag's independently verified source SHA for the attestation commands.
-The current collector/SBOM tooling targets alpha.3; inspect an older release
+The collector/SBOM tooling on the alpha.3 tag targets alpha.3; inspect that release
 with the tools from its matching tag. Do not rename assets or reuse old proofs.
 
 alpha.3 已公开：此前通过认证验收草稿的全部 22 个资产和 28 项证明；
@@ -277,3 +277,29 @@ unverified.
 通过 12 项 C/POSIX、setup/tui 与中英切换检查；这不是 Fedora 系统或安装生命周期
 验收。13 项源码伪终端场景使用测试子进程；中文输入和长度边界依据源码回归。
 ARM64 实机及用户具体 SSH 客户端/字体尚未验证。
+
+
+## alpha.4 candidate verification
+
+The current source tooling targets the unpublished `v0.4.0-alpha.4` candidate.
+Public installation commands above intentionally remain on published alpha.3;
+use its tag when applying those version-specific source-tool examples.
+For alpha.4, authenticate to the same draft, retain original remote names and
+verify exactly 22 assets: two `noderampart_0.4.0-alpha.4_{amd64,arm64}.deb`, four
+`noderampart-0.4.0-0.alpha.5.fc{43,44}.{x86_64,aarch64}.rpm`, six SBOM/buildinfo
+pairs, `noderampart-0.4.0-0.alpha.5.fc44.src.rpm`, `bootstrap.sh`, `release.json`
+and `SHA256SUMS`. Debian's internal Version is `0.4.0~alpha.4`; the embedded
+program version is `0.4.0-alpha.4`.
+
+Bind all 22 provenance and six SBOM attestations to `refs/tags/v0.4.0-alpha.4`,
+its complete source commit and the actual Release workflow run. Verify package
+contents and source-RPM manifest bytes against that commit, including PR #14's
+GeoIP implementation and tests; no temporary diagnostic entry, database or
+private report belongs in either package. A successful candidate `.test` binary
+is not a substitute for inspecting new release artifacts. Reusing algorithm
+and real-sample evidence does not establish new-package download, activation,
+scheduling, installation lifecycle or ARM64 runtime acceptance.
+
+alpha.4 尚未公开。草稿需认证下载，按远端原名验证 22 个资产及 28 项证明；
+匿名下载留待另行授权公开后执行。已有候选 City/ASN 离线通过仅作为算法证据，
+不能替代本次新包及其源提交、源码清单和证明核验。

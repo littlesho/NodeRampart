@@ -10,6 +10,8 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 > **v0.4.0-alpha.3：UTF-8 修复版预发布安装包现已提供。** 可从[公开 Release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.3) 或以下固定版本命令下载。匿名下载及校验和已经验证；本版本尚未执行安装生命周期及 ARM64 实机验收。用于生产前，请先在隔离环境中验证。Alpha 版本应与现有安全措施配合使用。
 
+> **下一候选：v0.4.0-alpha.4（尚未公开）。** 包含 PR #14 的 GeoIP 共享 MMDB 校验修复及安全的资源预算错误提示。匹配候选已完成 City/ASN 全部离线校验；用户正式下载、激活及每日更新尚未验证。下方命令仍安装已发布的 alpha.3。详见[候选范围与资源限制](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-candidate)。
+
 ## 能帮你做什么？
 
 | 你关心的问题 | 可以查看的内容 |

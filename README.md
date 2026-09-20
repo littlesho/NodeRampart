@@ -10,6 +10,8 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 > **v0.4.0-alpha.3 — UTF-8 fix prerelease, now available.** Download the [published packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.3) using the fixed-version commands below. Anonymous downloads and checksums have been verified; this version has not undergone installation lifecycle or ARM64 hardware acceptance testing. Validate it in an isolated environment before production use. Alpha software belongs alongside your existing security controls.
 
+> **Next candidate: v0.4.0-alpha.4 (not yet published).** It includes the GeoIP shared-MMDB validation fix from PR #14 and safe resource-budget errors. The matching candidate passed complete offline City/ASN validation; user download, activation and daily updates remain unverified. The commands below continue to install the published alpha.3. See [candidate scope and resource limits](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-candidate).
+
 ## What can it do?
 
 | You want to know… | NodeRampart shows… |

@@ -71,7 +71,7 @@ jobs:
           BUILD_DATE: ${{ needs.validate.outputs.build_date }}
         run: |
           ./scripts/build-release.sh --deb "$RELEASE_ARCH"
-          PACKAGE="dist/noderampart_0.4.0-alpha.3_${RELEASE_ARCH}.deb"
+          PACKAGE="dist/noderampart_0.4.0-alpha.4_${RELEASE_ARCH}.deb"
           test "$(dpkg-deb -f "$PACKAGE" Architecture)" = "$RELEASE_ARCH"
           CHECK_DIR=$(mktemp -d)
           trap 'rm -rf -- "$CHECK_DIR"' EXIT
@@ -114,7 +114,7 @@ jobs:
           go mod verify
           ./scripts/build-release.sh --rpm "$RELEASE_ARCH"
           case "$RELEASE_ARCH" in amd64) RPM_ARCH=x86_64;; arm64) RPM_ARCH=aarch64;; esac
-          PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.4.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"
+          PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.5.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"
           test "$(rpm -qp --qf '%{ARCH}' "$PACKAGE")" = "$RPM_ARCH"
           CHECK_DIR=$(mktemp -d)
           trap 'rm -rf -- "$CHECK_DIR"' EXIT
@@ -127,7 +127,7 @@ jobs:
           mkdir -p dist/publish
           cp "$PACKAGE" dist/publish/
           if [ "$RELEASE_FEDORA:$RELEASE_ARCH" = 44:amd64 ]; then
-            cp dist/rpm/noderampart-0.4.0-0.alpha.4.fc44.src.rpm dist/publish/
+            cp dist/rpm/noderampart-0.4.0-0.alpha.5.fc44.src.rpm dist/publish/
           fi
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -198,33 +198,33 @@ jobs:
       - name: Attest Debian amd64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart_0.4.0-alpha.3_amd64.deb
-          sbom-path: dist/release/noderampart_0.4.0-alpha.3_amd64.deb.spdx.json
+          subject-path: dist/release/noderampart_0.4.0-alpha.4_amd64.deb
+          sbom-path: dist/release/noderampart_0.4.0-alpha.4_amd64.deb.spdx.json
       - name: Attest Debian arm64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart_0.4.0-alpha.3_arm64.deb
-          sbom-path: dist/release/noderampart_0.4.0-alpha.3_arm64.deb.spdx.json
+          subject-path: dist/release/noderampart_0.4.0-alpha.4_arm64.deb
+          sbom-path: dist/release/noderampart_0.4.0-alpha.4_arm64.deb.spdx.json
       - name: Attest Fedora 43 x86_64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.4.fc43.x86_64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.4.fc43.x86_64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.5.fc43.x86_64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.5.fc43.x86_64.rpm.spdx.json
       - name: Attest Fedora 43 aarch64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.4.fc43.aarch64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.4.fc43.aarch64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.5.fc43.aarch64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.5.fc43.aarch64.rpm.spdx.json
       - name: Attest Fedora 44 x86_64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.4.fc44.x86_64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.4.fc44.x86_64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.5.fc44.x86_64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.5.fc44.x86_64.rpm.spdx.json
       - name: Attest Fedora 44 aarch64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.4.fc44.aarch64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.4.fc44.aarch64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.5.fc44.aarch64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.5.fc44.aarch64.rpm.spdx.json
       - name: Create draft for maintainer review
         env:
           GH_TOKEN: ${{ github.token }}

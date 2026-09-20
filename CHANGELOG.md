@@ -2,6 +2,26 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.4 - Unreleased
+
+- Include PR #14: avoid repeatedly parsing complete shared MMDB targets that
+  exhausted the old 64,000,000-operation budget on a valid City database.
+  Bound actual precheck work separately from logical expansion, retain complete
+  database verification and paired City/ASN activation, and show safe MMDB
+  validation/resource-budget errors without exposing credentials or raw errors.
+- Retain 64 million precheck operations; bound logical expansion to 128 million,
+  cumulative allocation charge to 8 GiB and data-summary cache to 5 MiB.
+  Neither charge nor cache size is a total process RSS limit. Synchronous
+  `reader.Verify` cancellation waits for the call to return.
+- The matching candidate passed every offline stage on the same real City and
+  ASN samples. This is algorithm evidence, not acceptance of these new packages,
+  real credentialed downloads, activation or daily updates. HTTP 451 upstream
+  legal/compliance restrictions are not addressed or bypassed.
+- Project/embedded version `0.4.0-alpha.4`; Debian internal `0.4.0~alpha.4`
+  and public DEB names `noderampart_0.4.0-alpha.4_ARCH.deb`; RPM
+  `0.4.0-0.alpha.5%{?dist}`. Existing UTF-8 fixes and release identity checks
+  remain unchanged. This candidate is not published; alpha.3 remains available.
+
 ## 0.4.0-alpha.3 - 2026-09-20 (UTC)
 
 - Published at `2026-09-20T05:39:54Z`. All 22 assets were anonymously downloaded
