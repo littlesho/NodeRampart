@@ -8,10 +8,7 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.2 — first installation-package prerelease, now available.** Download the [published packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.2) using the fixed-version commands below. Anonymous downloads and checksums have been verified; this version has not undergone installation lifecycle or ARM64 hardware acceptance testing. Validate it in an isolated environment before production use. Alpha software belongs alongside your existing security controls.
-
-> **Next candidate: v0.4.0-alpha.3** packages the UTF-8 terminal fix from PR #11. It is not yet published; the available downloads below remain alpha.2, including its per-command UTF-8 workaround.
-
+> **v0.4.0-alpha.3 — UTF-8 fix prerelease, now available.** Download the [published packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.3) using the fixed-version commands below. Anonymous downloads and checksums have been verified; this version has not undergone installation lifecycle or ARM64 hardware acceptance testing. Validate it in an isolated environment before production use. Alpha software belongs alongside your existing security controls.
 
 ## What can it do?
 
@@ -33,7 +30,7 @@ You can also merge repeated alerts, set silences that expire automatically, fill
 The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. This download command needs curl and working HTTPS certificates; the installer and apt/dnf handle the remaining installation dependencies. Go is not needed.
 
 ~~~bash
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.2/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.2
+curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.3/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.3
 ~~~
 
 Alternatively, download into a separate directory and inspect the script before deciding to execute it:
@@ -41,11 +38,11 @@ Alternatively, download into a separate directory and inspect the script before 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.2/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.3/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # Run separately, after reviewing and accepting the script:
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.2
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.3
 ~~~
 
 For manual package and provenance checks, see [release verification](docs/RELEASE_VERIFICATION.md#download-and-verify). HTTPS download, same-release SHA256 and GitHub attestation are distinct checks: bootstrap checks package checksums and identity but **does not automatically verify attestations**.
@@ -176,7 +173,11 @@ It uses apt/dnf without removing system dependencies. RPM may save edited config
 
 ## Troubleshooting
 
-**Chinese appears as question marks:** `--language zh` selects the UI language,
+**Chinese appears as question marks:** alpha.3 fixes the installer/menu locale
+handling and UTF-8 output-boundary truncation. The following workaround is for
+unchanged **alpha.2** packages; it is not required for C/POSIX in alpha.3.
+
+`--language zh` selects the UI language,
 not the terminal encoding. The published alpha.2 installer can pass `LC_ALL=C`
 to setup. For a UTF-8 SSH client, check `LC_ALL=C.UTF-8 locale charmap`, then run
 `sudo env LC_ALL=C.UTF-8 noderampart setup --language zh` (or replace `setup` with
@@ -184,8 +185,7 @@ to setup. For a UTF-8 SSH client, check `LC_ALL=C.UTF-8 locale charmap`, then ru
 No Chinese language pack is required. sudo may reset locale variables; set the
 locale for this command instead of using `sudo -E` or changing system defaults.
 See [terminal encoding troubleshooting](docs/V0.4_OPERATIONS.md#terminal-encoding--终端编码)
-for client/font checks and the distinction between the source fix and unchanged
-alpha.2 packages.
+for client/font checks and the fix included in alpha.3.
 
 ~~~bash
 sudo noderampart doctor

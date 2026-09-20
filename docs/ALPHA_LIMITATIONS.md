@@ -1,4 +1,4 @@
-# `v0.4.0-alpha.2` limitations
+# `v0.4.0-alpha.3` limitations
 
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
@@ -16,6 +16,17 @@ on ARM64. The checks required for a new build are listed in the
 [development guide](DEVELOPMENT.md). Public source availability does not imply a
 hosted workflow run, published packages, a matching tag or a completed release.
 The bootstrap command requires separately published matching release assets.
+
+For alpha.3, 22 published assets passed anonymous download/checksum verification.
+Actual x86_64 package CLIs from the DEB and Fedora 43/44 RPMs passed 12 bounded
+UTF-8 scenarios inside an isolated Debian 13 VM; no package installation took
+place. The 13 source PTY scenarios use test subprocesses; Chinese input and
+length boundaries have source regression coverage. This is not Fedora runtime
+acceptance, installation/upgrade/removal acceptance or user SSH client/font
+validation. See [release verification](RELEASE_VERIFICATION.md).
+
+alpha.3 已完成匿名下载校验及隔离 Debian VM 内实际 x86_64 包内 CLI 检查。
+源码伪终端、中文输入/长度边界回归不等于安装生命周期、ARM64 实机或用户客户端验收。
 
 ## Still unvalidated
 
