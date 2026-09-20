@@ -8,7 +8,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.2：首次安装包候选版本。** 源码已经公开；安装包正在准备为草稿，尚不能公开下载安装。下面的固定版本命令仅在同一 Release 正式发布后可用。在此之前请使用经过审查的本地安装包。Alpha 版本应与现有安全措施配合使用。
+> **v0.4.0-alpha.2：首次预发布安装包现已提供。** 可从[公开 Release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.2) 或以下固定版本命令下载。匿名下载及校验和已经验证；本版本尚未执行安装生命周期及 ARM64 实机验收。用于生产前，请先在隔离环境中验证。Alpha 版本应与现有安全措施配合使用。
 
 ## 能帮你做什么？
 
@@ -25,7 +25,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 还可以合并重复告警、设置到期自动解除的静默、补齐缺失日报、备份数据库，以及通过离线脱敏元数据比较不同检测阈值。
 
-## 一行安装——对应安装包 Release 发布后使用
+## 一行安装
 
 安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载这一行命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。
 
@@ -45,11 +45,11 @@ less "$INSTALL_DIR/bootstrap.sh"
 sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.2
 ~~~
 
-安装包与证明的人工核验步骤见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。HTTPS 下载、同一 Release 的 SHA256 和 GitHub attestation 是不同检查；bootstrap 会检查包校验和与包身份，**不会自动执行 attestation 验证**。草稿未公开时下载入口可能返回 404，这不表示校验通过。
+安装包与证明的人工核验步骤见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。HTTPS 下载、同一 Release 的 SHA256 和 GitHub attestation 是不同检查；bootstrap 会检查包校验和与包身份，**不会自动执行 attestation 验证**。
 
-安装器会识别系统和 CPU，下载对应 DEB/RPM，核对 SHA256、版本和架构，通过包管理器安装，随后进入配置向导。已有配置和服务启用/禁用状态会保留；下载源或制品尚未发布时会明确报错并停止。
+安装器会识别系统和 CPU，下载对应 DEB/RPM，核对 SHA256、版本和架构，通过包管理器安装，随后进入配置向导。已有配置和服务启用/禁用状态会保留；下载或校验失败时会明确报错并停止。
 
-目前可以按[本地安装说明](docs/V0.4_OPERATIONS.md#local-installation-before-publication)使用经过审查的本地构建或安装包。支持构建的平台不等于所有平台均已完成真实运行验收，具体边界见[当前限制](docs/ALPHA_LIMITATIONS.md)。
+如需手动安装已下载并核验的包，请按[本地安装包说明](docs/V0.4_OPERATIONS.md#local-package-installation)操作。支持构建的平台不等于所有平台均已完成真实运行验收，具体边界见[当前限制](docs/ALPHA_LIMITATIONS.md)。
 
 无人值守安装可在命令末尾加 **--no-setup**，之后再打开配置向导。安装器不会从脚本管道读取交互答案或凭据。Debian 首次装包会按系统服务策略启用服务并以安全默认配置开始观察；Fedora 遵循系统的服务 preset。
 

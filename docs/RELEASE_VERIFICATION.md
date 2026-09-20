@@ -1,9 +1,14 @@
 # Verify a NodeRampart release
 
-The public `v0.4.0-alpha.2` download and its GitHub attestations have **not been
-published**. The workflow creates a draft for a maintainer to inspect; writing
-or testing the workflow does not publish a release. The commands below apply
-after the intended release and attestations are available.
+[v0.4.0-alpha.2](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.2)
+is published as a prerelease, with 22 assets and their GitHub attestations.
+The release source commit is `bddd84f05fe79dd67dea09dcd8c384afa9fc6b7d`.
+All assets were downloaded anonymously under their original public names and
+matched the verified draft bytes; `sha256sum -c SHA256SUMS` passed directly.
+The existing package-content and attestation checks therefore apply to those
+same bytes. Installation lifecycle and ARM64 hardware acceptance testing have
+not been performed for this version. The steps below let you verify your own
+download before deciding to install it.
 
 ## What a release contains
 
@@ -204,7 +209,7 @@ interfaces used here.
 
 ## Candidate metadata and package revision
 
-The `v0.4.0-alpha.2` candidate replaces two unpublished candidates. The immutable
+The `v0.4.0-alpha.2` prerelease replaces two unpublished candidates. The immutable
 `v0.4.0-alpha` build failed; the `v0.4.0-alpha.1` draft has a filename/checksum
 mismatch because the upload changed tilde-containing names. Neither is a
 published installation release. Do not repair alpha.1 by renaming downloads.
