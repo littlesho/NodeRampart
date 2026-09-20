@@ -51,6 +51,8 @@ internal/api/v3.go
 internal/assets/assets.go
 internal/assets/assets_test.go
 internal/assets/geo.go
+internal/assets/geo_validation.go
+internal/assets/geo_validation_test.go
 internal/assets/health.go
 internal/assets/health_test.go
 internal/assets/http.go
@@ -93,6 +95,7 @@ internal/console/console.go
 internal/console/console_test.go
 internal/console/features_test.go
 internal/console/fields.go
+internal/console/geo_validation_test.go
 internal/console/prices.go
 internal/console/results.go
 internal/console/retention.go

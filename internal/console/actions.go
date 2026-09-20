@@ -6,6 +6,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/littlesho/NodeRampart/internal/assets"
 	"github.com/rivo/tview"
 )
 
@@ -302,14 +303,20 @@ func (u *ui) executeAction(a action, args map[string]string, back func()) {
 			secrets = append(secrets, args[p.key])
 		}
 	}
+	// Refresh also uses credentials, although it has no secret input fields.
+	protectedFailure := sensitive || a.id == "geo_download" || a.id == "geo_refresh"
+	language := u.lang
 	secretFailure := u.tr("The operation failed or was cancelled. Check the entered credentials, connectivity and local permissions. Secret values are not shown.", "操作失败或已取消。请检查凭据、网络连接与本机权限；不会显示凭据内容。")
 	secretSuccess := u.tr("Settings were applied successfully. Use the status menu to inspect the result. No secret values are displayed.", "设置已成功应用。可在状态菜单查看结果；不会显示凭据内容。")
 	u.background(u.tr(a.en, a.zh), func(ctx context.Context) func() {
 		text, err := u.backend.Action(ctx, a.id, args)
 		clearArguments(args)
 		if err != nil {
-			if sensitive {
+			if protectedFailure {
 				text = secretFailure
+			}
+			if diagnostic, ok := geoValidationFailure(a.id, err, language); ok {
+				text = diagnostic
 			}
 		} else if sensitive {
 			text = secretSuccess
@@ -325,7 +332,7 @@ func (u *ui) executeAction(a action, args map[string]string, back func()) {
 			title := u.tr(a.en, a.zh)
 			if err != nil {
 				title += u.tr(" — not completed", " — 未完成")
-				if !sensitive {
+				if !protectedFailure {
 					if text != "" {
 						text = err.Error() + "\n\n" + humanResult(text, u.lang)
 					} else {
@@ -339,4 +346,26 @@ func (u *ui) executeAction(a action, args map[string]string, back func()) {
 			u.output(title, text, back)
 		}
 	}, back)
+}
+
+// Only the typed assets boundary may supply these allowlisted fields. Never
+// display a transport, wrapped URL, response body or arbitrary error chain here.
+func geoValidationFailure(actionID string, err error, language string) (string, bool) {
+	if actionID != "geo_download" && actionID != "geo_refresh" {
+		return "", false
+	}
+	edition, reason, ok := assets.GeoValidationDiagnostic(err)
+	if !ok {
+		return "", false
+	}
+	if language == "zh" {
+		if reason == "resource_budget" {
+			return edition + "：MMDB 校验失败，校验资源预算已耗尽。此结果不是凭据认证失败。", true
+		}
+		return edition + "：MMDB 校验未通过，未应用下载的数据库。", true
+	}
+	if reason == "resource_budget" {
+		return edition + ": MMDB validation failed: validation resource budget exceeded. This is not a credential authentication failure.", true
+	}
+	return edition + ": MMDB validation rejected the database. The downloaded databases were not applied.", true
 }

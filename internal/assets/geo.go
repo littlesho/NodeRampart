@@ -213,7 +213,7 @@ func extractGeo(ctx context.Context, root *os.Root, compressed []byte, edition s
 		if base == edition+".mmdb" {
 			build, err = verifyMMDB(ctx, data, edition)
 			if err != nil {
-				return time.Time{}, nil, err
+				return time.Time{}, nil, geoValidationFailure(ctx, edition, err)
 			}
 		} else {
 			if !utf8.Valid(data) || bytes.IndexByte(data, 0) >= 0 {
@@ -303,6 +303,10 @@ func verifyMMDB(ctx context.Context, data []byte, edition string) (built time.Ti
 	// A DAG with heavily shared subtrees can require exponentially many network
 	// visits despite a small file. Bound search traversal before library Verify.
 	if err := boundMMDBTree(ctx, data, metadata); err != nil {
+		return time.Time{}, err
+	}
+	// The upstream verifier is synchronous; do not start it after cancellation.
+	if err := ctx.Err(); err != nil {
 		return time.Time{}, err
 	}
 	if err := reader.Verify(); err != nil {
