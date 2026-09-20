@@ -8,9 +8,9 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.3 — UTF-8 fix prerelease, now available.** Download the [published packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.3) using the fixed-version commands below. Anonymous downloads and checksums have been verified; this version has not undergone installation lifecycle or ARM64 hardware acceptance testing. Validate it in an isolated environment before production use. Alpha software belongs alongside your existing security controls.
+> **v0.4.0-alpha.4 — GeoIP validation fix prerelease, now available.** Download the [published packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.4) using the fixed-version commands below. Anonymous downloads and checksums have been verified; this version has not undergone installation lifecycle or ARM64 hardware acceptance testing. Validate it in an isolated environment before production use. Alpha software belongs alongside your existing security controls.
 
-> **Next candidate: v0.4.0-alpha.4 (not yet published).** It includes the GeoIP shared-MMDB validation fix from PR #14 and safe resource-budget errors. The matching candidate passed complete offline City/ASN validation; user download, activation and daily updates remain unverified. The commands below continue to install the published alpha.3. See [candidate scope and resource limits](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-candidate).
+> **GeoIP fix scope:** alpha.4 fixes repeated parsing of shared MMDB data that could exhaust the validation budget, and adds safe MMDB validation/resource-budget errors. Matching candidate City/ASN samples passed complete offline validation; user download, activation and daily updates remain unverified. This version’s packaged programs have not been run. See [validation scope and resource limits](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) and [upgrade and GeoIP acceptance](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance).
 
 ## What can it do?
 
@@ -32,7 +32,7 @@ You can also merge repeated alerts, set silences that expire automatically, fill
 The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. This download command needs curl and working HTTPS certificates; the installer and apt/dnf handle the remaining installation dependencies. Go is not needed.
 
 ~~~bash
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.3/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.3
+curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.4/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.4
 ~~~
 
 Alternatively, download into a separate directory and inspect the script before deciding to execute it:
@@ -40,11 +40,11 @@ Alternatively, download into a separate directory and inspect the script before 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.3/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.4/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # Run separately, after reviewing and accepting the script:
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.3
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.4
 ~~~
 
 For manual package and provenance checks, see [release verification](docs/RELEASE_VERIFICATION.md#download-and-verify). HTTPS download, same-release SHA256 and GitHub attestation are distinct checks: bootstrap checks package checksums and identity but **does not automatically verify attestations**.

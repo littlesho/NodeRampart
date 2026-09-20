@@ -2,7 +2,13 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-## 0.4.0-alpha.4 - Unreleased
+## 0.4.0-alpha.4 - 2026-09-20 (UTC)
+
+- Published at `2026-09-20T13:02:35Z`. All 22 assets passed anonymous
+  original-name download and checksum verification against the accepted draft.
+  Package/source correspondence and 28 attestations apply to those same bytes.
+  This version’s packaged programs, installation lifecycle and ARM64 hardware
+  have not been exercised.
 
 - Include PR #14: avoid repeatedly parsing complete shared MMDB targets that
   exhausted the old 64,000,000-operation budget on a valid City database.
@@ -20,7 +26,8 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 - Project/embedded version `0.4.0-alpha.4`; Debian internal `0.4.0~alpha.4`
   and public DEB names `noderampart_0.4.0-alpha.4_ARCH.deb`; RPM
   `0.4.0-0.alpha.5%{?dist}`. Existing UTF-8 fixes and release identity checks
-  remain unchanged. This candidate is not published; alpha.3 remains available.
+  remain unchanged. The alpha.4 prerelease is now available; older releases
+  and tags remain unchanged.
 
 ## 0.4.0-alpha.3 - 2026-09-20 (UTC)
 
