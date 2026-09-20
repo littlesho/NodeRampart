@@ -2,7 +2,12 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-## 0.4.0-alpha.2 - Unreleased
+## 0.4.0-alpha.2 - 2026-09-20 (UTC)
+
+- First public installation-package prerelease, published at
+  `2026-09-20T00:46:14Z`. All 22 assets were anonymously downloaded and matched
+  the verified draft bytes; the checksum manifest passed without renaming.
+  Download verification does not constitute installation or runtime acceptance.
 
 - Separate public asset filenames from Debian's internal version: download
   `noderampart_0.4.0-alpha.2_ARCH.deb`, while dpkg checks `0.4.0~alpha.2`.

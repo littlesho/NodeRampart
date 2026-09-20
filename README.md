@@ -8,7 +8,7 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.2 — first installation-package candidate.** The source is public; the package release is being prepared as a draft and is not yet available for public installation. The fixed-version commands below work only after that same release is published. Until then, use a reviewed local package. Alpha software belongs alongside your existing security controls.
+> **v0.4.0-alpha.2 — first installation-package prerelease, now available.** Download the [published packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.2) using the fixed-version commands below. Anonymous downloads and checksums have been verified; this version has not undergone installation lifecycle or ARM64 hardware acceptance testing. Validate it in an isolated environment before production use. Alpha software belongs alongside your existing security controls.
 
 ## What can it do?
 
@@ -25,7 +25,7 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 You can also merge repeated alerts, set silences that expire automatically, fill missing daily reports, create database backups and compare detection thresholds using offline anonymized metadata.
 
-## Install in one command — after a matching package release
+## Install in one command
 
 The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. This download command needs curl and working HTTPS certificates; the installer and apt/dnf handle the remaining installation dependencies. Go is not needed.
 
@@ -45,11 +45,11 @@ less "$INSTALL_DIR/bootstrap.sh"
 sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.2
 ~~~
 
-For manual package and provenance checks, see [release verification](docs/RELEASE_VERIFICATION.md#download-and-verify). HTTPS download, same-release SHA256 and GitHub attestation are distinct checks: bootstrap checks package checksums and identity but **does not automatically verify attestations**. A download URL may return 404 while the draft is unpublished; that is not successful verification.
+For manual package and provenance checks, see [release verification](docs/RELEASE_VERIFICATION.md#download-and-verify). HTTPS download, same-release SHA256 and GitHub attestation are distinct checks: bootstrap checks package checksums and identity but **does not automatically verify attestations**.
 
 This downloads the package for your distribution and CPU, checks its SHA256 and package identity, installs it with your package manager, then opens setup. Existing configuration and service enable/disable choices are preserved. If the release is unavailable, installation stops with an explanation.
 
-Currently, use a reviewed local build/package following [the local installation instructions](docs/V0.4_OPERATIONS.md#local-installation-before-publication). Build targets do not imply that every distribution and ARM64 runtime has been tested; see [validation scope](docs/ALPHA_LIMITATIONS.md).
+To install a downloaded and verified package manually, follow [the local package instructions](docs/V0.4_OPERATIONS.md#local-package-installation). Build targets do not imply that every distribution and ARM64 runtime has been tested; see [validation scope](docs/ALPHA_LIMITATIONS.md).
 
 For unattended installation, append **--no-setup** and open setup later. No terminal answers or credentials are read from the script pipe. A fresh Debian package enables and starts observation with safe defaults, subject to system service policy; Fedora follows its service presets.
 
@@ -189,7 +189,7 @@ Published packages will include a Go dependency SBOM and GitHub attestations; se
 
 The sensor uses AF_PACKET with `CAP_NET_RAW`; the daemon runs as a separate service identity. Setup and service/package management require root. No eBPF collector or automatic program updater is implemented. Keep your firewall and SSH access controls independently configured.
 
-The build targets are Debian 12/13 and Fedora 43/44 on amd64/arm64. Cross-compiling or inspecting a package is not a runtime test. Earlier private Debian 13/Fedora 44 amd64 lab results apply only to those snapshots, not to this tag. Fresh installation/upgrade/removal acceptance for the candidate and real ARM64 runtime validation are not claimed. See [remaining validation and functional limits](docs/ALPHA_LIMITATIONS.md) and [security reporting](SECURITY.md). Successful scans or valid attestations do not prove absence of vulnerabilities.
+The build targets are Debian 12/13 and Fedora 43/44 on amd64/arm64. Cross-compiling or inspecting a package is not a runtime test. Earlier private Debian 13/Fedora 44 amd64 lab results apply only to those snapshots, not to this tag. Fresh installation/upgrade/removal acceptance for this prerelease and real ARM64 runtime validation are not claimed. See [remaining validation and functional limits](docs/ALPHA_LIMITATIONS.md) and [security reporting](SECURITY.md). Successful scans or valid attestations do not prove absence of vulnerabilities.
 
 ## Development and license
 
