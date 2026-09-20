@@ -8,46 +8,174 @@ import (
 	"unicode/utf8"
 )
 
-// The upstream reader validates format correctness, but reflect-backed decoding
-// reserves the declared map/slice capacity before consuming its contents. This
-// allocation-free preflight bounds declarations and pointer expansion first.
-// Encoding follows the MaxMind DB data-section control-byte format; it does not
-// interpret geolocation records or replace the upstream complete verifier.
+const (
+	mmdbWorkLimit = 64_000_000
+	// Verify decodes shared targets afresh. Cache hits must still charge their
+	// full expansion, separately from preflight work. The cumulative byte
+	// charge also bounds copies/allocations that a value count alone misses.
+	mmdbExpandedValueLimit = 128_000_000
+	mmdbExpandedByteLimit  = 8 << 30
+	mmdbRecordValueLimit   = 16384
+	mmdbRecordByteLimit    = 8 << 20
+	mmdbDepthLimit         = 32
+	mmdbCacheSlots         = 1 << 18 // 20-byte slots: at most 5 MiB, independent of declarations.
+)
+
+// The upstream reader allocates from declarations before decoding their contents.
+// Preflight validates every encoding and bounds each logical expansion first.
+// Only fully validated pointer targets are memoized; no decoded data is cached.
 func checkMMDBValues(ctx context.Context, data []byte, metadata bool) error {
-	p := mmdbValueBounds{ctx: ctx, data: data}
-	if metadata && (len(data) == 0 || data[0]>>5 != 7) {
+	p := newMMDBValueBounds(ctx, data)
+	return p.check(metadata)
+}
+
+func newMMDBValueBounds(ctx context.Context, data []byte) *mmdbValueBounds {
+	slots := mmdbCacheSlots
+	for slots > 1 && slots > len(data) {
+		slots /= 2
+	}
+	return &mmdbValueBounds{ctx: ctx, data: data, workLimit: mmdbWorkLimit,
+		valueLimit: mmdbExpandedValueLimit, byteLimit: mmdbExpandedByteLimit, cacheSlots: slots}
+}
+
+func (p *mmdbValueBounds) check(metadata bool) error {
+	if err := p.ctx.Err(); err != nil {
+		return err
+	}
+	// End offsets fit the compact summaries on all supported architectures.
+	if len(p.data) > maxDatabase {
+		return errMMDBResourceBudget
+	}
+	if metadata && (len(p.data) == 0 || p.data[0]>>5 != 7) {
 		return errors.New("GeoIP metadata must be a bounded map")
 	}
-	for offset := 0; offset < len(data); {
+	for offset := 0; offset < len(p.data); {
 		p.recordValues, p.recordBytes = 0, 0
 		next, err := p.value(offset, 0)
-		if err != nil || next <= offset {
-			return errors.New("GeoIP value declarations or pointer expansion exceed safe bounds")
+		if err != nil {
+			return err
 		}
-		if metadata && next != len(data) {
+		if next <= offset {
+			return errMMDBBounds
+		}
+		if !mmdbAdd(&p.expandedValues, p.recordValues, p.valueLimit) ||
+			!mmdbAdd(&p.expandedBytes, p.recordBytes, p.byteLimit) {
+			return errMMDBResourceBudget
+		}
+		p.maxRecordValues = max(p.maxRecordValues, p.recordValues)
+		p.maxRecordBytes = max(p.maxRecordBytes, p.recordBytes)
+		if metadata && next != len(p.data) {
 			return errors.New("GeoIP metadata has trailing values")
 		}
 		offset = next
 	}
-	return ctx.Err()
+	return p.ctx.Err()
+}
+
+type mmdbValueSummary struct {
+	end, values, bytes uint32
+	height             uint8
+}
+
+type mmdbCacheEntry struct {
+	key     uint32 // data-relative offset + 1; zero is an unused slot.
+	summary mmdbValueSummary
 }
 
 type mmdbValueBounds struct {
-	ctx                                   context.Context
-	data                                  []byte
-	operations, recordValues, recordBytes int
+	ctx                                                            context.Context
+	data                                                           []byte
+	operations, recordValues, recordBytes                          uint64
+	expandedValues, expandedBytes, maxRecordValues, maxRecordBytes uint64
+	workLimit, valueLimit, byteLimit                               uint64
+	cacheSlots                                                     int
+	cache                                                          []mmdbCacheEntry
+	cacheHits, cacheMisses, cacheEntries, cacheEvictions           uint64
+	active                                                         [mmdbDepthLimit + 1]int
+	maxDepth                                                       int
 }
 
-var errMMDBBounds = errors.New("invalid or excessive MMDB value")
+var errMMDBBounds = errors.New("invalid MMDB value or pointer structure")
+var errMMDBResourceBudget = errors.New("GeoIP MMDB validation resource budget exceeded")
+
+// Charge before using a counter. Saturation preserves a useful failure count
+// without letting an overflow wrap under a bound (including on 32-bit hosts).
+func mmdbAdd(counter *uint64, amount, limit uint64) bool {
+	if amount > ^uint64(0)-*counter {
+		*counter = ^uint64(0)
+		return false
+	}
+	*counter += amount
+	return *counter <= limit
+}
 
 func (p *mmdbValueBounds) value(offset, depth int) (int, error) {
-	p.operations++
-	p.recordValues++
-	if offset < 0 || offset >= len(p.data) || depth > 32 || p.operations > 64_000_000 || p.recordValues > 16384 {
-		return 0, errMMDBBounds
+	s, err := p.parse(offset, depth, false)
+	return int(s.end), err
+}
+
+func (p *mmdbValueBounds) parse(offset, depth int, target bool) (mmdbValueSummary, error) {
+	if !mmdbAdd(&p.operations, 1, p.workLimit) {
+		return mmdbValueSummary{}, errMMDBResourceBudget
 	}
-	if p.operations%1024 == 0 && p.ctx.Err() != nil {
-		return 0, errMMDBBounds
+	if offset < 0 || offset >= len(p.data) || depth < 0 {
+		return mmdbValueSummary{}, errMMDBBounds
+	}
+	if depth > mmdbDepthLimit {
+		return mmdbValueSummary{}, errMMDBResourceBudget
+	}
+	if p.operations == 1 || p.operations%1024 == 0 {
+		if err := p.ctx.Err(); err != nil {
+			return mmdbValueSummary{}, err
+		}
+	}
+	// Active paths and completed entries are separate. Never publish a partial
+	// summary or treat a cycle as a reusable result.
+	for _, ancestor := range p.active[:depth] {
+		if ancestor == offset {
+			return mmdbValueSummary{}, errMMDBBounds
+		}
+	}
+	p.active[depth] = offset
+	p.maxDepth = max(p.maxDepth, depth)
+	var slot int
+	if target && p.cacheSlots > 0 {
+		if p.cache == nil {
+			p.cache = make([]mmdbCacheEntry, p.cacheSlots)
+		}
+		// Fixed, direct-mapped storage: hostile collisions only cause bounded
+		// reparsing, not unbounded storage or an unbounded hash probe chain.
+		slot = int((uint32(offset)*2654435761)>>14) & (len(p.cache) - 1)
+		entry := p.cache[slot]
+		if entry.key == uint32(offset)+1 {
+			p.cacheHits++
+			s := entry.summary
+			p.maxDepth = max(p.maxDepth, depth+int(s.height))
+			if depth+int(s.height) > mmdbDepthLimit ||
+				!mmdbAdd(&p.recordValues, uint64(s.values), mmdbRecordValueLimit) ||
+				!mmdbAdd(&p.recordBytes, uint64(s.bytes), mmdbRecordByteLimit) {
+				return mmdbValueSummary{}, errMMDBResourceBudget
+			}
+			return s, nil
+		}
+		p.cacheMisses++
+	}
+	beforeValues, beforeBytes := p.recordValues, p.recordBytes
+	if !mmdbAdd(&p.recordValues, 1, mmdbRecordValueLimit) {
+		return mmdbValueSummary{}, errMMDBResourceBudget
+	}
+	finish := func(end int, height uint8) mmdbValueSummary {
+		s := mmdbValueSummary{end: uint32(end), values: uint32(p.recordValues - beforeValues),
+			bytes: uint32(p.recordBytes - beforeBytes), height: height}
+		if target && p.cacheSlots > 0 {
+			if p.cache[slot].key == 0 {
+				p.cacheEntries++
+			} else if p.cache[slot].key != uint32(p.active[depth])+1 {
+				p.cacheEvictions++
+			}
+			p.cache[slot] = mmdbCacheEntry{key: uint32(p.active[depth]) + 1, summary: s}
+		}
+		return s
 	}
 	control := p.data[offset]
 	offset++
@@ -55,7 +183,7 @@ func (p *mmdbValueBounds) value(offset, depth int) (int, error) {
 	if kind == 1 {
 		n := ((size >> 3) & 3) + 1
 		if offset+n > len(p.data) || n == 4 && size != 24 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
 		pointer := uint64(size & 7)
 		if n == 4 {
@@ -70,16 +198,18 @@ func (p *mmdbValueBounds) value(offset, depth int) (int, error) {
 			pointer += 526336
 		}
 		if pointer >= uint64(len(p.data)) {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
-		if _, err := p.value(int(pointer), depth+1); err != nil {
-			return 0, err
+		child, err := p.parse(int(pointer), depth+1, true)
+		if err != nil {
+			return mmdbValueSummary{}, err
 		}
-		return offset + n, nil
+		// The pointer consumes its own encoding, never the target's encoding.
+		return finish(offset+n, child.height+1), nil
 	}
 	if kind == 0 {
 		if offset >= len(p.data) {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
 		kind = int(p.data[offset]) + 7
 		offset++
@@ -87,7 +217,7 @@ func (p *mmdbValueBounds) value(offset, depth int) (int, error) {
 	if size >= 29 {
 		n := size - 28
 		if offset+n > len(p.data) {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
 		value := 0
 		for _, b := range p.data[offset : offset+n] {
@@ -106,67 +236,70 @@ func (p *mmdbValueBounds) value(offset, depth int) (int, error) {
 	switch kind {
 	case 7, 11:
 		if kind == 7 && size > 256 || kind == 11 && size > 1024 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBResourceBudget
 		}
 		count := size
 		if kind == 7 {
 			count *= 2
 		}
 		// Include a conservative allocation charge for map slots and interfaces.
-		p.recordBytes += count * 128
-		if p.recordBytes > 8<<20 {
-			return 0, errMMDBBounds
+		if !mmdbAdd(&p.recordBytes, uint64(count)*128, mmdbRecordByteLimit) {
+			return mmdbValueSummary{}, errMMDBResourceBudget
 		}
+		var height uint8
 		for i := 0; i < count; i++ {
-			next, err := p.value(offset, depth+1)
+			child, err := p.parse(offset, depth+1, false)
 			if err != nil {
-				return 0, err
+				return mmdbValueSummary{}, err
 			}
-			offset = next
+			offset = int(child.end)
+			height = max(height, child.height+1)
 		}
-		return offset, nil
+		return finish(offset, height), nil
 	case 14:
 		if size > 1 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
-		return offset, nil
+		return finish(offset, 0), nil
 	case 2, 4:
 		if size > 64<<10 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBResourceBudget
 		}
 	case 3:
 		if size != 8 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
 	case 5:
 		if size > 2 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
 	case 6, 8:
 		if size > 4 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
 	case 9:
 		if size > 8 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
 	case 10:
 		if size > 16 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
 	case 15:
 		if size != 4 {
-			return 0, errMMDBBounds
+			return mmdbValueSummary{}, errMMDBBounds
 		}
 	default:
-		return 0, errMMDBBounds
+		return mmdbValueSummary{}, errMMDBBounds
 	}
 	if size > len(p.data)-offset {
-		return 0, errMMDBBounds
+		return mmdbValueSummary{}, errMMDBBounds
 	}
-	p.recordBytes += size
-	if p.recordBytes > 8<<20 || kind == 2 && !utf8.Valid(p.data[offset:offset+size]) {
-		return 0, errMMDBBounds
+	if !mmdbAdd(&p.recordBytes, uint64(size), mmdbRecordByteLimit) {
+		return mmdbValueSummary{}, errMMDBResourceBudget
 	}
-	return offset + size, nil
+	if kind == 2 && !utf8.Valid(p.data[offset:offset+size]) {
+		return mmdbValueSummary{}, errMMDBBounds
+	}
+	return finish(offset+size, 0), nil
 }
