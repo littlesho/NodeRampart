@@ -1,4 +1,4 @@
-# `v0.4.0-alpha.3` limitations
+# `v0.4.0-alpha.4` candidate limitations
 
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
@@ -27,6 +27,37 @@ validation. See [release verification](RELEASE_VERIFICATION.md).
 
 alpha.3 已完成匿名下载校验及隔离 Debian VM 内实际 x86_64 包内 CLI 检查。
 源码伪终端、中文输入/长度边界回归不等于安装生命周期、ARM64 实机或用户客户端验收。
+
+## GeoIP alpha.4 candidate
+
+alpha.4 is not yet published; alpha.3 remains the current installation download.
+PR #14's matching candidate passed complete offline validation of the same real
+City and ASN archives. City took 22.779 s (17.929 s in `reader.Verify`) with an
+observed diagnostic-process peak RSS of 408,584,192 bytes; ASN took 1.915 s.
+These are measurements of those samples in the offline tool, not fixed limits,
+new-package runtime acceptance or proof of user download/activation recovery.
+
+Precheck work is capped at 64 million operations, logical expanded values at
+128 million, cumulative allocation charge at 8 GiB, and the data-summary cache
+at 5 MiB. The charge is not resident memory and the cache is not the entire
+process. Existing per-record, depth, archive, tree and full verification checks
+remain. Synchronous `reader.Verify` cannot interrupt inside the call: cancellation
+is checked before and after it returns, without an abandoned background task.
+The offline tool's 300-second/2-GiB process protections are not production limits.
+
+The HTTP request budget remains 30 seconds; a TUI action has a cooperative
+5-minute context and the scheduled updater a 10-minute systemd start timeout.
+These do not establish a hard production RSS limit. City/ASN remain a complete
+update group; failed validation does not partially activate one database.
+Actual credentialed download, activation and daily updates are still unverified.
+Upstream HTTP 451 legal/compliance refusals are not fixed or bypassed.
+
+alpha.4 候选尚未公开，默认安装入口仍为 alpha.3。匹配候选对两份现场
+City/ASN 归档的完整离线校验通过，不等于新包或用户正式下载、激活和每日更新通过。
+预检查 6400 万次、逻辑展开 1.28 亿次、累计分配收费 8 GiB、数据缓存 5 MiB
+分别受限；后两者均不是整个进程的 RSS 上限。同步 Verify 取消需等待调用返回；
+诊断工具的 300 秒/2 GiB 限制不是生产保证。保留完整校验、整组激活和 UTF-8 修复；
+不绕过 HTTP 451。新包安装生命周期、ARM64 实机及用户客户端验收尚未执行。
 
 ## Still unvalidated
 
