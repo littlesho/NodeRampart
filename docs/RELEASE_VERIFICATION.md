@@ -237,3 +237,28 @@ then downloads those actual names into a fresh directory using authenticated
 API access, runs `sha256sum -c SHA256SUMS` without renaming, and checks package
 contents and attestations. Drafts are not anonymously downloadable at the
 fixed-version links; public download and installation checks remain separate.
+
+## alpha.3 draft verification
+
+The next candidate `v0.4.0-alpha.3` includes PR #11's terminal UTF-8 fix.
+It is not yet public. The public download examples above deliberately remain
+alpha.2; its verification results are not evidence for the new candidate.
+For authenticated review of the alpha.3 draft, use its actual Release ID and
+original asset names. The exact set remains 22 assets: DEBs
+`noderampart_0.4.0-alpha.3_{amd64,arm64}.deb`, Fedora 43/44 RPMs
+`noderampart-0.4.0-0.alpha.4.fc{43,44}.{x86_64,aarch64}.rpm`, their six
+SBOM/buildinfo pairs, `noderampart-0.4.0-0.alpha.4.fc44.src.rpm`, and
+`bootstrap.sh`, `release.json`, `SHA256SUMS`. Debian internal Version is
+`0.4.0~alpha.3`; the embedded project version is `0.4.0-alpha.3`.
+
+Require the new tag's full commit, commit-derived BUILD_DATE, actual Release run
+and original downloaded names throughout checksums, package identity, payload,
+SBOM/buildinfo and both attestation types. Use `refs/tags/v0.4.0-alpha.3` and
+that tag's independently verified source SHA for the attestation commands.
+The current collector/SBOM tooling targets alpha.3; inspect an older release
+with the tools from its matching tag. Do not rename assets or reuse old proofs.
+
+alpha.3 草稿需通过认证下载，并按新 tag、完整提交、构建运行及原始文件名
+重新核验全部 22 个资产和证明。草稿公开前匿名下载不可用属预期状态。
+源码伪终端测试、包内二进制交互检查、真实安装生命周期和用户 SSH 客户端/
+字体实测是不同的验收项目；未执行的项目不能写成通过。
