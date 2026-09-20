@@ -7,6 +7,9 @@ umask 077
 bootstrap_main() {
   PATH=/usr/sbin:/usr/bin:/sbin:/bin
   export PATH
+  # Keep machine parsing deterministic without passing ASCII to the TUI.
+  bootstrap_ui_locale=${LC_ALL:-${LC_CTYPE:-${LANG:-C.UTF-8}}}
+  case "$bootstrap_ui_locale" in C|POSIX) bootstrap_ui_locale=C.UTF-8;; esac
   LC_ALL=C
   export LC_ALL
   release=v0.4.0-alpha.2
@@ -107,7 +110,7 @@ bootstrap_main() {
   [ -f /usr/bin/noderampart ] && [ ! -L /usr/bin/noderampart ] || bootstrap_die 'package installation did not provide the expected CLI'
   echo 'Package installed. Existing configuration and service choices were preserved.'
   if [ "$setup" = true ]; then
-    /usr/bin/noderampart setup < /dev/tty > /dev/tty 2>&1
+    LC_ALL="$bootstrap_ui_locale" /usr/bin/noderampart setup < /dev/tty > /dev/tty 2>&1
   else
     echo 'Setup was skipped. Run: sudo noderampart setup'
     echo 'Fresh Debian packages may already be observing with safe defaults; Fedora follows system presets.'

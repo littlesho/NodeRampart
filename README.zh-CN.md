@@ -162,6 +162,15 @@ sudo /usr/libexec/noderampart/manage-remove --purge
 
 ## 遇到问题怎么排查？
 
+**中文显示为问号：** `--language zh` 选择界面语言，不决定终端编码。
+已发布 alpha.2 的安装器可能把 `LC_ALL=C` 传给 setup。使用 UTF-8 SSH 客户端时，
+先检查 `LC_ALL=C.UTF-8 locale charmap`，再运行
+`sudo env LC_ALL=C.UTF-8 noderampart setup --language zh`；主菜单可把 `setup` 换成 `tui`。
+若该 locale 不可用，从 `locale -a` 中选择可用的 UTF-8 名称，无需中文语言包。
+sudo 可能重置 locale，应对本次命令指定，不使用 `sudo -E` 或修改系统默认值。
+[终端编码排障](docs/V0.4_OPERATIONS.md#terminal-encoding--终端编码)说明了客户端/字体检查，
+以及源码修复与尚未改变的 alpha.2 安装包的区别。
+
 ~~~bash
 sudo noderampart doctor
 sudo noderampart status

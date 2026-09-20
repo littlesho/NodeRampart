@@ -578,3 +578,49 @@ func TestGeoTermsAndDestructiveWordsGateBackendCalls(t *testing.T) {
 	default:
 	}
 }
+
+func TestTerminalLocalePolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name, all, ctype, lang string
+		override, reject       bool
+	}{
+		{"C overrides LANG", "C", "", "en_US.UTF-8", true, false},
+		{"POSIX", "POSIX", "", "", true, false},
+		{"CTYPE overrides LANG", "", "C", "zh_CN.UTF-8", true, false},
+		{"UTF8 overrides CTYPE", "C.UTF-8", "C", "", false, false},
+		{"C utf8", "C.utf8", "", "", false, false},
+		{"English UTF8", "", "", "en_US.UTF-8", false, false},
+		{"Chinese UTF8", "", "", "zh_CN.UTF-8", false, false},
+		{"CTYPE UTF8", "", "en_US.UTF-8", "en_US.ISO-8859-1", false, false},
+		{"modifier", "en_US.UTF-8@modifier", "", "", false, false},
+		{"unset", "", "", "", false, false},
+		{"language only", "", "", "en_US", false, false},
+		{"legacy ALL", "en_US.ISO-8859-1", "", "zh_CN.UTF-8", false, true},
+		{"legacy CTYPE", "", "en_US.ISO-8859-1", "zh_CN.UTF-8", false, true},
+		{"explicit ASCII", "", "", "C.US-ASCII", false, true},
+		{"unsupported", "", "", "en_US.unknown", false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			override, err := terminalLocaleNeedsUTF8(tc.all, tc.ctype, tc.lang)
+			if override != tc.override || (err != nil) != tc.reject {
+				t.Fatalf("override=%v, error=%v", override, err)
+			}
+			if err != nil && !strings.Contains(err.Error(), "UTF-8") {
+				t.Fatal("missing readable encoding diagnostic")
+			}
+		})
+	}
+}
+
+func TestChineseTextAtOutputLimit(t *testing.T) {
+	text := strings.Repeat("中", maxOutputBytes/3+1)
+	pages, cut := outputPages(text)
+	if !cut || strings.Join(pages, "") != strings.Repeat("中", maxOutputBytes/3) {
+		t.Fatal("valid Chinese was replaced at the byte limit")
+	}
+	if cleanText("中文说明 → SSH") != "中文说明 → SSH" {
+		t.Fatal("text sanitization changed legitimate Chinese or symbols")
+	}
+	// Malformed input consisting only of continuation bytes must remain bounded.
+	_, _ = outputPages(strings.Repeat("\x80", maxOutputBytes+1))
+}

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -65,6 +66,69 @@ type alreadyInitialized struct {
 func (*alreadyInitialized) Init() error { return nil }
 func (s *alreadyInitialized) Fini()     { s.finalized.Do(s.Screen.Fini) }
 
+// Serialize the temporary locale override used only while tcell captures its
+// encoder/decoder. Restore it before any UI/backend work starts. Do not change
+// tcell's global encoding registry or the environment of management commands.
+var terminalInitMu sync.Mutex
+
+func terminalLocaleNeedsUTF8(all, ctype, lang string) (bool, error) {
+	locale := all
+	if locale == "" {
+		locale = ctype
+	}
+	if locale == "" {
+		locale = lang
+	}
+	if locale == "C" || locale == "POSIX" {
+		return true, nil // Supported SSH terminals use UTF-8, even under sudo's C locale.
+	}
+	// Match the locked tcell locale precedence and charset suffix parsing.
+	locale, _, _ = strings.Cut(locale, "@")
+	if _, charset, explicit := strings.Cut(locale, "."); explicit && !strings.EqualFold(charset, "UTF-8") && !strings.EqualFold(charset, "UTF8") {
+		return false, errors.New("the TUI requires UTF-8: set LC_ALL to an available UTF-8 locale (for example C.UTF-8) for setup/tui, and check the SSH client's encoding")
+	}
+	return false, nil // Unset or language-only locales default to UTF-8 in tcell.
+}
+
+func newTerminalScreen() (tcell.Screen, error) {
+	terminalInitMu.Lock()
+	defer terminalInitMu.Unlock()
+	override, err := terminalLocaleNeedsUTF8(os.Getenv("LC_ALL"), os.Getenv("LC_CTYPE"), os.Getenv("LANG"))
+	if err != nil {
+		return nil, err
+	}
+	if override {
+		previous, existed := os.LookupEnv("LC_ALL")
+		if err := os.Setenv("LC_ALL", "C.UTF-8"); err != nil {
+			return nil, errors.New("could not select UTF-8 for the terminal")
+		}
+		defer func() {
+			// A previously valid environment value and this constant key cannot
+			// contain the NUL/'=' errors rejected by Setenv/Unsetenv.
+			if existed {
+				_ = os.Setenv("LC_ALL", previous)
+			} else {
+				_ = os.Unsetenv("LC_ALL")
+			}
+		}()
+	}
+	// The Unix screen opens /dev/tty, never bootstrap's piped stdin. UTF-8
+	// selection uses Go's encoder, not an installed OS language pack.
+	screen, err := tcell.NewTerminfoScreen()
+	if err != nil {
+		return nil, errors.New("a supported controlling terminal is required; use an interactive SSH session")
+	}
+	if err := screen.Init(); err != nil {
+		// In tcell 2.8.1 a missing /dev/tty fails before Fini's channels exist.
+		// With the charset checked above, an acquired tty reaches that setup.
+		if tty, ok := screen.Tty(); ok && tty != nil {
+			screen.Fini()
+		}
+		return nil, errors.New("could not initialize the controlling terminal; use an interactive SSH session")
+	}
+	return screen, nil
+}
+
 func Run(ctx context.Context, backend Backend, options Options) error {
 	if backend == nil {
 		return errors.New("terminal backend is unavailable")
@@ -74,14 +138,12 @@ func Run(ctx context.Context, backend Backend, options Options) error {
 	}
 	screen := options.Screen
 	if screen == nil {
-		// tcell's Unix default opens /dev/tty, never bootstrap's piped stdin.
 		var err error
-		screen, err = tcell.NewTerminfoScreen()
+		screen, err = newTerminalScreen()
 		if err != nil {
-			return errors.New("a supported controlling terminal is required; use an interactive SSH session")
+			return err
 		}
-	}
-	if err := screen.Init(); err != nil {
+	} else if err := screen.Init(); err != nil {
 		screen.Fini()
 		return errors.New("could not initialize the controlling terminal")
 	}
@@ -340,7 +402,11 @@ func cleanText(text string) string {
 func outputPages(text string) ([]string, bool) {
 	truncated := len(text) > maxOutputBytes
 	if truncated {
-		text = text[:maxOutputBytes]
+		end := maxOutputBytes
+		for end > 0 && !utf8.RuneStart(text[end]) {
+			end--
+		}
+		text = text[:end]
 	}
 	text = cleanText(text)
 	// Replacing invalid UTF-8 can expand the string. Enforce the display budget

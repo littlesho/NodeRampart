@@ -28,6 +28,9 @@ lab = pathlib.Path(os.environ['BOOTSTRAP_LAB'])
 root = lab / 'root'
 with (lab / 'commands.jsonl').open('a') as log:
     log.write(json.dumps([name, *args]) + '\n')
+with (lab / 'locales.jsonl').open('a') as log:
+    log.write(json.dumps({'command': name, 'LC_ALL': os.environ.get('LC_ALL'),
+                          'LC_CTYPE': os.environ.get('LC_CTYPE'), 'LANG': os.environ.get('LANG')}) + '\n')
 scenario = os.environ.get('SCENARIO', '')
 if name == 'id':
     if args == ['-u']: print(os.environ.get('MOCK_UID', '0'))
@@ -251,6 +254,38 @@ class InstallerTests(unittest.TestCase):
         result = self.run_script('bootstrap.sh', tty=os.ttyname(slave), pipe=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(['noderampart', 'setup'], self.commands())
+
+    def test_tui_locale_is_separate_from_machine_locale(self):
+        master, slave = pty.openpty()
+        self.addCleanup(os.close, master)
+        self.addCleanup(os.close, slave)
+        for locale, expected in [
+            ({'LC_ALL': 'C', 'LANG': 'en_US.UTF-8'}, 'C.UTF-8'),
+            ({'LC_ALL': 'POSIX'}, 'C.UTF-8'),
+            ({'LC_CTYPE': 'C', 'LANG': 'zh_CN.UTF-8'}, 'C.UTF-8'),
+            ({'LC_ALL': 'C.utf8'}, 'C.utf8'),
+            ({'LANG': 'en_US.UTF-8'}, 'en_US.UTF-8'),
+            ({'LANG': 'zh_CN.UTF-8'}, 'zh_CN.UTF-8'),
+            ({}, 'C.UTF-8'),
+            # An explicit legacy encoding reaches the TUI's readable refusal;
+            # the installer does not pretend to change the SSH client's encoding.
+            ({'LC_ALL': 'en_US.ISO-8859-1'}, 'en_US.ISO-8859-1'),
+        ]:
+            with self.subTest(locale=locale):
+                for key in ('LC_ALL', 'LC_CTYPE', 'LANG'):
+                    self.env.pop(key, None)
+                self.env.update(locale, PYTHONCOERCECLOCALE='0', PYTHONUTF8='0')
+                log = self.lab / 'locales.jsonl'
+                log.unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', tty=os.ttyname(slave), pipe=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                rows = [json.loads(line) for line in log.read_text().splitlines()]
+                tui = [row for row in rows if row['command'] == 'noderampart']
+                self.assertEqual(len(tui), 1)
+                self.assertEqual(tui[0]['LC_ALL'], expected)
+                machine = [row for row in rows if row['command'] != 'noderampart']
+                self.assertTrue(machine)
+                self.assertTrue(all(row['LC_ALL'] == 'C' for row in machine))
 
     def test_unsupported_version_and_architecture(self):
         result = self.run_script('bootstrap.sh', '--version', 'v9.0.0', '--no-setup')
