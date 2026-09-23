@@ -43,12 +43,13 @@ type journalRecord struct {
 
 func (r journalRecord) trustedSSHOrigin() bool {
 	// SYSLOG_IDENTIFIER and _COMM are selection/display fields, not proof of
-	// origin. Require journald's sender credentials, executable path and system
-	// service identity. Reject inherited stdout credentials and user services.
+	// origin. Require journald's sender credentials, executable path and a
+	// system service or logind session scope. A scope name alone proves no SSH
+	// identity. Reject inherited stdout credentials and user services.
 	if r.UID != "0" || r.UserUnit != "" || (r.Transport != "syslog" && r.Transport != "journal") {
 		return false
 	}
-	if !sshUnit(r.Unit) {
+	if !sshUnit(r.Unit) && !loginSessionScope(r.Unit) {
 		return false
 	}
 	// Debian 13 uses /usr/{sbin,lib/openssh}; Fedora 44 has merged sbin
@@ -73,6 +74,28 @@ func sshUnit(unit string) bool {
 		}
 	}
 	return false
+}
+
+func loginSessionScope(unit string) bool {
+	// logind v257 uses a decimal uint32 audit session ID or a c-prefixed
+	// uint64 counter, without leading zeroes. Audit IDs exclude 0 and
+	// UINT32_MAX; that sentinel does not apply to the independent counter.
+	// Bound length before parsing.
+	// This only checks unit shape; trustedSSHOrigin must check the sender.
+	if len(unit) > len("session-c")+20+len(".scope") || !strings.HasPrefix(unit, "session-") || !strings.HasSuffix(unit, ".scope") {
+		return false
+	}
+	id := strings.TrimSuffix(strings.TrimPrefix(unit, "session-"), ".scope")
+	bits := 32
+	if strings.HasPrefix(id, "c") {
+		id = strings.TrimPrefix(id, "c")
+		bits = 64
+	}
+	if len(id) == 0 || id[0] < '1' || id[0] > '9' {
+		return false
+	}
+	number, err := strconv.ParseUint(id, 10, bits)
+	return err == nil && (bits != 32 || number != 1<<32-1)
 }
 
 func (r journalRecord) observedAt(now time.Time) time.Time {
