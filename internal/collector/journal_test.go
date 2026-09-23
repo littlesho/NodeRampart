@@ -57,7 +57,7 @@ done
 func TestJournalTrustedOrigin(t *testing.T) {
 	trusted := journalRecord{UID: "0", Executable: "/usr/sbin/sshd", Unit: "ssh.service", Transport: "syslog"}
 	for _, executable := range []string{"/usr/sbin/sshd", "/usr/bin/sshd", "/usr/lib/openssh/sshd-session", "/usr/lib/openssh/sshd-auth", "/usr/libexec/openssh/sshd-session", "/usr/libexec/openssh/sshd-auth"} {
-		for _, unit := range []string{"ssh.service", "sshd.service", "ssh@lab.service", "sshd@1-192.0.2.1:22-192.0.2.2:23.service"} {
+		for _, unit := range []string{"ssh.service", "sshd.service", "ssh@lab.service", "sshd@1-192.0.2.1:22-192.0.2.2:23.service", "session-42.scope", "session-43.scope", "session-c7.scope"} {
 			record := trusted
 			record.Executable, record.Unit = executable, unit
 			if !record.trustedSSHOrigin() {
@@ -84,6 +84,31 @@ func TestJournalTrustedOrigin(t *testing.T) {
 		change(&record)
 		if record.trustedSSHOrigin() {
 			t.Errorf("accepted untrusted origin: %#v", record)
+		}
+	}
+}
+
+func TestJournalSessionScopeOriginBounds(t *testing.T) {
+	for _, transport := range []string{"syslog", "journal"} {
+		for _, unit := range []string{"session-1.scope", "session-4294967294.scope", "session-c1.scope", "session-c4294967295.scope", "session-c4294967296.scope", "session-c18446744073709551615.scope"} {
+			r := journalRecord{UID: "0", Executable: "/usr/lib/openssh/sshd-session", Unit: unit, Transport: transport}
+			if !r.trustedSSHOrigin() {
+				t.Errorf("rejected session origin: %+v", r)
+			}
+		}
+	}
+	for _, unit := range []string{
+		"anything.scope", "sshd.scope", "session.scope", "session-.scope", "session-c.scope",
+		"session-0.scope", "session-01.scope", "session-c0.scope", "session-c01.scope", "session--1.scope", "session-+1.scope",
+		"session-1x.scope", "session-C1.scope", "session-1.service", "session-1.scope.extra",
+		"session-1/2.scope", `session-\x31.scope`, "session-1\n.scope", "session-1\r.scope",
+		"session-1\x00.scope", "session-1\t.scope", "session-1 .scope", " session-1.scope",
+		"session-１.scope", "session-\xff.scope", "session-4294967295.scope", "session-4294967296.scope",
+		"session-c18446744073709551616.scope", "session-" + strings.Repeat("1", 256) + ".scope",
+	} {
+		r := journalRecord{UID: "0", Executable: "/usr/lib/openssh/sshd-session", Unit: unit, Transport: "syslog"}
+		if r.trustedSSHOrigin() {
+			t.Errorf("accepted malformed or unrelated scope %q", unit)
 		}
 	}
 }
