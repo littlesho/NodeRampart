@@ -99,6 +99,19 @@ type CoverageGap struct {
 }
 
 func (s *Store) RecordCoverageGap(ctx context.Context, gap CoverageGap) error {
+	return s.recordCoverageGap(ctx, gap, false)
+}
+
+// RecordJournalDegradation records a current quality failure, not imported
+// historical coverage. Pending and the audit gap commit or roll back together.
+func (s *Store) RecordJournalDegradation(ctx context.Context, gap CoverageGap) error {
+	if gap.Name != "ssh_journal" {
+		return errors.New("invalid journal degradation")
+	}
+	return s.recordCoverageGap(ctx, gap, true)
+}
+
+func (s *Store) recordCoverageGap(ctx context.Context, gap CoverageGap, journalPending bool) error {
 	if gap.Name == "" || len(gap.Name) > 64 || gap.Reason == "" || len(gap.Reason) > 64 || gap.Start.IsZero() || gap.End.Before(gap.Start) || gap.Count > 1<<63-1 {
 		return errors.New("invalid coverage gap")
 	}
@@ -112,6 +125,11 @@ func (s *Store) RecordCoverageGap(ctx context.Context, gap CoverageGap) error {
 		return err
 	}
 	defer tx.Rollback()
+	if journalPending {
+		if err := setJournalRecovery(ctx, tx, true); err != nil {
+			return err
+		}
+	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO coverage_gaps(name,reason,started_at,ended_at,count) VALUES (?,?,?,?,?)`, gap.Name, gap.Reason, gap.Start.UnixMilli(), gap.End.UnixMilli(), gap.Count); err != nil {
 		return err
 	}

@@ -67,7 +67,7 @@ func (a *App) handleJournal(ctx context.Context, entry collector.JournalEntry) e
 			a.recordWrite(err, "journal", false)
 			return err
 		}
-		write := store.JournalWrite{Cursor: entry.Cursor, ReceivedAt: entry.ReceivedAt, ObservedAt: entry.ObservedAt}
+		write := store.JournalWrite{Cursor: entry.Cursor, ReceivedAt: entry.ReceivedAt, ObservedAt: entry.ObservedAt, Trusted: entry.SkipReason == "" || entry.SkipReason == "unrecognized_message"}
 		if entry.Observation != nil && !seen {
 			observation := *entry.Observation
 			write.Kind = string(observation.Kind)
@@ -87,10 +87,31 @@ func (a *App) handleJournal(ctx context.Context, entry collector.JournalEntry) e
 		a.mu.Unlock()
 		a.pendingJournal = &write
 	}
-	_, err := a.options.Store.CommitJournal(ctx, *a.pendingJournal)
-	a.recordWrite(err, "journal", entry.Observation != nil)
+	inserted, err := a.options.Store.CommitJournal(ctx, *a.pendingJournal)
+	a.recordWrite(err, "journal", inserted && entry.Observation != nil)
 	if err == nil {
+		if inserted && a.pendingJournal.Trusted {
+			a.recordWrite(nil, "journal_recovery", false)
+		}
 		a.pendingJournal = nil
+		if !inserted {
+			return collector.ErrJournalAlreadyAcknowledged
+		}
 	}
+	return err
+}
+
+func journalCoverageGap(status collector.JournalStatus) store.CoverageGap {
+	since := status.Since
+	if since.IsZero() || since.After(status.At) {
+		since = status.At
+	}
+	return store.CoverageGap{Name: "ssh_journal", Reason: status.Reason, Start: since, End: status.At, Count: status.Count}
+}
+
+func (a *App) recordJournalDegradation(ctx context.Context, status collector.JournalStatus) error {
+	err := a.options.Store.RecordJournalDegradation(ctx, journalCoverageGap(status))
+	a.recordWrite(err, "journal_recovery", false)
+	a.recordWrite(err, "coverage_gap", false)
 	return err
 }

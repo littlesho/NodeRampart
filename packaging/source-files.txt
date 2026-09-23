@@ -67,6 +67,8 @@ internal/collector/auth.go
 internal/collector/auth_test.go
 internal/collector/interfaces.go
 internal/collector/journal.go
+internal/collector/journal_durable_recovery_test.go
+internal/collector/journal_recovery_test.go
 internal/collector/journal_reliable.go
 internal/collector/journal_reliable_test.go
 internal/collector/journal_test.go
@@ -116,6 +118,9 @@ internal/daemon/health.go
 internal/daemon/health_test.go
 internal/daemon/interfaces.go
 internal/daemon/interfaces_test.go
+internal/daemon/journal_daemon_restart_test.go
+internal/daemon/journal_duplicate_test.go
+internal/daemon/journal_recovery_test.go
 internal/daemon/monitor.go
 internal/daemon/monitor_execution.go
 internal/daemon/monitor_execution_test.go
@@ -255,6 +260,8 @@ internal/store/interface_detail_test.go
 internal/store/interface_overflow_gap_test.go
 internal/store/interfaces.go
 internal/store/journal.go
+internal/store/journal_recovery_audit_test.go
+internal/store/journal_recovery_test.go
 internal/store/journal_test.go
 internal/store/migration_test.go
 internal/store/migration_v3.go
@@ -264,6 +271,7 @@ internal/store/migration_v5.go
 internal/store/migration_v5_test.go
 internal/store/migration_v6.go
 internal/store/migration_v6_test.go
+internal/store/migration_v7.go
 internal/store/monitor_coverage.go
 internal/store/monitor_coverage_test.go
 internal/store/monitor_state.go

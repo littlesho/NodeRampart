@@ -276,6 +276,9 @@ func schemaTokens(definition string) ([]schemaToken, error) {
 
 func downgradeSnapshotSchemaReference(ctx context.Context, db *sql.DB, version int) error {
 	var statements []string
+	if version < 7 {
+		statements = append(statements, `DROP TABLE journal_recovery`)
+	}
 	if version < 6 {
 		statements = append(statements, `DROP TABLE monitor_state`, `DROP TABLE retention_meta`, `DROP TABLE retention_ledger`, `DROP TABLE retention_totals`)
 	}

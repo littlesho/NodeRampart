@@ -139,6 +139,19 @@ func (a *App) Run(ctx context.Context) error {
 	a.mu.Lock()
 	a.interfaceDiscoveryRequired = true
 	a.mu.Unlock()
+	// Read durable readiness before starting workers or opening listeners.
+	var checkpoint store.Checkpoint
+	if a.options.Config.Auth.Enabled {
+		var err error
+		checkpoint, err = a.options.Store.JournalCheckpoint(ctx)
+		if err != nil {
+			a.mu.Lock()
+			a.journalStatus = collector.JournalStatus{State: "degraded", Reason: "recovery_state_unavailable", At: time.Now().UTC(), Since: a.started}
+			a.mu.Unlock()
+			a.recordWrite(err, "journal_recovery", false)
+			return fmt.Errorf("load journal checkpoint: %w", err)
+		}
+	}
 	sensorListener, err := ipc.ListenUnix(a.options.Config.Paths.SensorSocket, 0o660)
 	if err != nil {
 		return fmt.Errorf("listen sensor socket: %w", err)
@@ -203,12 +216,8 @@ func (a *App) Run(ctx context.Context) error {
 	start("control_socket", "running", true, func() error { return a.serveControl(child, controlListener) })
 	if a.options.Config.Auth.Enabled {
 		journal := collector.Journal{Path: a.options.Config.Auth.Journalctl}
-		checkpoint, err := a.options.Store.JournalCheckpoint(ctx)
-		if err != nil {
-			return fmt.Errorf("load journal checkpoint: %w", err)
-		}
 		start("ssh_journal", "degraded", false, func() error {
-			return journal.RunReliable(child, collector.JournalOptions{InitialCursor: checkpoint.Cursor, InitialObservedAt: checkpoint.ObservedAt, OnStatus: func(status collector.JournalStatus) {
+			return journal.RunReliable(child, collector.JournalOptions{InitialCursor: checkpoint.Cursor, InitialObservedAt: checkpoint.ObservedAt, InitialRecoveryPending: checkpoint.RecoveryPending, OnDegradation: a.recordJournalDegradation, OnStatus: func(status collector.JournalStatus) {
 				a.mu.Lock()
 				a.journalStatus = status
 				a.mu.Unlock()
@@ -217,12 +226,8 @@ func (a *App) Run(ctx context.Context) error {
 					state = "running"
 				}
 				a.recordWrite(a.options.Store.SetComponentStatus(child, "ssh_journal", state, time.Now().UTC()), "coverage", false)
-				if status.State == "gap" || status.State == "degraded" {
-					since := status.Since
-					if since.IsZero() || since.After(status.At) {
-						since = status.At
-					}
-					a.recordWrite(a.options.Store.RecordCoverageGap(child, store.CoverageGap{Name: "ssh_journal", Reason: status.Reason, Start: since, End: status.At, Count: status.Count}), "coverage_gap", false)
+				if status.State == "gap" && !status.QualityDegraded() {
+					a.recordWrite(a.options.Store.RecordCoverageGap(child, journalCoverageGap(status)), "coverage_gap", false)
 				}
 			}}, func(deliveryCtx context.Context, entry collector.JournalEntry) error {
 				delivery := journalDelivery{entry: entry, ack: make(chan error, 1)}

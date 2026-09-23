@@ -24,7 +24,7 @@ func legacyV5Database(t *testing.T) string {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	for _, query := range []string{`DROP TABLE monitor_state`, `DROP TABLE retention_meta`, `DROP TABLE retention_ledger`, `DROP TABLE retention_totals`, `DELETE FROM schema_migrations WHERE version>=6`, `PRAGMA journal_mode=DELETE`} {
+	for _, query := range []string{`DROP TABLE journal_recovery`, `DROP TABLE monitor_state`, `DROP TABLE retention_meta`, `DROP TABLE retention_ledger`, `DROP TABLE retention_totals`, `DELETE FROM schema_migrations WHERE version>=6`, `PRAGMA journal_mode=DELETE`} {
 		if _, err := db.Exec(query); err != nil {
 			t.Fatal(err)
 		}
