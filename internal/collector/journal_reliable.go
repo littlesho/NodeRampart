@@ -86,6 +86,9 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 	}
 	backoff := options.RestartMin
 	var forceSince time.Time
+	// Record quality recovery belongs to the ingest loop, not one subprocess.
+	// Restarting a child cannot acknowledge a previously observed bad record.
+	recoveryPending := false
 	for ctx.Err() == nil {
 		started := time.Now().UTC()
 		cutoff := started.Add(-options.BackfillWindow)
@@ -109,7 +112,7 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 		}
 		emit("starting", "process_started", started, 0)
 		before := cursor
-		err := j.runReliableAttempt(ctx, cursor, since, started, options.MaxBackfill, func(entry JournalEntry) error {
+		err := j.runReliableAttempt(ctx, cursor, since, started, options.MaxBackfill, &recoveryPending, func(entry JournalEntry) error {
 			if entry.Cursor == cursor {
 				return nil
 			}
@@ -162,7 +165,7 @@ func validJournalCursor(cursor string) bool {
 	return len(cursor) > 0 && len(cursor) <= 4096 && utf8.ValidString(cursor) && strings.IndexFunc(cursor, func(r rune) bool { return r < 0x21 || r == 0x7f }) < 0
 }
 
-func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, started time.Time, maxBackfill int, consume func(JournalEntry) error, emit func(string, string, time.Time, uint64)) error {
+func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, started time.Time, maxBackfill int, recoveryPending *bool, consume func(JournalEntry) error, emit func(string, string, time.Time, uint64)) error {
 	args := append([]string{"--follow", "--no-tail", "--system", "--boot=all", "--output=json", "--no-pager"}, journalSelectionArguments()...)
 	if cursor != "" {
 		// journalctl may silently approximate a vacuumed --after-cursor. Read
@@ -205,24 +208,29 @@ func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, s
 		case <-watchDone:
 		}
 	}()
-	emit("running", "process_started", started, 0)
+	state := "running"
+	if *recoveryPending {
+		// The child is alive, but trusted ingest has not recovered. Use the
+		// existing retry state without recording another historical gap.
+		state = "retrying"
+	}
+	emit(state, "process_started", started, 0)
 	reader := bufio.NewReaderSize(stdout, 64<<10)
 	backfill := 0
 	verifyCursor := cursor != ""
 	live := false
-	coverageDirty := false
 	for {
 		line, oversized, readErr := readJournalLine(reader)
 		if !live && (len(line) > 0 || oversized) {
 			backfill++
 		}
 		if oversized {
-			coverageDirty = true
+			*recoveryPending = true
 			emit("gap", "malformed_record", started, 1)
 		} else if len(line) > 0 {
 			entry, ok := decodeJournalEntry(line, time.Now())
 			if !ok {
-				coverageDirty = true
+				*recoveryPending = true
 				emit("gap", "malformed_record", started, 1)
 			} else {
 				if verifyCursor {
@@ -249,16 +257,16 @@ func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, s
 					return journalAttemptError{reason: "backfill_count_limit"}
 				}
 				if entry.SkipReason != "" && entry.SkipReason != "unrecognized_message" {
-					coverageDirty = true
+					*recoveryPending = true
 					emit("degraded", entry.SkipReason, entry.ReceivedAt, 1)
 				}
 				if err := consume(entry); err != nil {
 					return err
 				}
-				if coverageDirty && (entry.SkipReason == "" || entry.SkipReason == "unrecognized_message") {
+				if *recoveryPending && (entry.SkipReason == "" || entry.SkipReason == "unrecognized_message") {
 					// A historical gap remains in the consumer's coverage log;
 					// successful trusted persistence restores current readiness.
-					coverageDirty = false
+					*recoveryPending = false
 					emit("running", "record_persisted", entry.ReceivedAt, 0)
 				}
 			}
