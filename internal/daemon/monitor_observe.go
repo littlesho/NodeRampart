@@ -235,7 +235,7 @@ func (a *App) monitorStorageFailure() bool {
 	defer a.mu.RUnlock()
 	// Status API read failures and this worker's own persistence failures cannot
 	// recursively produce storage-write alerts.
-	for _, operation := range []string{"interface", "sensor_health", "traffic", "event", "journal", "coverage", "coverage_gap", "interface_coverage_gap", "budget_maintenance", "event_queue_capacity", "event_metadata_rejected", "process_restart_pending_unknown"} {
+	for _, operation := range []string{"interface", "sensor_health", "traffic", "event", "journal", "journal_recovery", "coverage", "coverage_gap", "interface_coverage_gap", "budget_maintenance", "event_queue_capacity", "event_metadata_rejected", "process_restart_pending_unknown"} {
 		if a.storageFailures[operation] {
 			return true
 		}

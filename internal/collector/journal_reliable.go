@@ -18,13 +18,17 @@ import (
 )
 
 type JournalOptions struct {
-	InitialCursor     string
-	InitialObservedAt time.Time // Journal reception time stored with the checkpoint.
-	BackfillWindow    time.Duration
-	MaxBackfill       int
-	RestartMin        time.Duration
-	RestartMax        time.Duration
-	OnStatus          func(JournalStatus)
+	InitialCursor          string
+	InitialObservedAt      time.Time // Journal reception time stored with the checkpoint.
+	BackfillWindow         time.Duration
+	MaxBackfill            int
+	RestartMin             time.Duration
+	RestartMax             time.Duration
+	OnStatus               func(JournalStatus)
+	InitialRecoveryPending bool
+	// OnDegradation must durably record current record-quality loss before
+	// consumption can advance the checkpoint. Other gap kinds are historical.
+	OnDegradation func(context.Context, JournalStatus) error
 }
 
 // JournalEntry is delivered serially. A nil Observation still represents a
@@ -46,14 +50,23 @@ type JournalStatus struct {
 	Count  uint64    `json:"count"`
 }
 
+func (s JournalStatus) QualityDegraded() bool {
+	return s.State == "degraded" || s.State == "gap" && s.Reason == "malformed_record"
+}
+
 type journalAttemptError struct{ reason string }
+
+// ErrJournalAlreadyAcknowledged reports a successful duplicate checkpoint,
+// not a new trusted ingest. It advances replay without clearing recovery.
+var ErrJournalAlreadyAcknowledged = errors.New("journal entry already acknowledged")
 
 func (e journalAttemptError) Error() string { return "journal: " + e.reason }
 
 // RunReliable restarts journalctl with bounded backoff and backfill. consume's
 // return is the acknowledgement: it must atomically persist its aggregate,
-// events/outbox and checkpoint, and defensively deduplicate cursors. An error
-// leaves the in-memory cursor unchanged. The caller
+// events/outbox and checkpoint, and defensively deduplicate cursors. Return
+// ErrJournalAlreadyAcknowledged for a duplicate durable checkpoint; it is not
+// recovery evidence. Other errors leave the in-memory cursor unchanged. The caller
 // must retain any prepared detector result across retries of the same cursor.
 func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consume func(context.Context, JournalEntry) error) error {
 	if consume == nil {
@@ -74,10 +87,19 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 	if options.BackfillWindow < 0 || options.BackfillWindow > 24*time.Hour || options.MaxBackfill < 1 || options.MaxBackfill > 100_000 || options.RestartMin < 0 || options.RestartMax < options.RestartMin || options.RestartMax > 5*time.Minute {
 		return errors.New("invalid journal recovery bounds")
 	}
-	emit := func(state, reason string, since time.Time, count uint64) {
-		if options.OnStatus != nil {
-			options.OnStatus(JournalStatus{State: state, Reason: reason, At: time.Now().UTC(), Since: since, Count: count})
+	emit := func(state, reason string, since time.Time, count uint64) error {
+		status := JournalStatus{State: state, Reason: reason, At: time.Now().UTC(), Since: since, Count: count}
+		var err error
+		if status.QualityDegraded() && options.OnDegradation != nil {
+			err = options.OnDegradation(ctx, status)
 		}
+		if options.OnStatus != nil {
+			options.OnStatus(status)
+		}
+		if err != nil {
+			return journalAttemptError{reason: "persist_failed"}
+		}
+		return nil
 	}
 	cursor, acknowledgedAt := options.InitialCursor, options.InitialObservedAt
 	if cursor != "" && !validJournalCursor(cursor) {
@@ -88,7 +110,7 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 	var forceSince time.Time
 	// Record quality recovery belongs to the ingest loop, not one subprocess.
 	// Restarting a child cannot acknowledge a previously observed bad record.
-	recoveryPending := false
+	recoveryPending := options.InitialRecoveryPending
 	for ctx.Err() == nil {
 		started := time.Now().UTC()
 		cutoff := started.Add(-options.BackfillWindow)
@@ -113,10 +135,8 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 		emit("starting", "process_started", started, 0)
 		before := cursor
 		err := j.runReliableAttempt(ctx, cursor, since, started, options.MaxBackfill, &recoveryPending, func(entry JournalEntry) error {
-			if entry.Cursor == cursor {
-				return nil
-			}
-			if err := consume(ctx, entry); err != nil {
+			ack := consume(ctx, entry)
+			if ack != nil && !errors.Is(ack, ErrJournalAlreadyAcknowledged) {
 				return journalAttemptError{reason: "persist_failed"}
 			}
 			cursor = entry.Cursor
@@ -124,7 +144,7 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 				acknowledgedAt = entry.ReceivedAt
 			}
 			forceSince = time.Time{}
-			return nil
+			return ack
 		}, emit)
 		if ctx.Err() != nil {
 			return nil
@@ -165,7 +185,7 @@ func validJournalCursor(cursor string) bool {
 	return len(cursor) > 0 && len(cursor) <= 4096 && utf8.ValidString(cursor) && strings.IndexFunc(cursor, func(r rune) bool { return r < 0x21 || r == 0x7f }) < 0
 }
 
-func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, started time.Time, maxBackfill int, recoveryPending *bool, consume func(JournalEntry) error, emit func(string, string, time.Time, uint64)) error {
+func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, started time.Time, maxBackfill int, recoveryPending *bool, consume func(JournalEntry) error, emit func(string, string, time.Time, uint64) error) error {
 	args := append([]string{"--follow", "--no-tail", "--system", "--boot=all", "--output=json", "--no-pager"}, journalSelectionArguments()...)
 	if cursor != "" {
 		// journalctl may silently approximate a vacuumed --after-cursor. Read
@@ -218,6 +238,7 @@ func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, s
 	reader := bufio.NewReaderSize(stdout, 64<<10)
 	backfill := 0
 	verifyCursor := cursor != ""
+	lastCursor := cursor
 	live := false
 	for {
 		line, oversized, readErr := readJournalLine(reader)
@@ -226,12 +247,16 @@ func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, s
 		}
 		if oversized {
 			*recoveryPending = true
-			emit("gap", "malformed_record", started, 1)
+			if err := emit("gap", "malformed_record", started, 1); err != nil {
+				return err
+			}
 		} else if len(line) > 0 {
 			entry, ok := decodeJournalEntry(line, time.Now())
 			if !ok {
 				*recoveryPending = true
-				emit("gap", "malformed_record", started, 1)
+				if err := emit("gap", "malformed_record", started, 1); err != nil {
+					return err
+				}
 			} else {
 				if verifyCursor {
 					if entry.Cursor != cursor {
@@ -258,12 +283,21 @@ func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, s
 				}
 				if entry.SkipReason != "" && entry.SkipReason != "unrecognized_message" {
 					*recoveryPending = true
-					emit("degraded", entry.SkipReason, entry.ReceivedAt, 1)
+					if err := emit("degraded", entry.SkipReason, entry.ReceivedAt, 1); err != nil {
+						return err
+					}
 				}
-				if err := consume(entry); err != nil {
-					return err
+				// A repeated acknowledged cursor is not a new durable consumer
+				// acknowledgement and cannot clear record-quality recovery.
+				if entry.Cursor == lastCursor {
+					continue
 				}
-				if *recoveryPending && (entry.SkipReason == "" || entry.SkipReason == "unrecognized_message") {
+				ack := consume(entry)
+				if ack != nil && !errors.Is(ack, ErrJournalAlreadyAcknowledged) {
+					return ack
+				}
+				lastCursor = entry.Cursor
+				if ack == nil && *recoveryPending && (entry.SkipReason == "" || entry.SkipReason == "unrecognized_message") {
 					// A historical gap remains in the consumer's coverage log;
 					// successful trusted persistence restores current readiness.
 					*recoveryPending = false

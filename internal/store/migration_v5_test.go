@@ -31,7 +31,7 @@ func legacyV4Report(t *testing.T) (string, ReportSnapshot) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	for _, statement := range []string{`DROP TABLE monitor_state`, `DROP TABLE retention_meta`, `DROP TABLE retention_ledger`, `DROP TABLE retention_totals`, `ALTER TABLE report_snapshots DROP COLUMN billing_json`, `DELETE FROM schema_migrations WHERE version>=5`, `PRAGMA journal_mode=DELETE`} {
+	for _, statement := range []string{`DROP TABLE journal_recovery`, `DROP TABLE monitor_state`, `DROP TABLE retention_meta`, `DROP TABLE retention_ledger`, `DROP TABLE retention_totals`, `ALTER TABLE report_snapshots DROP COLUMN billing_json`, `DELETE FROM schema_migrations WHERE version>=5`, `PRAGMA journal_mode=DELETE`} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)
 		}

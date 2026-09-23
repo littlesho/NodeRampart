@@ -222,6 +222,9 @@ func TestBackupAcceptsAndMigratesAllSupportedSchemaVersions(t *testing.T) {
 				t.Fatal(err)
 			}
 			var statements []string
+			if version < 7 {
+				statements = append(statements, `DROP TABLE journal_recovery`)
+			}
 			if version < 6 {
 				statements = append(statements, `DROP TABLE monitor_state`, `DROP TABLE retention_meta`, `DROP TABLE retention_ledger`, `DROP TABLE retention_totals`)
 			}

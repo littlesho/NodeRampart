@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-const schemaVersion = 6
+const schemaVersion = 7
 
 func migrateV3(ctx context.Context, tx *sql.Tx) error {
 	for _, statement := range []string{

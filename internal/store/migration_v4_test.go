@@ -25,7 +25,7 @@ func legacyV3Database(t *testing.T) string {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	statements := []string{`DROP TABLE monitor_state`, `DROP TABLE retention_meta`, `DROP TABLE retention_ledger`, `DROP TABLE retention_totals`, `ALTER TABLE report_snapshots DROP COLUMN billing_json`, `DROP TABLE event_notifications`, `DROP TABLE notification_silences`, `DROP TABLE interface_detail_hourly`, `DROP INDEX events_incident_idx`, `DROP INDEX events_source_time_idx`, `DROP INDEX notification_incident_idx`}
+	statements := []string{`DROP TABLE journal_recovery`, `DROP TABLE monitor_state`, `DROP TABLE retention_meta`, `DROP TABLE retention_ledger`, `DROP TABLE retention_totals`, `ALTER TABLE report_snapshots DROP COLUMN billing_json`, `DROP TABLE event_notifications`, `DROP TABLE notification_silences`, `DROP TABLE interface_detail_hourly`, `DROP INDEX events_incident_idx`, `DROP INDEX events_source_time_idx`, `DROP INDEX notification_incident_idx`}
 	for _, column := range []string{"incident_id", "event_kind", "event_phase", "merged_count", "merge_until", "suppressed_at", "lease_until"} {
 		statements = append(statements, `ALTER TABLE notification_outbox DROP COLUMN `+column)
 	}

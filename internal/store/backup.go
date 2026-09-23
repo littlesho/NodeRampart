@@ -145,6 +145,11 @@ func verifySnapshot(ctx context.Context, path string) (BackupInfo, error) {
 	if !valid {
 		return BackupInfo{}, errors.New("backup integrity check produced no result")
 	}
+	if version >= 7 {
+		if _, err := (&Store{db: db}).JournalCheckpoint(ctx); err != nil {
+			return BackupInfo{}, err
+		}
+	}
 	return BackupInfo{Path: path, Bytes: fileInfo.Size(), SchemaVersion: version, CreatedAt: fileInfo.ModTime().UTC()}, nil
 }
 
@@ -240,6 +245,9 @@ func verifySnapshotSchema(ctx context.Context, db *sql.DB) (int, error) {
 		tables["retention_meta"] = "id tracking_started evicted_entries"
 		tables["retention_ledger"] = "id dataset reason action_day operations affected_rows data_start data_end first_action last_action"
 		tables["retention_totals"] = "dataset reason operations affected_rows data_start data_end first_action last_action"
+	}
+	if version >= 7 {
+		tables["journal_recovery"] = "id pending"
 	}
 	rows, err = db.QueryContext(ctx, `SELECT name FROM sqlite_schema WHERE type='table'`)
 	if err != nil {

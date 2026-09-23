@@ -21,25 +21,50 @@ type JournalWrite struct {
 	SourceRange  string
 	Event        *model.Event
 	Notification *OutboxMessage
+	// Trusted is set only after journal decoding and source validation. A
+	// new trusted checkpoint clears pending recovery in this same transaction.
+	Trusted bool
 }
 
 type Checkpoint struct {
-	Cursor     string
-	ObservedAt time.Time
+	Cursor          string
+	ObservedAt      time.Time
+	RecoveryPending bool
 }
+
+var ErrJournalRecoveryUnavailable = errors.New("journal recovery state unavailable")
 
 func (s *Store) JournalCheckpoint(ctx context.Context) (Checkpoint, error) {
 	var c Checkpoint
-	var observed int64
-	err := s.db.QueryRowContext(ctx, `SELECT cursor,observed_at FROM collector_checkpoints WHERE name='ssh_journal'`).Scan(&c.Cursor, &observed)
-	if IsNotFound(err) {
-		return c, nil
-	}
+	var observed, pending int64
+	// The singleton exists even before the first checkpoint. Read readiness
+	// and cursor from one snapshot; a missing/corrupt marker is never ready.
+	err := s.db.QueryRowContext(ctx, `SELECT COALESCE(c.cursor,''),COALESCE(c.observed_at,0),r.pending
+ FROM journal_recovery r LEFT JOIN collector_checkpoints c ON c.name='ssh_journal' WHERE r.id=1`).Scan(&c.Cursor, &observed, &pending)
 	if err != nil {
-		return c, err
+		// Driver errors may include storage details. Startup reports this fixed
+		// reason instead of exposing the database or filesystem error text.
+		return Checkpoint{}, ErrJournalRecoveryUnavailable
 	}
-	c.ObservedAt = time.UnixMicro(observed).UTC()
+	if pending != 0 && pending != 1 {
+		return Checkpoint{}, ErrJournalRecoveryUnavailable
+	}
+	c.RecoveryPending = pending == 1
+	if c.Cursor != "" {
+		c.ObservedAt = time.UnixMicro(observed).UTC()
+	}
 	return c, nil
+}
+
+func setJournalRecovery(ctx context.Context, tx executor, pending bool) error {
+	result, err := tx.ExecContext(ctx, `UPDATE journal_recovery SET pending=? WHERE id=1`, pending)
+	if err != nil {
+		return err
+	}
+	if count, err := result.RowsAffected(); err != nil || count != 1 {
+		return ErrJournalRecoveryUnavailable
+	}
+	return nil
 }
 
 func cursorHash(cursor string) string {
@@ -80,6 +105,13 @@ func (s *Store) CommitJournal(ctx context.Context, write JournalWrite) (bool, er
 		return false, err
 	}
 	if count > 0 {
+		// A cursor already committed before degradation is not new recovery
+		// evidence, even when it reappears during bounded replay.
+		if write.Trusted {
+			if err := setJournalRecovery(ctx, tx, false); err != nil {
+				return false, err
+			}
+		}
 		if write.Kind != "" {
 			if err := addAuth(ctx, tx, write.ObservedAt, write.Kind, write.SourceRange); err != nil {
 				return false, err

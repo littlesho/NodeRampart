@@ -232,6 +232,11 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 	}
+	if version < 7 {
+		if err := migrateV7(ctx, tx); err != nil {
+			return err
+		}
+	}
 	return tx.Commit()
 }
 
