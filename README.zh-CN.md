@@ -8,6 +8,8 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
+> **开发候选：** main 正在准备 `0.4.0-alpha.5`，尚未发布。候选包含 SSH journal 来源兼容和持久恢复修复，数据库升级至 schema 7。测试前保留兼容的升级前备份；下方 alpha.4 命令仍指向已公开的历史版本。
+
 > **v0.4.0-alpha.4：GeoIP 校验修复版预发布安装包现已提供。** 可从[公开 Release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.4) 或以下固定版本命令下载。匿名下载及校验和已经验证；本版本尚未执行安装生命周期及 ARM64 实机验收。用于生产前，请先在隔离环境中验证。Alpha 版本应与现有安全措施配合使用。
 
 > **GeoIP 修复范围：** alpha.4 修复共享 MMDB 数据重复解析造成的预算误拒绝，并提供安全的 MMDB 校验/资源预算错误提示。匹配候选对 City/ASN 的完整离线校验通过；用户正式下载、激活和每日更新尚未验证，本版本包内程序尚未运行。详见[验证范围与资源限制](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)及[升级与 GeoIP 验收](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance)。

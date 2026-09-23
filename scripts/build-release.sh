@@ -7,7 +7,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 cd "$PROJECT_DIR"
 VERSION=$(tr -d '\n' < VERSION)
-[ "$VERSION" = 0.4.0-alpha.4 ] || { echo 'release tooling currently targets 0.4.0-alpha.4' >&2; exit 1; }
+[ "$VERSION" = 0.4.0-alpha.5 ] || { echo 'release tooling currently targets 0.4.0-alpha.5' >&2; exit 1; }
 # Release callers must supply metadata from the verified source checkout.
 # Empty job outputs must never fall back to local Git or the wall clock.
 COMMIT=${COMMIT-}
@@ -72,7 +72,7 @@ try:
     for name, path in found.items():
         shutil.copyfile(path, stage / name)
     shutil.copyfile(project / 'scripts/bootstrap.sh', stage / 'bootstrap.sh')
-    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha.4',
+    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha.5',
         'commit': commit, 'build_date': build_date, 'package_count': 6,
         'source_package_count': 1, 'sbom_count': 6,
         'sbom_scope': 'packaged Go programs; runtime system dependencies excluded'}, indent=2) + '\n')
