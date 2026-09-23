@@ -180,7 +180,7 @@ class PackagingTests(unittest.TestCase):
         path = self.lab / "commands.jsonl"
         return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
-    def prepare_rpm_source(self, version="0.4.0-alpha.4"):
+    def prepare_rpm_source(self, version="0.4.0-alpha.5"):
         files = ["LICENSE", "README.md", "README.zh-CN.md", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md",
                  "SECURITY.md", "CONTRIBUTING.md", "Makefile", "go.mod", "go.sum", "VERSION",
                  "docs/public-guide.md", "configs/noderampart.json", "packaging/rpm/noderampart.spec",
@@ -492,13 +492,13 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
 
     def test_candidate_debian_mapping_and_native_order(self):
-        self.write(self.project / "VERSION", "0.4.0-alpha.4\n")
+        self.write(self.project / "VERSION", "0.4.0-alpha.5\n")
         result = self.run_script("scripts/build-deb.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Version: 0.4.0~alpha.4\n", (self.lab / "deb-control").read_text())
-        self.assertEqual((self.lab / "deb-output").read_text(), "noderampart_0.4.0-alpha.4_amd64.deb")
+        self.assertIn("Version: 0.4.0~alpha.5\n", (self.lab / "deb-control").read_text())
+        self.assertEqual((self.lab / "deb-output").read_text(), "noderampart_0.4.0-alpha.5_amd64.deb")
         if shutil.which("dpkg"):
-            for lower, higher in (("0.4.0~alpha.3", "0.4.0~alpha.4"), ("0.4.0~alpha.4", "0.4.0")):
+            for lower, higher in (("0.4.0~alpha.4", "0.4.0~alpha.5"), ("0.4.0~alpha.5", "0.4.0")):
                 self.assertEqual(subprocess.run([shutil.which("dpkg"), "--compare-versions", lower, "lt", higher]).returncode, 0)
 
     def test_candidate_rpm_mapping_preserves_full_program_version(self):
@@ -506,18 +506,18 @@ class PackagingTests(unittest.TestCase):
         result = self.run_script("scripts/build-rpm.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
         spec = (self.lab / "rpm-spec").read_text()
-        for expected in ("%global noderampart_version 0.4.0-alpha.4", "Version:        0.4.0",
-                         "Release:        0.alpha.5%{?dist}", "Source0:        %{name}-%{noderampart_version}.tar.gz",
+        for expected in ("%global noderampart_version 0.4.0-alpha.5", "Version:        0.4.0",
+                         "Release:        0.alpha.6%{?dist}", "Source0:        %{name}-%{noderampart_version}.tar.gz",
                          "%autosetup -n NodeRampart-%{noderampart_version}",
                          "internal/version.Version=%{noderampart_version}"):
             self.assertIn(expected, spec)
         names = json.loads((self.lab / "rpm-source-files.json").read_text())
-        self.assertTrue(all(name.split('/')[0] == 'NodeRampart-0.4.0-alpha.4' for name in names))
+        self.assertTrue(all(name.split('/')[0] == 'NodeRampart-0.4.0-alpha.5' for name in names))
 
     @unittest.skipUnless(shutil.which("rpm"), "native RPM tooling is unavailable")
     def test_candidate_native_rpm_order(self):
         for fedora in (43, 44):
-            for lower, higher in (("0.alpha.4", "0.alpha.5"), ("0.alpha.5", "1")):
+            for lower, higher in (("0.alpha.5", "0.alpha.6"), ("0.alpha.6", "1")):
                 result = subprocess.run([shutil.which("rpm"), "--eval",
                     '%{lua: print(rpm.vercmp("0.4.0-' + lower + '.fc' + str(fedora) +
                     '", "0.4.0-' + higher + '.fc' + str(fedora) + '"))}'],
@@ -610,12 +610,12 @@ class PackagingTests(unittest.TestCase):
 
     def test_debian_arm64_package_checks_binary_architecture(self):
         self.env.update(ARCH="arm64", MOCK_GOARCH="arm64")
-        self.write(self.project / "VERSION", "0.4.0-alpha.4\n")
+        self.write(self.project / "VERSION", "0.4.0-alpha.5\n")
         result = self.run_script("scripts/build-deb.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Architecture: arm64\n", (self.lab / "deb-control").read_text())
-        self.assertIn("Version: 0.4.0~alpha.4\n", (self.lab / "deb-control").read_text())
-        self.assertEqual((self.lab / "deb-output").read_text(), "noderampart_0.4.0-alpha.4_arm64.deb")
+        self.assertIn("Version: 0.4.0~alpha.5\n", (self.lab / "deb-control").read_text())
+        self.assertEqual((self.lab / "deb-output").read_text(), "noderampart_0.4.0-alpha.5_arm64.deb")
         self.env["MOCK_GOARCH"] = "amd64"
         result = self.run_script("scripts/build-deb.sh")
         self.assertNotEqual(result.returncode, 0)

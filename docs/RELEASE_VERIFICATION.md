@@ -94,6 +94,13 @@ it does not perform these GitHub attestation checks automatically.
 
 ## Maintainer draft verification
 
+The next candidate is alpha.5 (not yet published). The download examples above
+refer to published alpha.4; use the new reviewed tag only after it is separately
+authorized and created. A local candidate can be built without a tag using
+`EXPECTED_COMMIT=<full-main-SHA> ./scripts/release-metadata.sh` and passing its
+`commit` and source-commit `build_date` to `build-release.sh`. Do not substitute
+the local wall clock or claim local artifacts have GitHub attestations.
+
 A draft remains unpublished even if an authenticated maintainer can download it.
 Use the same `gh release download` and attestation commands above with an account
 that can read the draft. Record its numeric Release ID, tag, full source commit,
@@ -102,13 +109,13 @@ reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 
 The exact expected asset set is 22 files:
 
-- `noderampart_0.4.0-alpha.4_amd64.deb` and `noderampart_0.4.0-alpha.4_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.5.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.5.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.5.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.5.fc44.aarch64.rpm`.
+- `noderampart_0.4.0-alpha.5_amd64.deb` and `noderampart_0.4.0-alpha.5_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.6.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.6.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.6.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.6.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.5.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.6.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
 
 Check names and identities, not only the count. GitHub's generated source ZIP/TAR
@@ -146,7 +153,7 @@ python3 scripts/release_sbom.py --fetch-syft "$TOOLS_DIR/syft"
 COMMIT=$(git rev-parse HEAD)
 BUILD_DATE=$(git show -s --format=%cI HEAD)
 export COMMIT BUILD_DATE
-python3 scripts/release_sbom.py dist/noderampart_0.4.0-alpha.4_amd64.deb \
+python3 scripts/release_sbom.py dist/noderampart_0.4.0-alpha.5_amd64.deb \
   --syft "$TOOLS_DIR/syft/syft" --output dist/sbom
 ```
 

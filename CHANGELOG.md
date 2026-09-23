@@ -2,6 +2,19 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.5 - Unreleased
+
+- Accept trusted OpenSSH records from strictly bounded systemd login session
+  scopes without weakening UID, executable, transport or user-unit checks.
+- Keep known journal quality degradation pending across journalctl subprocess
+  and daemon restarts until a new trusted record is durably checkpointed.
+- Database schema 7 stores current recovery separately from historical coverage
+  gaps. Upgrades cannot reconstruct unresolved state lost by older versions;
+  an older binary requires a compatible pre-upgrade backup for rollback.
+- Prepare project version `0.4.0-alpha.5`, Debian internal `0.4.0~alpha.5`, and
+  RPM `0.4.0-0.alpha.6%{?dist}`. This source preparation does not publish a tag,
+  package or Release; candidate validation and publication are separate gates.
+
 ## 0.4.0-alpha.4 - 2026-09-20 (UTC)
 
 - Published at `2026-09-20T13:02:35Z`. All 22 assets passed anonymous
