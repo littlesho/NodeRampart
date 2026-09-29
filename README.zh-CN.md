@@ -8,11 +8,11 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
-> **开发候选：** main 正在准备 `0.4.0-alpha.5`，尚未发布。候选包含 SSH journal 来源兼容和持久恢复修复，数据库升级至 schema 7。测试前保留兼容的升级前备份；下方 alpha.4 命令仍指向已公开的历史版本。
+> **v0.4.0-alpha.5：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.5) 修复 SSH journal session scope 来源兼容以及子进程、整个 daemon 重启后的恢复状态。数据库升级至 schema 7，升级前请保留已验证的兼容备份。
 
-> **v0.4.0-alpha.4：GeoIP 校验修复版预发布安装包现已提供。** 可从[公开 Release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.4) 或以下固定版本命令下载。匿名下载及校验和已经验证；本版本尚未执行安装生命周期及 ARM64 实机验收。用于生产前，请先在隔离环境中验证。Alpha 版本应与现有安全措施配合使用。
+> **验收范围：** 22 项资产匿名下载与校验和、22 项 provenance、6 项 SPDX attestation，以及 Debian 12/13、Fedora 43/44 的 amd64/x86_64 原生与安装包生命周期已通过。Debian 12、Fedora 43 的公开 bootstrap 安装也已通过。ARM64 实机仍未验收，beta 前必需；这不代表生产就绪。详见[发布验证](docs/RELEASE_VERIFICATION.md#alpha5-publication-and-distribution-verification)。
 
-> **GeoIP 修复范围：** alpha.4 修复共享 MMDB 数据重复解析造成的预算误拒绝，并提供安全的 MMDB 校验/资源预算错误提示。匹配候选对 City/ASN 的完整离线校验通过；用户正式下载、激活和每日更新尚未验证，本版本包内程序尚未运行。详见[验证范围与资源限制](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)及[升级与 GeoIP 验收](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance)。
+> **GeoIP 修复范围：** alpha.4 修复共享 MMDB 数据重复解析造成的预算误拒绝，并提供安全的 MMDB 校验/资源预算错误提示。匹配候选对 City/ASN 的完整离线校验通过；用户正式下载、激活和每日更新尚未验证。详见[验证范围与资源限制](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)及[升级与 GeoIP 验收](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance)。
 
 ## 能帮你做什么？
 
@@ -34,7 +34,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载这一行命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。
 
 ~~~bash
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.4/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.4
+curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.5
 ~~~
 
 也可以先下载到独立目录，查看脚本后再决定是否执行：
@@ -42,11 +42,11 @@ curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/r
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.4/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # 查看并接受脚本行为后，再单独执行：
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.4
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.5
 ~~~
 
 安装包与证明的人工核验步骤见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。HTTPS 下载、同一 Release 的 SHA256 和 GitHub attestation 是不同检查；bootstrap 会检查包校验和与包身份，**不会自动执行 attestation 验证**。
@@ -147,7 +147,7 @@ GeoIP：需要你自己的 [MaxMind GeoLite 账户](https://www.maxmind.com/en/g
 
 ## 怎样升级和卸载？
 
-NodeRampart 不会自动更新可执行程序。主动升级安装包前，请创建并验证数据库备份，单独妥善保存必要配置和凭据，并保留旧安装包。使用包管理器或目标 Release 的 bootstrap 升级。数据库会自动迁移到 schema 6，旧程序不能打开迁移后的数据库；配置恢复不会降级数据。源码安装必须先按[源码转安装包说明](docs/V0.4_OPERATIONS.md#upgrades-and-removal)迁移，不能直接覆盖源码安装拥有的文件。
+NodeRampart 不会自动更新可执行程序。主动升级安装包前，请创建并验证数据库备份，单独妥善保存必要配置和凭据，并保留旧安装包。使用包管理器或目标 Release 的 bootstrap 升级。数据库会自动迁移到 schema 7，旧程序不能打开迁移后的数据库；配置恢复不会降级数据。源码安装必须先按[源码转安装包说明](docs/V0.4_OPERATIONS.md#upgrades-and-removal)迁移，不能直接覆盖源码安装拥有的文件。
 
 在**服务与卸载**中选择：
 
@@ -187,16 +187,16 @@ sudo journalctl -u noderampartd -u noderampart-sensor --since today
 SSH 会话没有终端时，可用 ssh -t 分配终端，或使用原有的非交互命令。下载失败、GeoIP 缺失、数据不完整等情况见[操作说明](docs/V0.4_OPERATIONS.md)。事件、备份和回放的详细命令仍可查阅 [v0.3 操作手册](docs/V0.3_OPERATIONS.md)。
 
 新生成的日报会保存完整单价、来源、免费额度、字节单位和观测流量，便于复算。
-历史补报使用生成时配置的价格，已有存档不会重新计价。数据库自动迁移到 schema 6，新增持久化告警状态与裁剪台账；
+历史补报使用生成时配置的价格，已有存档不会重新计价。数据库自动迁移到 schema 7，保留持久化告警状态与裁剪台账，并记录未恢复的 journal 降级；
 升级前请备份，旧版程序不能直接打开已迁移的数据库。
 
-发布产物将附带 Go 依赖 SBOM 与 GitHub 来源证明，验证步骤见[发布验证](docs/RELEASE_VERIFICATION.md)。
+发布产物附带 Go 依赖 SBOM 与 GitHub 来源证明，验证步骤见[发布验证](docs/RELEASE_VERIFICATION.md)。
 
 ## 安全与 Alpha 限制
 
 传感器使用 AF_PACKET 和 `CAP_NET_RAW`，守护进程使用独立服务身份。配置管理、服务管理和装卸包需要 root。尚未实现 eBPF 采集器或程序自动更新；防火墙和 SSH 访问控制仍需独立配置。
 
-构建目标是 Debian 12/13、Fedora 43/44 的 amd64/arm64。交叉编译或检查包内容不等于真实运行测试。过去私有 Debian 13/Fedora 44 amd64 实验结果仅适用于当时快照，不代表当前 tag 已通过新的安装、升级、卸载验收，也不代表真实 ARM64 运行通过。[剩余验收与功能限制](docs/ALPHA_LIMITATIONS.md)和[安全问题报告](SECURITY.md)说明了边界。扫描成功或证明有效均不代表不存在漏洞。
+构建目标是 Debian 12/13、Fedora 43/44 的 amd64/arm64。交叉编译或检查包内容不等于真实运行测试。alpha.5 已通过 Debian 12/13、Fedora 43/44 的 amd64/x86_64 原生与安装包生命周期验收，以及 Debian 12/Fedora 43 的公开 bootstrap 安装。真实 ARM64 运行仍未验收，beta 前必须完成。[剩余验收与功能限制](docs/ALPHA_LIMITATIONS.md)和[安全问题报告](SECURITY.md)说明了边界。扫描成功或证明有效均不代表不存在漏洞。
 
 ## 开发与许可
 

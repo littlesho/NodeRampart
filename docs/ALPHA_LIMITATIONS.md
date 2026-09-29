@@ -1,21 +1,29 @@
-# `v0.4.0-alpha.4` limitations
+# `v0.4.0-alpha.5` limitations
 
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
 
 ## Validation scope
 
-Earlier development snapshots passed bounded local checks and selected native
-installation, management, retained removal, reinstall and purge checks in
-isolated Debian 13 and Fedora 44 amd64 VMs. Those results are historical; they
-are not a fresh privileged acceptance of this public source snapshot. Private
-lab logs and internal handoffs are not distributed with the source.
+alpha.5 was published at `2026-09-29T14:50:47Z` from source
+`f539d18c9a91913a49e4c1d9f36d381965f2f7b7`. All 22 public assets passed fresh
+anonymous download/checksum verification, 22 provenance and six SPDX checks.
+Debian 12/13 and Fedora 43/44 amd64/x86_64 native and package lifecycle acceptance
+passed. Public bootstrap installation passed on Debian 12 and Fedora 43 with
+unchanged uploaded packages, standard proxy variables and normal TLS checks.
+See the [scoped release record](RELEASE_VERIFICATION.md#alpha5-publication-and-distribution-verification).
 
-ARM64 DEB/RPM artifacts were previously cross-built and inspected, not executed
-on ARM64. The checks required for a new build are listed in the
-[development guide](DEVELOPMENT.md). Public source availability does not imply a
-hosted workflow run, published packages, a matching tag or a completed release.
-The bootstrap command requires separately published matching release assets.
+ARM64 DEB/RPM artifacts were cross-built and inspected, not executed on ARM64.
+Real ARM64 validation is required before beta by the
+[development guide](DEVELOPMENT.md). Private operational evidence is not
+packaged or included in public source; validation does not establish production readiness.
+
+Schema 6 has no durable evidence for the new recovery-pending protocol. Migration
+to schema 7 defaults to no known pending under that protocol, not historical
+confirmed health; it cannot reconstruct unresolved state already lost by older
+versions. Historical coverage gaps remain history, not proof of backfill.
+Tested transactions and process-crash recovery do not guarantee zero loss from
+arbitrary host power failures.
 
 For alpha.3, 22 published assets passed anonymous download/checksum verification.
 Actual x86_64 package CLIs from the DEB and Fedora 43/44 RPMs passed 12 bounded
@@ -65,8 +73,7 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
 
 ## Still unvalidated
 
-- Debian 12 and Fedora 43 runtime and package lifecycle.
-- Real `arm64` runtime; cross-builds do not execute the sensor.
+- Real `arm64` runtime, required before beta; cross-builds do not execute the sensor.
 - Authenticated MaxMind downloads with real customer credentials and live
   Telegram delivery from the new setup menu. Automated tests use synthetic
   credentials, generated MMDB data and mocked HTTP responses.
@@ -144,5 +151,5 @@ Healthy route families continue under partial discovery, while coverage stays
 degraded. ECMP/policy-routing limits remain. GeoIP unchanged detection avoids
 activation but still downloads and validates the pair. New report archives
 preserve configured pricing inputs; old archives contain no reconstructed
-tariff history. The current schema 6 requires a matching verified backup for a
+tariff history. The current schema 7 requires a matching verified backup for a
 planned downgrade.

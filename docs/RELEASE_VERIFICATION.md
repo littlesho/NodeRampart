@@ -1,14 +1,16 @@
 # Verify a NodeRampart release
 
-[v0.4.0-alpha.4](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.4)
-is published as a prerelease, with 22 assets and their GitHub attestations.
-The release source commit is `cd61b30a622e0d2c65b398db8c24d2dcea7519f0`.
-All assets were downloaded anonymously under their original public names and
-matched the verified draft bytes; `sha256sum -c SHA256SUMS` passed directly.
-The existing package-content and attestation checks therefore apply to those
-same bytes. Installation lifecycle and ARM64 hardware acceptance testing have
-not been performed for this version. The steps below let you verify your own
-download before deciding to install it.
+[v0.4.0-alpha.5](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.5)
+was published as an alpha prerelease at `2026-09-29T14:50:47Z` (Release ID
+`395132661`). Its source and tag are
+`f539d18c9a91913a49e4c1d9f36d381965f2f7b7`; BUILD_DATE remains
+`2026-09-23T22:52:52+08:00`, derived from that source commit.
+The [release workflow](https://github.com/littlesho/NodeRampart/actions/runs/35931396244)
+completed on attempt 1. All 22 assets passed anonymous re-download/checksum and
+provenance verification; six SPDX attestations passed. See the
+[acceptance scope](#alpha5-publication-and-distribution-verification) below.
+These package identities remain pinned even when later documentation commits
+advance main. The steps below verify a download before installation.
 
 ## What a release contains
 
@@ -48,18 +50,18 @@ independent evidence of the expected source.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.4 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.5 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.4_amd64.deb
+PACKAGE=noderampart_0.4.0-alpha.5_amd64.deb
 EXPECTED_COMMIT='REPLACE_WITH_REVIEWED_FULL_COMMIT_SHA'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.4 \
+  --source-ref refs/tags/v0.4.0-alpha.5 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -68,16 +70,16 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.4 \
+  --source-ref refs/tags/v0.4.0-alpha.5 \
   --source-digest "$EXPECTED_COMMIT" \
-  --predicate-type https://spdx.dev/Document \
+  --predicate-type https://spdx.dev/Document/v2.3 \
   --deny-self-hosted-runners
 
 # The separately downloaded inventory also has its own provenance statement.
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.4 \
+  --source-ref refs/tags/v0.4.0-alpha.5 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -94,9 +96,9 @@ it does not perform these GitHub attestation checks automatically.
 
 ## Maintainer draft verification
 
-The next candidate is alpha.5 (not yet published). The download examples above
-refer to published alpha.4; use the new reviewed tag only after it is separately
-authorized and created. A local candidate can be built without a tag using
+The following procedure applies before publication of a future candidate;
+alpha.5 is already published. Select that candidate’s independently reviewed
+version and source identity. A local candidate can be built without a tag using
 `EXPECTED_COMMIT=<full-main-SHA> ./scripts/release-metadata.sh` and passing its
 `commit` and source-commit `build_date` to `build-release.sh`. Do not substitute
 the local wall clock or claim local artifacts have GitHub attestations.
@@ -107,7 +109,7 @@ that can read the draft. Record its numeric Release ID, tag, full source commit,
 workflow run ID and attempt before verification. The tag must resolve to the
 reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 
-The exact expected asset set is 22 files:
+For the frozen alpha.5 release, the exact asset set is 22 files:
 
 - `noderampart_0.4.0-alpha.5_amd64.deb` and `noderampart_0.4.0-alpha.5_arm64.deb`.
 - `noderampart-0.4.0-0.alpha.6.fc43.x86_64.rpm`,
@@ -313,3 +315,59 @@ alpha.4 已公开，22 项资产已按远端原名匿名下载并直接通过校
 一致，复用对应包内容、源码及 28 项证明。已有候选 City/ASN 离线通过仅作为算法
 证据；本版本包内程序未运行，用户真实下载、激活、每日更新、安装生命周期及
 ARM64 实机仍未验收。
+
+## alpha.5 publication and distribution verification
+
+The public bytes match the accepted assets: 22 filenames, asset IDs, sizes and
+SHA256 values were unchanged across publication. Fresh anonymous downloads used
+fixed-version public entry URLs with TLS validation and no GitHub credentials
+or cookies. SHA256SUMS checked its 21 entries; the checksum file itself matched
+its sealed digest and provenance. All 22 provenance and six SPDX attestations
+were reverified on these bytes against repository, signer workflow, source ref,
+source SHA, workflow run/attempt, predicate and subject digest constraints.
+SPDX predicates matched the downloaded SBOMs. Proof retrieval used GitHub
+authentication separately from anonymous asset transfer.
+
+Debian 12/13 amd64 and Fedora 43/44 x86_64 passed the recorded native/package
+lifecycle matrix. Schema 6→7, backup/restore, checkpoint transactions and journal
+recovery across subprocess and whole-daemon restarts have scoped acceptance.
+The Debian controlled instance-service socket path and Fedora 43/44 vendor
+`sshd.socket`/`sshd@.service` loopback port-22 configurations passed; Fedora stayed
+SELinux Enforcing. This does not cover arbitrary custom ports, aliases or PAM
+variants. Fedora 43 socket-specific pending observations lasted five seconds;
+the separate native service recovery scenarios used full 135-second windows.
+
+Public bootstrap installation separately passed on Debian 12.15 (systemd
+252.39-1~deb12u2, OpenSSH 9.2p1 Debian-2+deb12u10) and Fedora 43 Server (systemd
+258-1.fc43, OpenSSH 10.0p2, SELinux Enforcing, firewalld active). Each guest newly
+downloaded `bootstrap.sh` from the public alpha.5 URL, matched SHA256
+`c0064f9f2763ba5d2a26031a3e25c5ea6621e06f4a217998542ac610ade60fd4`, and ran
+`--version v0.4.0-alpha.5 --no-setup`. Observed bootstrap package bytes matched:
+
+| Package | SHA256 |
+| --- | --- |
+| `noderampart_0.4.0-alpha.5_amd64.deb` | `19d47a3d2b8635133be8fec3b1c431bde582b6eba41a3fbb7735df9350503127` |
+| `noderampart-0.4.0-0.alpha.6.fc43.x86_64.rpm` | `f50be0c9bc8f8fffc385b4e8ea853a389f7fa3ac49b8c5943f40529fd04664da` |
+
+The Debian internal version is `0.4.0~alpha.5`; RPM `0.4.0-0.alpha.6.fc43` is the
+package ordering mapping, not an alpha.6 program. Installed CLI and running
+daemon version, commit and build date matched the frozen identity above; binary
+hashes matched buildinfo. Original service identity/sandbox, control sockets,
+journal access and disabled notifications passed. Unsupported version and
+unavailable download failed closed; detected architecture and selected package
+matched. The full earlier lifecycle/recovery matrix was not rerun for this step.
+
+Only standard process-local variables pointed to an approved existing proxy;
+TLS validation and official repositories remained enabled. Debian's first
+attempt failed on an unavailable installation-media APT source; that failure
+was retained, the media source was temporarily disabled, and official HTTPS
+sources were preserved before successful installation. Guests without a default
+route used the documented explicit sensor interface setting. No bootstrap,
+package, SSH/PAM, firewall or SELinux policy changes were made. Both guests were
+restored to their preserved clean baselines and stopped.
+
+ARM64 native remains **NOT RUN**, required before beta. Schema 6 migration
+cannot reconstruct previously lost pending state; no-known-pending is not
+historical confirmed health. Historical gaps are not described as backfilled.
+Transaction/process-crash checks do not guarantee arbitrary host-power-loss
+durability. This remains an alpha prerelease, not production readiness.
