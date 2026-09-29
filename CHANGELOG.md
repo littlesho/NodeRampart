@@ -2,7 +2,7 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-## 0.4.0-alpha.5 - Unreleased
+## 0.4.0-alpha.5 - 2026-09-29 (UTC)
 
 - Accept trusted OpenSSH records from strictly bounded systemd login session
   scopes without weakening UID, executable, transport or user-unit checks.
@@ -11,9 +11,14 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 - Database schema 7 stores current recovery separately from historical coverage
   gaps. Upgrades cannot reconstruct unresolved state lost by older versions;
   an older binary requires a compatible pre-upgrade backup for rollback.
-- Prepare project version `0.4.0-alpha.5`, Debian internal `0.4.0~alpha.5`, and
-  RPM `0.4.0-0.alpha.6%{?dist}`. This source preparation does not publish a tag,
-  package or Release; candidate validation and publication are separate gates.
+- Project version `0.4.0-alpha.5`, Debian internal `0.4.0~alpha.5`, and
+  RPM `0.4.0-0.alpha.6%{?dist}`; the RPM Release sequence is not the project version.
+- Published at `2026-09-29T14:50:47Z` from
+  `f539d18c9a91913a49e4c1d9f36d381965f2f7b7`. All 22 anonymous asset downloads,
+  checksums, 22 provenance and six SPDX attestations passed. Debian 12/13 and
+  Fedora 43/44 amd64/x86_64 native/package lifecycle and Debian 12/Fedora 43
+  public bootstrap installation passed. ARM64 native remains required before beta.
+  Later documentation commits do not change the alpha.5 package source identity.
 
 ## 0.4.0-alpha.4 - 2026-09-20 (UTC)
 

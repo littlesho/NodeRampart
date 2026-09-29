@@ -8,11 +8,11 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
-> **Development candidate:** main prepares `0.4.0-alpha.5`; it is not a published release. It adds SSH journal source compatibility and durable recovery with database schema 7. Keep a compatible pre-upgrade backup before testing; published alpha.4 instructions below remain historical release instructions.
+> **v0.4.0-alpha.5 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.5) fix SSH journal session-scope compatibility and recovery across subprocess and whole-daemon restarts. The database upgrades to schema 7; retain a verified compatible pre-upgrade backup.
 
-> **v0.4.0-alpha.4 — GeoIP validation fix prerelease, now available.** Download the [published packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.4) using the fixed-version commands below. Anonymous downloads and checksums have been verified; this version has not undergone installation lifecycle or ARM64 hardware acceptance testing. Validate it in an isolated environment before production use. Alpha software belongs alongside your existing security controls.
+> **Validation:** All 22 anonymous asset downloads/checksums, 22 provenance and six SPDX attestations passed, alongside Debian 12/13 and Fedora 43/44 amd64/x86_64 native/package lifecycle acceptance. Public bootstrap installation passed on Debian 12 and Fedora 43. Real ARM64 remains unvalidated and required before beta; this does not establish production readiness. See [release verification](docs/RELEASE_VERIFICATION.md#alpha5-publication-and-distribution-verification).
 
-> **GeoIP fix scope:** alpha.4 fixes repeated parsing of shared MMDB data that could exhaust the validation budget, and adds safe MMDB validation/resource-budget errors. Matching candidate City/ASN samples passed complete offline validation; user download, activation and daily updates remain unverified. This version’s packaged programs have not been run. See [validation scope and resource limits](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) and [upgrade and GeoIP acceptance](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance).
+> **GeoIP fix scope:** alpha.4 fixes repeated parsing of shared MMDB data that could exhaust the validation budget, and adds safe MMDB validation/resource-budget errors. Matching candidate City/ASN samples passed complete offline validation; user download, activation and daily updates remain unverified. See [validation scope and resource limits](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) and [upgrade and GeoIP acceptance](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance).
 
 ## What can it do?
 
@@ -34,7 +34,7 @@ You can also merge repeated alerts, set silences that expire automatically, fill
 The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. This download command needs curl and working HTTPS certificates; the installer and apt/dnf handle the remaining installation dependencies. Go is not needed.
 
 ~~~bash
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.4/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.4
+curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.5
 ~~~
 
 Alternatively, download into a separate directory and inspect the script before deciding to execute it:
@@ -42,11 +42,11 @@ Alternatively, download into a separate directory and inspect the script before 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.4/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # Run separately, after reviewing and accepting the script:
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.4
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.5
 ~~~
 
 For manual package and provenance checks, see [release verification](docs/RELEASE_VERIFICATION.md#download-and-verify). HTTPS download, same-release SHA256 and GitHub attestation are distinct checks: bootstrap checks package checksums and identity but **does not automatically verify attestations**.
@@ -158,7 +158,7 @@ Guest TX is not identical to billable Internet egress. Free allowances and prici
 
 ## Upgrades and uninstall
 
-NodeRampart does not update its own executable. Before an explicit package upgrade, create and verify a database backup, separately protect required configuration and credentials, and retain the previous package. Use the package manager or the bootstrap from the intended release. Schema 6 migrations are automatic; older binaries cannot open the migrated database. Configuration recovery does not downgrade data. Source installations require the documented [source-to-package transition](docs/V0.4_OPERATIONS.md#upgrades-and-removal), not installation over the source-owned files.
+NodeRampart does not update its own executable. Before an explicit package upgrade, create and verify a database backup, separately protect required configuration and credentials, and retain the previous package. Use the package manager or the bootstrap from the intended release. Schema 7 migration is automatic; older binaries cannot open the migrated database. Configuration recovery does not downgrade data. Source installations require the documented [source-to-package transition](docs/V0.4_OPERATIONS.md#upgrades-and-removal), not installation over the source-owned files.
 
 Open **Services and uninstall** in the menu:
 
@@ -199,15 +199,15 @@ sudo journalctl -u noderampartd -u noderampart-sensor --since today
 
 For an SSH session without a terminal, allocate one with ssh -t, or use the existing noninteractive commands. Installation failures, missing GeoIP data and report coverage are explained in [operations](docs/V0.4_OPERATIONS.md). Event, backup and replay command references remain in [v0.3 operations](docs/V0.3_OPERATIONS.md).
 
-New daily archives retain the full tariff, source, free allowance, byte unit and observed bytes used for their estimate. Backfilled reports use the tariff configured when generated; old archives are not re-priced. Database schema 6 migrates automatically; back up before upgrading because older binaries cannot open the migrated database.
+New daily archives retain the full tariff, source, free allowance, byte unit and observed bytes used for their estimate. Backfilled reports use the tariff configured when generated; old archives are not re-priced. Database schema 7 migrates automatically; back up before upgrading because older binaries cannot open the migrated database.
 
-Published packages will include a Go dependency SBOM and GitHub attestations; see [verify a release](docs/RELEASE_VERIFICATION.md).
+Published packages include a Go dependency SBOM and GitHub attestations; see [verify a release](docs/RELEASE_VERIFICATION.md).
 
 ## Security and alpha limits
 
 The sensor uses AF_PACKET with `CAP_NET_RAW`; the daemon runs as a separate service identity. Setup and service/package management require root. No eBPF collector or automatic program updater is implemented. Keep your firewall and SSH access controls independently configured.
 
-The build targets are Debian 12/13 and Fedora 43/44 on amd64/arm64. Cross-compiling or inspecting a package is not a runtime test. Earlier private Debian 13/Fedora 44 amd64 lab results apply only to those snapshots, not to this tag. Fresh installation/upgrade/removal acceptance for this prerelease and real ARM64 runtime validation are not claimed. See [remaining validation and functional limits](docs/ALPHA_LIMITATIONS.md) and [security reporting](SECURITY.md). Successful scans or valid attestations do not prove absence of vulnerabilities.
+The build targets are Debian 12/13 and Fedora 43/44 on amd64/arm64. Cross-compiling or inspecting a package is not a runtime test. alpha.5 passed Debian 12/13 and Fedora 43/44 amd64/x86_64 native/package lifecycle acceptance and Debian 12/Fedora 43 public bootstrap installation. Real ARM64 runtime remains unvalidated and required before beta. See [remaining validation and functional limits](docs/ALPHA_LIMITATIONS.md) and [security reporting](SECURITY.md). Successful scans or valid attestations do not prove absence of vulnerabilities.
 
 ## Development and license
 
