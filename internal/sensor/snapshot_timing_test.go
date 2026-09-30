@@ -54,7 +54,7 @@ func TestFleetSnapshotsPrecedeBlockingStatsAndDelivery(t *testing.T) {
 		t.Run(phase, func(t *testing.T) {
 			started := time.Now().UTC().Add(-250 * time.Millisecond)
 			conn := &snapshotHookConnection{fail: phase == "send failure"}
-			f := &Fleet{BatchInterval: 100 * time.Millisecond, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Sender: &BatchSender{connect: func() (batchConnection, error) { return conn, nil }}, slots: map[string]*captureSlot{}}
+			f := &Fleet{BatchInterval: 100 * time.Millisecond, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Sender: &BatchSender{connect: func(time.Duration) (batchConnection, error) { return conn, nil }}, slots: map[string]*captureSlot{}}
 			for _, name := range []string{"labA", "labB"} {
 				f.slots[name] = &captureSlot{capture: &snapshotHookCapture{}, aggregator: NewAggregator(name, 64, started), done: make(chan struct{}), lastFlush: started}
 			}

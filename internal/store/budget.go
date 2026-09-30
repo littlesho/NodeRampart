@@ -67,14 +67,26 @@ const (
 	writeTraffic
 )
 
-func (s *Store) ConfigureBudget(ctx context.Context, cfg BudgetConfig) error {
+func validateBudget(cfg BudgetConfig) error {
 	if cfg.MaxBytes < 64<<20 || cfg.MaxBytes > 1<<40 || cfg.MinFreeBytes < 0 || cfg.MinFreeBytes > 1<<40 {
 		return errors.New("storage budget requires max_bytes 64 MiB..1 TiB and min_free_bytes 0..1 TiB")
+	}
+	return nil
+}
+
+func (s *Store) ConfigureBudget(ctx context.Context, cfg BudgetConfig) error {
+	if err := validateBudget(cfg); err != nil {
+		return err
 	}
 	if err := s.lockBudget(ctx); err != nil {
 		return err
 	}
 	defer s.budgetMu.Unlock()
+	// Publish before querying: even a replacement created during configuration
+	// must apply this Store's budget before it is handed to database/sql.
+	if s.connector != nil {
+		s.connector.budget.Store(&cfg)
+	}
 	var pageSize int64
 	if err := s.db.QueryRowContext(ctx, `PRAGMA page_size`).Scan(&pageSize); err != nil {
 		return err

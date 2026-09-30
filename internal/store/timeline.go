@@ -34,6 +34,7 @@ func (q TimelineQuery) Validate() error {
 }
 
 type DeliveryOutcome struct {
+	Channel        string    `json:"channel,omitempty"`
 	Decision       string    `json:"decision"`
 	NotificationID string    `json:"notification_id,omitempty"`
 	State          string    `json:"state"`
@@ -55,6 +56,7 @@ type TimelineEvent struct {
 	SourceRange string              `json:"source_range,omitempty"`
 	Count       uint64              `json:"count"`
 	Delivery    DeliveryOutcome     `json:"delivery"`
+	Deliveries  []DeliveryOutcome   `json:"deliveries"`
 }
 
 type TimelinePage struct {
@@ -65,21 +67,31 @@ type TimelinePage struct {
 	HistoryNote   string          `json:"history_note"`
 }
 
-const timelineColumns = `e.id,e.incident_id,e.observed_at,e.kind,e.phase,e.severity,e.summary,e.source_range,e.count,
- COALESCE(d.decision,CASE WHEN old.id IS NOT NULL THEN 'legacy' ELSE 'unknown' END),
+const timelineDeliveryColumns = `COALESCE(d.decision,CASE WHEN old.id IS NOT NULL THEN 'legacy' ELSE 'unknown' END),
  COALESCE(o.id,old.id,NULLIF(d.notification_id,''),''),
  CASE WHEN COALESCE(o.sent_at,old.sent_at) IS NOT NULL THEN 'sent'
+ WHEN COALESCE(o.isolated_at,old.isolated_at) IS NOT NULL AND COALESCE(o.suppressed_at,old.suppressed_at) IS NOT NULL
+ AND COALESCE(o.body,old.body)='' AND COALESCE(o.last_error,old.last_error)='isolated notification explicitly discarded' THEN 'discarded'
+ WHEN COALESCE(o.isolated_at,old.isolated_at) IS NOT NULL THEN 'isolated'
  WHEN COALESCE(o.suppressed_at,old.suppressed_at) IS NOT NULL THEN 'silenced'
  WHEN d.decision IN ('silenced','ineligible','rejected') THEN d.decision
  WHEN COALESCE(o.id,old.id) IS NULL THEN 'history_unavailable'
  WHEN COALESCE(o.expires_at,old.expires_at)<=? THEN 'expired'
  WHEN COALESCE(o.quarantined_at,old.quarantined_at) IS NOT NULL THEN 'quarantined'
+ WHEN EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=0) THEN 'paused'
  WHEN COALESCE(o.lease_until,old.lease_until,0)>? THEN 'sending'
  ELSE 'pending' END,
- COALESCE(o.attempts,old.attempts,0),COALESCE(o.merged_count,old.merged_count,0),COALESCE(d.silence_id,''),COALESCE(o.sent_at,old.sent_at,0),
+ COALESCE(o.attempts,old.attempts,0),COALESCE(o.merged_count,old.merged_count,0),COALESCE(d.silence_id,''),COALESCE(o.sent_at,old.sent_at,0)`
+
+const timelineColumns = `e.id,e.incident_id,e.observed_at,e.kind,e.phase,e.severity,e.summary,e.source_range,e.count,` + timelineDeliveryColumns + `,
+ COALESCE(d.channel,CASE WHEN old.id IS NOT NULL THEN 'telegram' ELSE '' END),
  CASE WHEN e.kind IN ('budget_month_bytes','budget_month_cost','budget_day_bytes','budget_day_growth','health_sensor','health_interface_counter','health_ssh_journal','health_storage','health_geoip_update') AND length(CAST(e.evidence_json AS BLOB))<=65536 THEN e.evidence_json ELSE '{}' END`
 
+// The event limit and cursor apply to events, independently of how many
+// channels have retained notification decisions. Preserve the legacy single
+// Delivery field by preferring Telegram, then Webhook.
 const timelineJoins = ` FROM events e LEFT JOIN event_notifications d ON d.event_id=e.id
+ AND d.channel=(SELECT channel FROM event_notifications WHERE event_id=e.id ORDER BY CASE channel WHEN 'telegram' THEN 0 ELSE 1 END LIMIT 1)
  LEFT JOIN notification_outbox o ON o.id=d.notification_id
  LEFT JOIN notification_outbox old ON d.event_id IS NULL AND old.dedupe_key='event:'||e.id||':telegram' `
 
@@ -89,11 +101,11 @@ type timelineReader interface {
 }
 
 func scanTimeline(row scanner) (TimelineEvent, error) {
-	var e TimelineEvent
+	e := TimelineEvent{Deliveries: []DeliveryOutcome{}}
 	var observed, sent int64
 	var evidence string
 	err := row.Scan(&e.ID, &e.IncidentID, &observed, &e.Kind, &e.Phase, &e.Severity, &e.Summary, &e.SourceRange, &e.Count,
-		&e.Delivery.Decision, &e.Delivery.NotificationID, &e.Delivery.State, &e.Delivery.Attempts, &e.Delivery.MergedEvents, &e.Delivery.SilenceID, &sent, &evidence)
+		&e.Delivery.Decision, &e.Delivery.NotificationID, &e.Delivery.State, &e.Delivery.Attempts, &e.Delivery.MergedEvents, &e.Delivery.SilenceID, &sent, &e.Delivery.Channel, &evidence)
 	e.ObservedAt = time.UnixMilli(observed).UTC()
 	if sent != 0 {
 		e.Delivery.SentAt = time.UnixMilli(sent).UTC()
@@ -109,7 +121,22 @@ func scanTimeline(row scanner) (TimelineEvent, error) {
 }
 
 func (s *Store) Timeline(ctx context.Context, q TimelineQuery) (TimelinePage, error) {
-	return readTimeline(ctx, s.db, q, time.Now().UTC())
+	if err := q.Validate(); err != nil {
+		return TimelinePage{}, err
+	}
+	tx, now, err := s.beginReadSnapshot(ctx)
+	if err != nil {
+		return TimelinePage{}, err
+	}
+	defer tx.Rollback()
+	page, err := readTimeline(ctx, tx, q, now)
+	if err != nil {
+		return page, err
+	}
+	if err := tx.Commit(); err != nil {
+		return page, err
+	}
+	return page, nil
 }
 
 func readTimeline(ctx context.Context, db timelineReader, q TimelineQuery, now time.Time) (TimelinePage, error) {
@@ -140,11 +167,76 @@ func readTimeline(ctx context.Context, db timelineReader, q TimelineQuery, now t
 	if err := rows.Err(); err != nil {
 		return page, err
 	}
+	// A limit+1 lookahead may leave unread rows. Close before the association
+	// query, otherwise the Store's single physical connection cannot be used.
+	if err := rows.Close(); err != nil {
+		return page, err
+	}
+	if err := readTimelineDeliveries(ctx, db, page.Events, now); err != nil {
+		return page, err
+	}
 	if page.More {
 		last := page.Events[len(page.Events)-1]
 		page.NextAfterTime, page.NextAfterID = last.ObservedAt, last.ID
 	}
 	return page, nil
+}
+
+func readTimelineDeliveries(ctx context.Context, db timelineReader, events []TimelineEvent, now time.Time) error {
+	if len(events) == 0 {
+		return nil
+	}
+	if len(events) > 100 {
+		return errors.New("timeline delivery query exceeds event limit")
+	}
+	positions := make(map[string]int, len(events))
+	args := []any{now.UnixMilli(), now.UnixMilli()}
+	for index, event := range events {
+		positions[event.ID] = index
+		args = append(args, event.ID)
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(events)), ",")
+	args = append(args, 2*len(events)+1)
+	rows, err := db.QueryContext(ctx, `SELECT e.id,d.channel,`+timelineDeliveryColumns+`
+ FROM events e JOIN event_notifications d ON d.event_id=e.id
+ LEFT JOIN notification_outbox o ON o.id=d.notification_id
+ LEFT JOIN notification_outbox old ON 0
+ WHERE e.id IN (`+placeholders+`) ORDER BY e.id,CASE d.channel WHEN 'telegram' THEN 0 ELSE 1 END LIMIT ?`, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var outcome DeliveryOutcome
+		var sent int64
+		if err := rows.Scan(&id, &outcome.Channel, &outcome.Decision, &outcome.NotificationID, &outcome.State, &outcome.Attempts, &outcome.MergedEvents, &outcome.SilenceID, &sent); err != nil {
+			return err
+		}
+		index, found := positions[id]
+		if !found || !notificationChannel(outcome.Channel) || len(events[index].Deliveries) >= 2 {
+			return errors.New("timeline delivery associations are invalid or exceed channel limit")
+		}
+		if sent != 0 {
+			outcome.SentAt = time.UnixMilli(sent).UTC()
+		}
+		events[index].Deliveries = append(events[index].Deliveries, outcome)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	for index := range events {
+		if len(events[index].Deliveries) > 0 {
+			events[index].Delivery = events[index].Deliveries[0]
+		} else if events[index].Delivery.Channel != "" {
+			// Pre-decision legacy Telegram history retains its existing evidence.
+			events[index].Deliveries = append(events[index].Deliveries, events[index].Delivery)
+		}
+	}
+	return nil
 }
 
 type IncidentSummary struct {
@@ -319,6 +411,9 @@ func readIncident(ctx context.Context, db timelineReader, q TimelineQuery, now t
 			return view, err
 		}
 		if err := rows.Close(); err != nil {
+			return view, err
+		}
+		if err := readTimelineDeliveries(ctx, db, view.RelatedSSH, now); err != nil {
 			return view, err
 		}
 	}

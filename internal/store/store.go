@@ -17,7 +17,6 @@ import (
 
 	"github.com/littlesho/NodeRampart/internal/model"
 	"github.com/littlesho/NodeRampart/internal/protocol"
-	_ "modernc.org/sqlite"
 )
 
 type Store struct {
@@ -26,6 +25,7 @@ type Store struct {
 	budgetMu    sync.Mutex
 	budget      *budgetState
 	mergeWindow time.Duration
+	connector   *storeConnector
 }
 
 const (
@@ -76,26 +76,21 @@ func openStore(path string, budget *BudgetConfig) (*Store, error) {
 			return nil, err
 		}
 	}
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, err
+	connector := &storeConnector{path: path}
+	if budget != nil {
+		if err := validateBudget(*budget); err != nil {
+			return nil, err
+		}
+		connector.budget.Store(budget)
 	}
+	db := sql.OpenDB(connector)
 	db.SetMaxOpenConns(1)
-	store := &Store{db: db, path: path}
+	store := &Store{db: db, path: path, connector: connector}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	statements := []string{
-		"PRAGMA foreign_keys=ON", "PRAGMA synchronous=NORMAL", "PRAGMA busy_timeout=5000",
-		"PRAGMA trusted_schema=OFF", "PRAGMA secure_delete=FAST", "PRAGMA journal_size_limit=33554432",
-	}
-	if budget == nil {
-		statements = append(statements, "PRAGMA journal_mode=WAL")
-	}
-	for _, statement := range statements {
-		if _, err := db.ExecContext(ctx, statement); err != nil {
-			_ = db.Close()
-			return nil, fmt.Errorf("configure SQLite: %w", err)
-		}
+	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("configure SQLite: %w", err)
 	}
 	if budget != nil {
 		if err := store.ConfigureBudget(ctx, *budget); err != nil {
@@ -237,6 +232,26 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 	}
+	if version < 8 {
+		if err := migrateV8(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if version < 9 {
+		if err := migrateV9(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if version < 10 {
+		if err := migrateV10(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if version < 11 {
+		if err := migrateV11(ctx, tx); err != nil {
+			return err
+		}
+	}
 	return tx.Commit()
 }
 
@@ -282,7 +297,18 @@ func (s *Store) AddTrafficBatch(ctx context.Context, traffic []model.Traffic) er
 		return admitErr
 	}
 	defer release()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := addTrafficBatch(ctx, tx, traffic); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
 
+func addTrafficBatch(ctx context.Context, tx *sql.Tx, traffic []model.Traffic) error {
 	if len(traffic) == 0 {
 		return nil
 	}
@@ -315,11 +341,6 @@ func (s *Store) AddTrafficBatch(ctx context.Context, traffic []model.Traffic) er
 		value.packets += item.Packets
 		aggregated[key] = value
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
 	insertStatement, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO traffic_hourly
 		(hour_utc, direction, country, region, asn, asn_org, attributed, bytes, packets)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -412,7 +433,7 @@ func (s *Store) AddTrafficBatch(ctx context.Context, traffic []model.Traffic) er
 			return err
 		}
 	}
-	return tx.Commit()
+	return nil
 }
 
 func (s *Store) AddAuth(ctx context.Context, observedAt time.Time, kind, sourceRange string) error {
@@ -542,9 +563,12 @@ func (s *Store) RecordBatchHealth(ctx context.Context, batch protocol.Batch) err
 		return admitErr
 	}
 	defer release()
+	return recordBatchHealth(ctx, s.db, batch)
+}
 
+func recordBatchHealth(ctx context.Context, db executor, batch protocol.Batch) error {
 	hour := batch.SentAt.UTC().Truncate(time.Hour).Unix()
-	_, err := s.db.ExecContext(ctx, `INSERT INTO collector_health_hourly
+	_, err := db.ExecContext(ctx, `INSERT INTO collector_health_hourly
 		(hour_utc, batches, overflow_bytes, overflow_packets, parse_errors, kernel_packets, kernel_drops, kernel_stats_errors, last_seen,
 		ipc_dropped_batches, ipc_dropped_packets, ipc_dropped_bytes, health_counter_saturations) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(hour_utc) DO UPDATE SET batches=batches+1,
@@ -562,8 +586,13 @@ func (s *Store) RecordBatchHealth(ctx context.Context, batch protocol.Batch) err
 }
 
 type OutboxMessage struct {
+	// Secondary is admitted only with an event, in the same transaction. There
+	// are exactly two supported channels; nested or same-channel pairs fail.
+	Secondary   *OutboxMessage `json:"secondary,omitempty"`
 	ID          string
 	DedupeKey   string
+	Channel     string
+	PrivacyMode string
 	Destination string
 	Body        string
 	Attempts    int
@@ -597,11 +626,17 @@ func (s *Store) Enqueue(ctx context.Context, message OutboxMessage) (bool, error
 }
 
 func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, error) {
+	if message.Secondary != nil {
+		return false, errors.New("paired messages require event admission")
+	}
 	if message.ID == "" {
 		message.ID = model.NewID("msg")
 	}
 	if message.DedupeKey == "" || message.Destination == "" || message.Body == "" {
 		return false, errors.New("outbox message is incomplete")
+	}
+	if len(message.Destination) > 128 || (message.Channel != "" && (!notificationChannel(message.Channel) || !validNotificationTarget(message.Channel, message.Destination))) {
+		return false, errors.New("outbox target is invalid")
 	}
 	if len(message.Body) > 4096 {
 		return false, errors.New("outbox message exceeds Telegram limit")
@@ -626,9 +661,20 @@ func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, erro
 		}
 		return false, ErrOutboxFull
 	}
+	now := time.Now().UTC()
+	var isolated any
+	if message.Channel != "" {
+		bound, err := notificationTargetMatches(ctx, tx, message)
+		if err != nil {
+			return false, err
+		}
+		if !bound {
+			isolated = now.UnixMilli()
+		}
+	}
 	result, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO notification_outbox
-		(id, dedupe_key, destination, body, next_attempt, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		message.ID, limit(message.DedupeKey, 512), limit(message.Destination, 128), message.Body, message.NextAttempt.UnixMilli(), time.Now().UTC().UnixMilli(), time.Now().UTC().Add(OutboxTTL).UnixMilli())
+		(id, dedupe_key, channel, destination, body, next_attempt, created_at, expires_at, isolated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		message.ID, limit(message.DedupeKey, 512), limit(message.Channel, 32), limit(message.Destination, 128), message.Body, message.NextAttempt.UnixMilli(), now.UnixMilli(), now.Add(OutboxTTL).UnixMilli(), isolated)
 	if err != nil {
 		return false, err
 	}
@@ -640,17 +686,31 @@ func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, erro
 }
 
 func (s *Store) Pending(ctx context.Context, now time.Time, count int) ([]OutboxMessage, error) {
+	return s.pendingDestination(ctx, now, count, "")
+}
+
+// Limit after target selection so one unavailable channel cannot starve another.
+func (s *Store) PendingDestination(ctx context.Context, now time.Time, count int, destination string) ([]OutboxMessage, error) {
+	if destination == "" || len(destination) > 128 {
+		return nil, errors.New("invalid notification destination")
+	}
+	return s.pendingDestination(ctx, now, count, destination)
+}
+
+func (s *Store) pendingDestination(ctx context.Context, now time.Time, count int, destination string) ([]OutboxMessage, error) {
 	if err := s.ExpireNotifications(ctx, now); err != nil {
 		return nil, err
 	}
 	if count < 1 || count > 100 {
 		count = 20
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id, dedupe_key, destination, body, attempts, next_attempt
-		FROM notification_outbox AS o WHERE sent_at IS NULL AND quarantined_at IS NULL AND suppressed_at IS NULL AND expires_at > ? AND next_attempt <= ?
+	rows, err := s.db.QueryContext(ctx, `SELECT id, dedupe_key, channel, destination, body, attempts, next_attempt
+		FROM notification_outbox AS o WHERE sent_at IS NULL AND quarantined_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL AND expires_at > ? AND next_attempt <= ?
+ AND (channel='' OR EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=1))
  AND (lease_until IS NULL OR lease_until<=?)
  AND NOT EXISTS (SELECT 1 FROM notification_cooldowns c WHERE c.destination=o.destination AND c.until_at>?)
- ORDER BY next_attempt, created_at, id LIMIT ?`, now.UnixMilli(), now.UnixMilli(), now.UnixMilli(), now.UnixMilli(), count)
+ AND (?='' OR o.destination=?)
+ ORDER BY next_attempt, created_at, id LIMIT ?`, now.UnixMilli(), now.UnixMilli(), now.UnixMilli(), now.UnixMilli(), destination, destination, count)
 	if err != nil {
 		return nil, err
 	}
@@ -659,7 +719,7 @@ func (s *Store) Pending(ctx context.Context, now time.Time, count int) ([]Outbox
 	for rows.Next() {
 		var message OutboxMessage
 		var next int64
-		if err := rows.Scan(&message.ID, &message.DedupeKey, &message.Destination, &message.Body, &message.Attempts, &next); err != nil {
+		if err := rows.Scan(&message.ID, &message.DedupeKey, &message.Channel, &message.Destination, &message.Body, &message.Attempts, &next); err != nil {
 			return nil, err
 		}
 		message.NextAttempt = time.UnixMilli(next).UTC()

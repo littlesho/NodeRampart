@@ -85,9 +85,13 @@ type InputSummary struct {
 // strictJSON also rejects duplicate keys and excessive nesting. Diagnostics
 // never include input fields, usernames, addresses or raw decoder errors.
 func strictJSON(data []byte, target any) error {
+	return strictJSONLimit(data, target, MaxRecordBytes)
+}
+
+func strictJSONLimit(data []byte, target any, maximum int) error {
 	invalid := errors.New("invalid replay JSON object")
 	data = bytes.TrimSpace(data)
-	if len(data) < 2 || len(data) > MaxRecordBytes || data[0] != '{' || data[len(data)-1] != '}' || !utf8.Valid(data) {
+	if len(data) < 2 || len(data) > maximum || data[0] != '{' || data[len(data)-1] != '}' || !utf8.Valid(data) {
 		return invalid
 	}
 	check := json.NewDecoder(bytes.NewReader(data))

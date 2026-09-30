@@ -5,6 +5,7 @@ package report
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -75,7 +76,7 @@ func TestSchedulerConflictStillBackfillsOtherDates(t *testing.T) {
 				t.Fatalf("automatic backfill exceeded two creations: %d %v", len(reports), err)
 			}
 			after, err := b.Store.Report(context.Background(), yesterday)
-			if err != nil || before != after {
+			if err != nil || !reflect.DeepEqual(before, after) {
 				t.Fatal("conflicting archive changed")
 			}
 			queue, err := b.Store.QueueStatus(context.Background(), now)

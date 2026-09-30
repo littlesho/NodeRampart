@@ -118,7 +118,7 @@ func (m *monitorRuntime) applyObservations(ctx context.Context, observations []m
 			}
 			if m.pending[key] == nil {
 				previous := m.states[key]
-				if observation.Now.Before(previous.ObservedAt) || observation.Status.Period != "" && previous.Period != "" && observation.Status.Period < previous.Period {
+				if monitorRollback(previous, observation) {
 					view = previous.Status
 					view.State, view.Reason, view.Available = "unknown", "clock_rollback", false
 				} else {

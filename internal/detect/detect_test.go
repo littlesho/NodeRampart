@@ -81,8 +81,9 @@ func TestAuthPrunesStaleSourcesAndCapsHistory(t *testing.T) {
 	cfg.Cooldown = config.Duration{}
 	detector := NewAuth(cfg)
 	now := time.Now().UTC()
-	detector.failures["192.0.2.1"] = []time.Time{now.Add(-2 * cfg.Window.Duration)}
+	detector.failures["192.0.2.1"] = []authTimestamp{compactAuthTime(now.Add(-2 * cfg.Window.Duration))}
 	detector.lastSeen["192.0.2.1"] = now.Add(-2 * cfg.Window.Duration)
+	detector.entries, detector.capacity = 1, 1
 	detector.observed = 1_023
 	observation := collector.AuthObservation{ObservedAt: now, Kind: collector.AuthFailure, SourceIP: netip.MustParseAddr("203.0.113.9"), User: "root", Method: "password"}
 	detector.Observe(observation)

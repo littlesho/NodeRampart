@@ -254,6 +254,8 @@ func TestJournalRecoveryMissingMarkerIsNotReady(t *testing.T) {
 	}
 }
 
+// Produce the actual old shape, including undoing this task's schema 8 fields.
+// This helper touches only its temporary fixture and preserves all v6 data.
 func legacyJournalV6(t *testing.T) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "legacy.db")
@@ -268,11 +270,19 @@ func legacyJournalV6(t *testing.T) string {
 	if err := s.RecordCoverageGap(context.Background(), recoveryGap(at)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.db.Exec(`DROP TABLE journal_recovery; DELETE FROM schema_migrations WHERE version=7`); err != nil {
-		t.Fatal(err)
-	}
+	downgradeJournalFixtureV6(t, s.db)
 	s.Close()
 	return path
+}
+
+func downgradeJournalFixtureV6(t *testing.T, db *sql.DB) {
+	t.Helper()
+	if err := downgradeSnapshotSchemaReference(context.Background(), db, 6); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DELETE FROM schema_migrations WHERE version>=7`); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestJournalRecoveryMigrationFromV6AndRollback(t *testing.T) {

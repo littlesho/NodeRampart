@@ -17,13 +17,16 @@ import (
 )
 
 type Builder struct {
-	Store       *store.Store
-	Hostname    string
-	Location    *time.Location
-	TopN        int
-	Billing     *billing.Profile
-	archiveOnce sync.Once
-	archiveGate chan struct{}
+	Store          *store.Store
+	Hostname       string
+	Location       *time.Location
+	TopN           int
+	Billing        *billing.Profile
+	CycleStartDay  int
+	ThresholdBytes uint64
+	ThresholdCost  float64
+	archiveOnce    sync.Once
+	archiveGate    chan struct{}
 }
 
 // lockArchive serializes immutable date construction without making a waiting
@@ -96,6 +99,11 @@ func (b *Builder) rangeAt(ctx context.Context, title string, start, end, asOf ti
 }
 
 func (b *Builder) rangeWithBilling(ctx context.Context, title string, start, end, asOf time.Time) (string, *billing.Snapshot, error) {
+	body, pricing, err := b.fullRangeWithBilling(ctx, title, start, end, asOf)
+	return joinWithin(strings.Split(body, "\n"), 4096), pricing, err
+}
+
+func (b *Builder) fullRangeWithBilling(ctx context.Context, title string, start, end, asOf time.Time) (string, *billing.Snapshot, error) {
 	var pricing *billing.Snapshot
 	if !start.Before(end) {
 		return "", nil, fmt.Errorf("report period must have a positive duration")
@@ -193,9 +201,7 @@ func (b *Builder) rangeWithBilling(ctx context.Context, title string, start, end
 		lines = append(lines, "⚠ Detailed sensor coverage unavailable; regional traffic may be missing.")
 	}
 	if b.Billing != nil {
-		lastLocal := end.Add(-time.Nanosecond).In(b.location())
-		month := time.Date(lastLocal.Year(), lastLocal.Month(), 1, 0, 0, 0, 0, time.UTC)
-		monthStart, ok := resolveCivilTime(month, b.location())
+		monthStart, _, ok := BillingCycle(end.Add(-time.Nanosecond), b.location(), b.CycleStartDay)
 		if !ok {
 			return "", nil, fmt.Errorf("unsupported billing calendar boundary")
 		}
@@ -237,7 +243,11 @@ func (b *Builder) rangeWithBilling(ctx context.Context, title string, start, end
 			lines = append(lines, fmt.Sprintf("• %s: RX %s / TX %s", html.EscapeString(item.label), formatBytes(item.rx), formatBytes(item.tx)))
 		}
 	}
-	return joinWithin(lines, 4096), pricing, nil
+	body := strings.Join(lines, "\n")
+	if len(body) > MaxFullBodyBytes {
+		return "", nil, fmt.Errorf("local report exceeds body byte limit")
+	}
+	return body, pricing, ctx.Err()
 }
 
 func formatBytes(value uint64) string {

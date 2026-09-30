@@ -73,10 +73,11 @@ func (a *App) handleJournal(ctx context.Context, entry collector.JournalEntry) e
 			write.Kind = string(observation.Kind)
 			_, write.SourceRange = a.options.StorePrivacy.IP(observation.SourceIP.String())
 			if event := a.auth.Observe(observation); event != nil {
+				a.addAuthHistoryHints(ctx, observation, event)
 				if event.Evidence == nil {
 					event.Evidence = map[string]string{}
 				}
-				event.Evidence["detection_window_complete"] = fmt.Sprint(time.Since(a.started) >= a.options.Config.Auth.Window.Duration)
+				event.Evidence["detection_window_complete"] = fmt.Sprint(time.Since(a.started) >= a.options.Config.Auth.Window.Duration && a.auth.Stats().CoverageComplete)
 				stored, message := a.prepareEvent(*event)
 				write.Event = &stored
 				write.Notification = message
@@ -94,11 +95,40 @@ func (a *App) handleJournal(ctx context.Context, entry collector.JournalEntry) e
 			a.recordWrite(nil, "journal_recovery", false)
 		}
 		a.pendingJournal = nil
+		a.refreshAuthCoverage(ctx, time.Now().UTC())
 		if !inserted {
 			return collector.ErrJournalAlreadyAcknowledged
 		}
 	}
 	return err
+}
+
+func (a *App) refreshAuthCoverage(ctx context.Context, now time.Time) {
+	if a.auth == nil || !a.options.Config.Auth.Enabled {
+		return
+	}
+	stats := a.auth.StatsAt(now)
+	a.mu.Lock()
+	a.authStats = stats
+	previous := a.authCoverageState
+	a.mu.Unlock()
+	state := "running"
+	if !stats.CoverageComplete {
+		state = "degraded"
+	}
+	// Do not add a duplicate healthy ledger for deployments that have never
+	// lost authentication detector coverage. After a refusal, preserve both
+	// degradation and recovery using the existing component history.
+	if state == previous || state == "running" && previous == "" {
+		return
+	}
+	err := a.options.Store.SetComponentStatus(ctx, "auth_detection", state, now)
+	a.recordWrite(err, "auth_detection_coverage", false)
+	if err == nil {
+		a.mu.Lock()
+		a.authCoverageState = state
+		a.mu.Unlock()
+	}
 }
 
 func journalCoverageGap(status collector.JournalStatus) store.CoverageGap {

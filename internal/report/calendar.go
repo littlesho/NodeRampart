@@ -21,6 +21,35 @@ func MonthStart(now time.Time, location *time.Location) (time.Time, bool) {
 	return resolveCivilTime(time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, time.UTC), location)
 }
 
+// BillingCycle resolves a fixed monthly civil start day. Legacy zero retains
+// day one. It uses the same timezone transition policy as daily reports.
+func BillingCycle(now time.Time, location *time.Location, day int) (time.Time, time.Time, bool) {
+	if day == 0 {
+		day = 1
+	}
+	if day < 1 || day > 28 || now.IsZero() || now.Year() < 1970 || now.Year() > 9999 {
+		return time.Time{}, time.Time{}, false
+	}
+	if location == nil {
+		location = time.Local
+	}
+	local := now.In(location)
+	civil := time.Date(local.Year(), local.Month(), day, 0, 0, 0, 0, time.UTC)
+	start, ok := resolveCivilTime(civil, location)
+	if !ok {
+		return time.Time{}, time.Time{}, false
+	}
+	if now.Before(start) {
+		civil = civil.AddDate(0, -1, 0)
+		start, ok = resolveCivilTime(civil, location)
+		if !ok {
+			return time.Time{}, time.Time{}, false
+		}
+	}
+	end, ok := resolveCivilTime(civil.AddDate(0, 1, 0), location)
+	return start, end, ok && start.Year() >= 1970 && end.Year() <= 9999 && start.Before(end) && !now.Before(start) && now.Before(end)
+}
+
 // resolveCivilTime interprets UTC fields as a local wall clock. It chooses the
 // first occurrence of a repeated time and the first real instant after a gap.
 // Unlike time.Date alone, this does not normalize a missing midnight into the

@@ -30,6 +30,7 @@ type Aggregator struct {
 	started                                     time.Time
 	iface                                       string
 	maxFlows                                    int
+	now                                         func() time.Time
 	flows                                       map[flowKey]counters
 	rxBytes, txBytes, rxPackets, txPackets      uint64
 	inboundSYN, inboundUDP, inboundICMP         uint64
@@ -89,6 +90,9 @@ func (a *Aggregator) Flush(now time.Time) protocol.Batch {
 func (a *Aggregator) flushCurrent() protocol.Batch {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	if a.now != nil {
+		return a.flush(a.now().UTC())
+	}
 	return a.flush(time.Now().UTC())
 }
 

@@ -7,9 +7,11 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"path/filepath"
@@ -100,7 +102,8 @@ func (m *Manager) updateGeoData(ctx context.Context, input map[string]string, re
 		}
 		files[notice] = filepath.Join(bundle.Directory, notice)
 	}
-	unchanged, err := m.geoUnchanged(ctx, snapshot, files)
+	validatedDigests := map[string]string{"GeoLite2-City.mmdb": bundle.CityDigest, "GeoLite2-ASN.mmdb": bundle.ASNDigest}
+	unchanged, err := m.geoUnchanged(ctx, snapshot, files, validatedDigests)
 	if err != nil {
 		return "", err
 	}
@@ -117,11 +120,11 @@ func (m *Manager) updateGeoData(ctx context.Context, input map[string]string, re
 			}
 		}()
 		for name, source := range files {
-			data, err := readFile(source, 256<<20, false, -1)
-			if err != nil {
-				return "", errors.New("staged GeoIP data is unavailable")
+			maximum := int64(1 << 20)
+			if name == "GeoLite2-City.mmdb" || name == "GeoLite2-ASN.mmdb" {
+				maximum = 160 << 20
 			}
-			if err := writeFile(filepath.Join(dir, name), bytes.NewReader(data), 256<<20, 0o640, os.Geteuid(), m.daemonGID, false); err != nil {
+			if err := m.copyGeoFile(ctx, source, filepath.Join(dir, name), maximum, validatedDigests[name]); err != nil {
 				return "", err
 			}
 		}
@@ -167,10 +170,58 @@ func (m *Manager) updateGeoData(ctx context.Context, input map[string]string, re
 	return "GeoLite2 City and ASN installed. / 已安装本地 GeoLite2 City 和 ASN 数据库。\n" + result, nil
 }
 
+func (m *Manager) copyGeoFile(ctx context.Context, source, target string, maximum int64, expectedDigest string) error {
+	f, before, err := openManagedFile(source, maximum, false, -1)
+	if err != nil {
+		return errors.New("staged GeoIP data is unavailable or unsafe")
+	}
+	defer f.Close()
+	reader := &geoCopyReader{ctx: ctx, file: f, before: before, expectedDigest: expectedDigest, hash: sha256.New()}
+	return writeFile(target, reader, maximum, 0o640, os.Geteuid(), m.daemonGID, false)
+}
+
+// EOF confirms identity/size/timestamps before writeFile may publish its
+// temporary output. Copying uses io.Copy's fixed buffer, not a whole MMDB slice.
+type geoCopyReader struct {
+	ctx            context.Context
+	file           *os.File
+	before         unix.Stat_t
+	total          int64
+	expectedDigest string
+	hash           hash.Hash
+}
+
+func (r *geoCopyReader) Read(p []byte) (int, error) {
+	if err := r.ctx.Err(); err != nil {
+		return 0, err
+	}
+	n, err := r.file.Read(p)
+	r.total += int64(n)
+	_, _ = r.hash.Write(p[:n])
+	if r.total > r.before.Size {
+		return n, errors.New("GeoIP source grew during copy")
+	}
+	if errors.Is(err, io.EOF) {
+		var after unix.Stat_t
+		if unix.Fstat(int(r.file.Fd()), &after) != nil || r.total != r.before.Size || after.Size != r.before.Size ||
+			after.Mode != r.before.Mode || after.Uid != r.before.Uid || after.Gid != r.before.Gid || after.Nlink != r.before.Nlink ||
+			after.Mtim != r.before.Mtim || after.Ctim != r.before.Ctim {
+			return n, errors.New("GeoIP source changed during copy")
+		}
+		if r.expectedDigest != "" && hex.EncodeToString(r.hash.Sum(nil)) != r.expectedDigest {
+			return n, errors.New("GeoIP source differs from its validated content")
+		}
+	}
+	if r.ctx.Err() != nil {
+		return n, r.ctx.Err()
+	}
+	return n, err
+}
+
 // geoUnchanged only recognizes a complete, trusted managed generation. Invalid
 // active data falls through to normal paired replacement; it cannot bypass
 // activation merely because the new bundle contains identical bytes.
-func (m *Manager) geoUnchanged(ctx context.Context, snapshot console.Snapshot, files map[string]string) (bool, error) {
+func (m *Manager) geoUnchanged(ctx context.Context, snapshot console.Snapshot, files map[string]string, validatedDigests map[string]string) (bool, error) {
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
@@ -219,6 +270,9 @@ func (m *Manager) geoUnchanged(ctx context.Context, snapshot console.Snapshot, f
 				return false, ctx.Err()
 			}
 			return false, errors.New("staged GeoIP data could not be compared safely")
+		}
+		if expected := validatedDigests[entry.Name()]; expected != "" && hex.EncodeToString(stagedDigest[:]) != expected {
+			return false, errors.New("staged GeoIP data differs from its validated content")
 		}
 		if activeDigest != stagedDigest {
 			return false, nil

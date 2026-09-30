@@ -14,9 +14,10 @@ import (
 )
 
 type Worker struct {
-	Store  *store.Store
-	Sender Sender
-	Logger *slog.Logger
+	Store       *store.Store
+	Sender      Sender
+	Logger      *slog.Logger
+	Destination string
 }
 
 func (w *Worker) Run(ctx context.Context) error {
@@ -41,8 +42,19 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 
 func (w *Worker) process(ctx context.Context) error {
+	destination := w.Destination
+	if sender, ok := w.Sender.(interface{ Destination() string }); ok {
+		identity := sender.Destination()
+		if identity == "" || (destination != "" && destination != identity) {
+			return errors.New("notification sender target identity does not match worker")
+		}
+		destination = identity
+	}
+	if destination == "" {
+		return errors.New("notification sender target identity unavailable")
+	}
 	now := time.Now().UTC()
-	messages, err := w.Store.Pending(ctx, now, 20)
+	messages, err := w.Store.PendingDestination(ctx, now, 20, destination)
 	if err != nil {
 		return err
 	}
@@ -53,7 +65,7 @@ func (w *Worker) process(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if blockedDestinations[message.Destination] {
+		if message.Destination != destination || blockedDestinations[message.Destination] {
 			continue
 		}
 		message, eligible, err := w.Store.ClaimNotification(ctx, message.ID, time.Now().UTC())
@@ -63,8 +75,24 @@ func (w *Worker) process(ctx context.Context) error {
 		if !eligible {
 			continue
 		}
+		allowed, err := w.Store.NotificationDeliveryAllowed(ctx, message.ID, destination)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			if err := w.Store.ReleaseNotificationClaim(ctx, message.ID); err != nil {
+				return err
+			}
+			continue
+		}
 		deliveryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-		err = w.Sender.Send(deliveryCtx, message.Body)
+		if sender, ok := w.Sender.(interface {
+			SendMessage(context.Context, store.OutboxMessage) error
+		}); ok {
+			err = sender.SendMessage(deliveryCtx, message)
+		} else {
+			err = w.Sender.Send(deliveryCtx, message.Body)
+		}
 		cancel()
 		if err == nil {
 			if err := w.Store.MarkSent(ctx, message.ID, time.Now().UTC()); err != nil {

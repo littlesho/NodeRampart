@@ -5,16 +5,21 @@ package notify
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -36,7 +41,41 @@ type Telegram struct {
 	client   *http.Client
 }
 
+// Destination derives identity only from the public bot number and numeric chat
+// ID. The credential suffix is never included, stored or logged. Numeric IDs
+// remain stable across a credential rotation; mutable @usernames cannot prove
+// that an old body belongs to the same recipient and are rejected.
+func (t *Telegram) Destination() string {
+	identity, _ := telegramDestination(t.token, t.chatID)
+	return identity
+}
+
+func TelegramDestination(tokenFile, chatID string) (string, error) {
+	token, err := readSecret(tokenFile)
+	if err != nil {
+		return "", err
+	}
+	return telegramDestination(token, chatID)
+}
+
+func telegramDestination(token, chatID string) (string, error) {
+	if !tokenPattern.MatchString(token) {
+		return "", errors.New("Telegram token file has an invalid format")
+	}
+	chat, err := strconv.ParseInt(chatID, 10, 64)
+	if err != nil || chat == 0 || strings.TrimSpace(chatID) != chatID {
+		return "", errors.New("Telegram target requires a nonzero numeric chat ID")
+	}
+	bot, err := strconv.ParseUint(strings.SplitN(token, ":", 2)[0], 10, 64)
+	if err != nil || bot == 0 {
+		return "", errors.New("Telegram bot identity is invalid")
+	}
+	digest := sha256.Sum256([]byte(strconv.FormatUint(bot, 10) + ":" + strconv.FormatInt(chat, 10)))
+	return "telegram:" + hex.EncodeToString(digest[:]), nil
+}
+
 type DeliveryError struct {
+	Channel         string
 	StatusCode      int
 	APIErrorCode    int
 	RetryAfter      time.Duration
@@ -49,13 +88,17 @@ type DeliveryError struct {
 }
 
 func (e *DeliveryError) Error() string {
+	channel := "Telegram"
+	if e.Channel == "webhook" {
+		channel = "Webhook"
+	}
 	if e.SuspendDestination {
-		return fmt.Sprintf("Telegram retry interval requires destination resume (HTTP %d, API %d)", e.StatusCode, e.APIErrorCode)
+		return fmt.Sprintf("%s retry interval requires destination resume (HTTP %d, API %d)", channel, e.StatusCode, e.APIErrorCode)
 	}
 	if e.InvalidResponse {
-		return fmt.Sprintf("Telegram response invalid (HTTP %d)", e.StatusCode)
+		return fmt.Sprintf("%s response invalid (HTTP %d)", channel, e.StatusCode)
 	}
-	return fmt.Sprintf("Telegram delivery failed (HTTP %d, API %d)", e.StatusCode, e.APIErrorCode)
+	return fmt.Sprintf("%s delivery failed (HTTP %d, API %d)", channel, e.StatusCode, e.APIErrorCode)
 }
 
 func NewTelegram(tokenFile, chatID string, timeout time.Duration) (*Telegram, error) {
@@ -65,6 +108,9 @@ func NewTelegram(tokenFile, chatID string, timeout time.Duration) (*Telegram, er
 	}
 	if !tokenPattern.MatchString(token) {
 		return nil, errors.New("Telegram token file has an invalid format")
+	}
+	if _, err := telegramDestination(token, chatID); err != nil {
+		return nil, err
 	}
 	if timeout < time.Second || timeout > time.Minute {
 		timeout = 10 * time.Second
@@ -79,24 +125,66 @@ func NewTelegram(tokenFile, chatID string, timeout time.Duration) (*Telegram, er
 }
 
 func readSecret(path string) (string, error) {
-	info, err := os.Lstat(path)
+	secret, _, err := readSecretGeneration(path)
+	return secret, err
+}
+
+// Walk each directory by descriptor so a parent symlink cannot redirect a
+// credential read. The returned file remains tied to this inspected inode.
+func openSecret(path string) (int, error) {
+	absolute, err := filepath.Abs(path)
 	if err != nil {
-		return "", fmt.Errorf("read Telegram token: %w", err)
+		return -1, err
 	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return "", errors.New("Telegram token must be a regular file, not a symlink")
-	}
-	if info.Mode().Perm()&0o077 != 0 {
-		return "", errors.New("Telegram token file must not be accessible by group or others")
-	}
-	if info.Size() < 20 || info.Size() > 512 {
-		return "", errors.New("Telegram token file has an invalid size")
-	}
-	data, err := os.ReadFile(path)
+	parts := strings.Split(strings.TrimPrefix(filepath.Clean(absolute), "/"), "/")
+	parent, err := unix.Open("/", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return "", fmt.Errorf("read Telegram token: %w", err)
+		return -1, err
 	}
-	return strings.TrimSpace(string(data)), nil
+	for _, part := range parts[:len(parts)-1] {
+		next, err := unix.Openat(parent, part, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+		unix.Close(parent)
+		if err != nil {
+			return -1, err
+		}
+		parent = next
+	}
+	defer unix.Close(parent)
+	return unix.Openat(parent, parts[len(parts)-1], unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
+}
+
+func readSecretGeneration(path string) (string, string, error) {
+	fd, err := openSecret(path)
+	if err != nil {
+		return "", "", errors.New("protected token could not be opened")
+	}
+	file := os.NewFile(uintptr(fd), path)
+	defer file.Close()
+	var before, after unix.Stat_t
+	if unix.Fstat(fd, &before) != nil {
+		return "", "", errors.New("protected token could not be inspected")
+	}
+	if before.Mode&unix.S_IFMT != unix.S_IFREG || before.Nlink != 1 {
+		return "", "", errors.New("protected token must be a regular file, not a symlink")
+	}
+	if before.Mode&0o077 != 0 {
+		return "", "", errors.New("protected token file must not be accessible by group or others")
+	}
+	if before.Size < 20 || before.Size > 512 {
+		return "", "", errors.New("protected token file has an invalid size")
+	}
+	data, err := io.ReadAll(io.LimitReader(file, 513))
+	if err != nil {
+		return "", "", errors.New("protected token could not be read")
+	}
+	if len(data) > 512 {
+		return "", "", errors.New("protected token file has an invalid size")
+	}
+	if unix.Fstat(fd, &after) != nil || before.Dev != after.Dev || before.Ino != after.Ino || before.Mode != after.Mode || before.Uid != after.Uid || before.Gid != after.Gid || before.Size != after.Size || before.Mtim != after.Mtim || before.Ctim != after.Ctim {
+		return "", "", errors.New("protected token changed while reading")
+	}
+	generation := fmt.Sprintf("%d:%d:%d:%d:%d:%d", before.Dev, before.Ino, before.Ctim.Sec, before.Ctim.Nsec, before.Mtim.Sec, before.Mtim.Nsec)
+	return strings.TrimSpace(string(data)), generation, nil
 }
 
 func (t *Telegram) Send(ctx context.Context, body string) error {

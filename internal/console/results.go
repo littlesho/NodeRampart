@@ -41,6 +41,7 @@ var resultLabels = map[string][2]string{
 	"next_until_utc": {"Next page: until (UTC)", "下一页：until（UTC）"}, "next_after_id": {"Next page: after ID", "下一页：after_id"},
 	"next_date": {"Resume from date", "继续补齐的日期"}, "status": {"Status", "状态"}, "reason": {"Reason", "原因"}, "error": {"Error", "错误"},
 	"pending": {"Pending", "待处理"}, "sent": {"Sent", "已发送"}, "failed": {"Failed", "失败"}, "suppressed": {"Silenced", "已静默"}, "expired": {"Expired", "已到期"},
+	"isolated": {"Isolated target/privacy backlog", "目标或隐私变更后的隔离积压"}, "discarded": {"Discarded isolated bodies", "已丢弃隔离正文"},
 	"monitoring": {"Budget and health alerts", "预算与健康告警"}, "rules": {"Rules", "规则"}, "available": {"Evidence available", "依据可用"},
 	"alert": {"Alert inputs saved with this event", "此事件保存的告警依据"}, "availability": {"Recorded context availability", "事件依据完整程度"},
 	"metric": {"Alert metric", "告警指标"}, "period": {"Accounting period", "统计周期"}, "period_start_utc": {"Period starts (UTC)", "周期起点（UTC）"}, "period_end_utc": {"Period ends (UTC)", "周期终点（UTC）"},

@@ -28,13 +28,35 @@ func (s *Store) ConfigureNotifications(window time.Duration) error {
 }
 
 func recordEventNotification(ctx context.Context, tx *sql.Tx, event model.Event, message *OutboxMessage, now time.Time, window time.Duration) error {
+	if message == nil {
+		return recordOneEventNotification(ctx, tx, event, nil, now, window)
+	}
+	primary := *message
+	primary.Secondary = nil
+	if message.Secondary != nil && (message.Secondary.Secondary != nil || !notificationChannel(message.Channel) || !notificationChannel(message.Secondary.Channel) || message.Channel == message.Secondary.Channel) {
+		return errors.New("event supports at most one message per configured notification channel")
+	}
+	if err := recordOneEventNotification(ctx, tx, event, &primary, now, window); err != nil {
+		return err
+	}
+	if message.Secondary != nil {
+		return recordOneEventNotification(ctx, tx, event, message.Secondary, now, window)
+	}
+	return nil
+}
+
+func recordOneEventNotification(ctx context.Context, tx *sql.Tx, event model.Event, message *OutboxMessage, now time.Time, window time.Duration) error {
+	channel := "telegram"
+	if message != nil && message.Channel != "" {
+		channel = message.Channel
+	}
 	var exists bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM event_notifications WHERE event_id=?)`, event.ID).Scan(&exists); err != nil || exists {
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM event_notifications WHERE event_id=? AND channel=?)`, event.ID, channel).Scan(&exists); err != nil || exists {
 		return err
 	}
 	decision, notificationID, silenceID := "ineligible", "", ""
 	record := func() error {
-		_, err := tx.ExecContext(ctx, `INSERT INTO event_notifications(event_id,notification_id,decision,silence_id,recorded_at) VALUES (?,?,?,?,?)`, event.ID, notificationID, decision, silenceID, now.UnixMilli())
+		_, err := tx.ExecContext(ctx, `INSERT INTO event_notifications(event_id,channel,notification_id,decision,silence_id,recorded_at) VALUES (?,?,?,?,?,?)`, event.ID, channel, notificationID, decision, silenceID, now.UnixMilli())
 		return err
 	}
 	if message == nil {
@@ -49,7 +71,7 @@ func recordEventNotification(ctx context.Context, tx *sql.Tx, event model.Event,
 	if !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
-	if message.Destination == "telegram" {
+	if notificationChannel(message.Channel) || message.Destination == "telegram" {
 		err = tx.QueryRowContext(ctx, `SELECT id FROM notification_silences WHERE revoked_at IS NULL AND expires_at>?
  AND (incident_id='' OR incident_id=?) AND (kind='' OR kind=?) ORDER BY created_at,id LIMIT 1`, now.UnixMilli(), event.IncidentID, event.Kind).Scan(&silenceID)
 		if err == nil {
@@ -66,12 +88,16 @@ func recordEventNotification(ctx context.Context, tx *sql.Tx, event model.Event,
 			return err
 		}
 	}
-	mergeable := window > 0 && event.Phase == "update" && event.IncidentID != "" && len(message.Body) <= 4096-mergeBodyReserve
+	bound, err := notificationTargetMatches(ctx, tx, *message)
+	if err != nil {
+		return err
+	}
+	mergeable := bound && window > 0 && event.Phase == "update" && event.IncidentID != "" && len(message.Body) <= 4096-mergeBodyReserve
 	if mergeable {
 		var count, previousBytes int64
 		err := tx.QueryRowContext(ctx, `SELECT id,merged_count,LENGTH(CAST(body AS BLOB)) FROM notification_outbox
  WHERE incident_id=? AND event_kind=? AND destination=? AND event_phase='update' AND merge_until>?
- AND sent_at IS NULL AND suppressed_at IS NULL AND quarantined_at IS NULL AND lease_until IS NULL AND attempts=0 AND expires_at>?
+ AND sent_at IS NULL AND suppressed_at IS NULL AND isolated_at IS NULL AND quarantined_at IS NULL AND lease_until IS NULL AND attempts=0 AND expires_at>?
  ORDER BY merge_until,id LIMIT 1`, event.IncidentID, event.Kind, message.Destination, now.UnixMilli(), now.UnixMilli()).Scan(&notificationID, &count, &previousBytes)
 		if err == nil {
 			if count == 1<<63-1 {
@@ -148,7 +174,8 @@ func (s *Store) ClaimNotification(ctx context.Context, id string, now time.Time)
 	}
 	defer tx.Rollback()
 	result, err := tx.ExecContext(ctx, `UPDATE notification_outbox AS o SET lease_until=? WHERE id=?
- AND sent_at IS NULL AND quarantined_at IS NULL AND suppressed_at IS NULL AND expires_at>? AND next_attempt<=?
+ AND sent_at IS NULL AND quarantined_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL AND expires_at>? AND next_attempt<=?
+ AND (channel='' OR EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=1))
  AND (lease_until IS NULL OR lease_until<=?)
  AND NOT EXISTS(SELECT 1 FROM notification_cooldowns c WHERE c.destination=o.destination AND c.until_at>?)`,
 		now.Add(2*time.Minute).UnixMilli(), id, now.UnixMilli(), now.UnixMilli(), now.UnixMilli(), now.UnixMilli())
@@ -161,7 +188,7 @@ func (s *Store) ClaimNotification(ctx context.Context, id string, now time.Time)
 	}
 	var message OutboxMessage
 	var next int64
-	if err := tx.QueryRowContext(ctx, `SELECT id,dedupe_key,destination,body,attempts,next_attempt FROM notification_outbox WHERE id=?`, id).Scan(&message.ID, &message.DedupeKey, &message.Destination, &message.Body, &message.Attempts, &next); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT id,dedupe_key,channel,destination,body,attempts,next_attempt FROM notification_outbox WHERE id=?`, id).Scan(&message.ID, &message.DedupeKey, &message.Channel, &message.Destination, &message.Body, &message.Attempts, &next); err != nil {
 		return OutboxMessage{}, false, err
 	}
 	message.NextAttempt = time.UnixMilli(next).UTC()

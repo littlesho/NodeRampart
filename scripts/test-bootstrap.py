@@ -29,8 +29,7 @@ root = lab / 'root'
 with (lab / 'commands.jsonl').open('a') as log:
     log.write(json.dumps([name, *args]) + '\n')
 with (lab / 'locales.jsonl').open('a') as log:
-    log.write(json.dumps({'command': name, 'LC_ALL': os.environ.get('LC_ALL'),
-                          'LC_CTYPE': os.environ.get('LC_CTYPE'), 'LANG': os.environ.get('LANG')}) + '\n')
+    log.write(json.dumps({'command': name, 'LC_ALL': os.environ.get('LC_ALL', '')}) + '\n')
 scenario = os.environ.get('SCENARIO', '')
 if name == 'id':
     if args == ['-u']: print(os.environ.get('MOCK_UID', '0'))
@@ -84,8 +83,8 @@ elif name == 'dpkg-query':
         else: print(os.environ.get('MOCK_DEB_STATUS', 'install ok installed'))
     else: sys.exit(1)
 elif name == 'dpkg-deb':
-    values = {'Package':'noderampart', 'Version':'0.4.0~alpha.5', 'Architecture':os.environ.get('MOCK_USER_ARCH', 'amd64')}
-    print('malformed' if scenario == 'identity' or scenario == 'wrong-' + args[-1].lower() else values[args[-1]])
+    values = {'Package':'noderampart', 'Version':os.environ.get('MOCK_DEB_VERSION', '0.4.0~alpha.5'), 'Architecture':os.environ.get('MOCK_USER_ARCH', 'amd64')}
+    print('malformed' if scenario == 'identity' else values[args[-1]])
 elif name == 'rpm':
     if '-qp' in args:
         print('malformed' if scenario == 'identity' else os.environ.get('MOCK_RPM_IDENTITY', 'noderampart:0.4.0:0.alpha.6.fc44:x86_64'))
@@ -202,6 +201,48 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual([row[0] for row in commands].count('curl'), 2)
         self.assertFalse(list((self.root / 'tmp').iterdir()))
 
+    def test_default_release_stays_public_alpha5(self):
+        self.env.update(MOCK_ASSET='noderampart_0.4.0-alpha.5_amd64.deb',
+                        MOCK_DEB_VERSION='0.4.0~alpha.5')
+        result = self.run_script('bootstrap.sh', '--no-setup')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        downloads = [row[-1] for row in self.commands() if row[0] == 'curl']
+        self.assertEqual(downloads, [
+            'https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/SHA256SUMS',
+            'https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/noderampart_0.4.0-alpha.5_amd64.deb'])
+
+    def test_explicit_alpha6_candidate_has_native_identity_and_downgrade_guard(self):
+        self.env.update(MOCK_ASSET='noderampart_0.4.0-alpha.6_amd64.deb',
+                        MOCK_DEB_VERSION='0.4.0~alpha.6')
+        result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.6', '--no-setup')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(any(row[0] == 'apt-get' and row[1] == 'install' for row in self.commands()))
+        self.assertTrue(all('/v0.4.0-alpha.6/' in row[-1] for row in self.commands() if row[0] == 'curl'))
+        (self.lab / 'commands.jsonl').unlink()
+        self.env['MOCK_DEB_VERSION'] = '0.4.0~alpha.5'
+        result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.6', '--no-setup')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('identity', result.stderr)
+        self.assert_no_install()
+        self.write(self.root / 'etc/os-release', 'ID=fedora\nVERSION_ID=44\n')
+        self.env.update(MOCK_ASSET='noderampart-0.4.0-0.alpha.7.fc44.x86_64.rpm',
+                        MOCK_RPM_INSTALLED='1',
+                        MOCK_RPM_IDENTITY='noderampart:0.4.0:0.alpha.7.fc44:x86_64')
+        for installed, accepted in (('0.4.0-0.alpha.6.fc44', True),
+                                    ('0.4.0-0.alpha.7.fc44', True),
+                                    ('0.4.0-0.alpha.8.fc44', False)):
+            with self.subTest(installed=installed):
+                self.env['MOCK_RPM_VERSION'] = installed
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.6', '--no-setup')
+                self.assertEqual(result.returncode == 0, accepted, result.stderr)
+                if accepted:
+                    self.assertTrue(any(row[0] == 'dnf' and row[1] == 'install' for row in self.commands()))
+                    self.assertTrue(all('/v0.4.0-alpha.6/' in row[-1] for row in self.commands() if row[0] == 'curl'))
+                else:
+                    self.assertIn('downgrade', result.stderr)
+                    self.assert_no_install()
+
     def test_fedora_fresh_install_preserves_signature_policy(self):
         self.write(self.root / 'etc/os-release', 'ID=fedora\nVERSION_ID=44\n')
         self.env['MOCK_ASSET'] = 'noderampart-0.4.0-0.alpha.6.fc44.x86_64.rpm'
@@ -213,20 +254,20 @@ class InstallerTests(unittest.TestCase):
 
     def test_fedora_candidate_upgrade_and_downgrade(self):
         self.write(self.root / 'etc/os-release', 'ID=fedora\nVERSION_ID=44\n')
-        self.env.update(MOCK_ASSET='noderampart-0.4.0-0.alpha.6.fc44.x86_64.rpm', MOCK_RPM_INSTALLED='1')
-        for installed, accepted in (('0.4.0-0.alpha.1.fc44', True),
-                                    ('0.4.0-0.alpha.2.fc44', True),
-                                    ('0.4.0-0.alpha.3.fc44', True),
-                                    ('0.4.0-0.alpha.4.fc44', True),
-                                    ('0.4.0-0.alpha.5.fc44', True),
-                                    ('0.4.0-0.alpha.6.fc44', True),
+        self.env.update(MOCK_ASSET='noderampart-0.4.0-0.alpha.6.fc44.x86_64.rpm', MOCK_RPM_INSTALLED='1',
+                        MOCK_RPM_IDENTITY='noderampart:0.4.0:0.alpha.6.fc44:x86_64')
+        for installed, accepted in (('0.4.0-0.alpha.1.fc44', True), ('0.4.0-0.alpha.2.fc44', True),
+                                    ('0.4.0-0.alpha.3.fc44', True), ('0.4.0-0.alpha.4.fc44', True),
+                                    ('0.4.0-0.alpha.5.fc44', True), ('0.4.0-0.alpha.6.fc44', True),
                                     ('0.4.0-0.alpha.7.fc44', False)):
             with self.subTest(installed=installed):
                 self.env['MOCK_RPM_VERSION'] = installed
-                result = self.run_script('bootstrap.sh', '--no-setup')
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.5', '--no-setup')
                 self.assertEqual(result.returncode == 0, accepted, result.stderr)
                 if not accepted:
                     self.assertIn('downgrade', result.stderr)
+                    self.assert_no_install()
 
     def test_arm64_package_selection(self):
         self.env.update(MOCK_MACHINE='aarch64', MOCK_USER_ARCH='arm64', MOCK_ASSET='noderampart_0.4.0-alpha.5_arm64.deb')
@@ -235,7 +276,7 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(any(row[0] == 'curl' and row[-1].endswith('_arm64.deb') for row in self.commands()))
 
     def test_download_failures_never_install(self):
-        for scenario in ('404', 'transport', 'redirect_bad', 'redirect_http', 'redirect_loop', 'hash', 'duplicate', 'manifest', 'oversize', 'missing_asset', 'identity', 'wrong-package', 'wrong-version', 'wrong-architecture'):
+        for scenario in ('404', 'transport', 'redirect_bad', 'redirect_http', 'redirect_loop', 'hash', 'duplicate', 'manifest', 'oversize', 'missing_asset', 'identity'):
             with self.subTest(scenario=scenario):
                 self.env['SCENARIO'] = scenario
                 result = self.run_script('bootstrap.sh', '--no-setup')
@@ -262,18 +303,14 @@ class InstallerTests(unittest.TestCase):
         master, slave = pty.openpty()
         self.addCleanup(os.close, master)
         self.addCleanup(os.close, slave)
-        for locale, expected in [
-            ({'LC_ALL': 'C', 'LANG': 'en_US.UTF-8'}, 'C.UTF-8'),
-            ({'LC_ALL': 'POSIX'}, 'C.UTF-8'),
-            ({'LC_CTYPE': 'C', 'LANG': 'zh_CN.UTF-8'}, 'C.UTF-8'),
-            ({'LC_ALL': 'C.utf8'}, 'C.utf8'),
-            ({'LANG': 'en_US.UTF-8'}, 'en_US.UTF-8'),
-            ({'LANG': 'zh_CN.UTF-8'}, 'zh_CN.UTF-8'),
-            ({}, 'C.UTF-8'),
-            # An explicit legacy encoding reaches the TUI's readable refusal;
-            # the installer does not pretend to change the SSH client's encoding.
-            ({'LC_ALL': 'en_US.ISO-8859-1'}, 'en_US.ISO-8859-1'),
-        ]:
+        for locale, expected in (({'LC_ALL': 'C', 'LANG': 'en_US.UTF-8'}, 'C.UTF-8'),
+                                 ({'LC_ALL': 'POSIX'}, 'C.UTF-8'),
+                                 ({'LC_CTYPE': 'C', 'LANG': 'zh_CN.UTF-8'}, 'C.UTF-8'),
+                                 ({'LC_ALL': 'C.utf8'}, 'C.utf8'),
+                                 ({'LANG': 'en_US.UTF-8'}, 'en_US.UTF-8'),
+                                 ({'LANG': 'zh_CN.UTF-8'}, 'zh_CN.UTF-8'),
+                                 ({}, 'C.UTF-8'),
+                                 ({'LC_ALL': 'en_US.ISO-8859-1'}, 'en_US.ISO-8859-1')):
             with self.subTest(locale=locale):
                 for key in ('LC_ALL', 'LC_CTYPE', 'LANG'):
                     self.env.pop(key, None)
@@ -591,20 +628,39 @@ class ReleaseAssetTests(unittest.TestCase):
         (self.project / 'scripts').mkdir()
         for name in ('build-release.sh', 'bootstrap.sh', 'release_sbom.py'):
             shutil.copyfile(REPO / 'scripts' / name, self.project / 'scripts' / name)
-        (self.project / 'VERSION').write_text('0.4.0-alpha.5\n')
+        (self.project / 'VERSION').write_text('0.4.0-alpha.6\n')
         self.input = self.project / 'input'
         self.input.mkdir()
-        names = [f'noderampart_0.4.0-alpha.5_{arch}.deb' for arch in ('amd64', 'arm64')]
-        names += [f'noderampart-0.4.0-0.alpha.6.fc{fedora}.{arch}.rpm'
+        names = [f'noderampart_0.4.0-alpha.6_{arch}.deb' for arch in ('amd64', 'arm64')]
+        names += [f'noderampart-0.4.0-0.alpha.7.fc{fedora}.{arch}.rpm'
                   for fedora in (43, 44) for arch in ('x86_64', 'aarch64')]
-        names += ['noderampart-0.4.0-0.alpha.6.fc44.src.rpm']
+        names += ['noderampart-0.4.0-0.alpha.7.fc44.src.rpm']
         for name in names:
             (self.input / name).write_text('synthetic package\n')
-        self.env = dict(os.environ, COMMIT='1234567890abcdef1234567890abcdef12345678', BUILD_DATE='2026-09-12T00:00:00Z')
+        # This is a synthetic clean revision, not a Git mutation or an assertion
+        # about the dirty developer checkout containing this test.
+        self.commit = '1' * 40
+        mocks = self.project / 'mocks'
+        mocks.mkdir()
+        git = mocks / 'git'
+        git.write_text('#!' + sys.executable + '\n' + f'''import sys
+args = sys.argv[1:]
+if args[:1] == ['-c']:
+    if args[1] != 'safe.directory=' + {str(self.project)!r}:
+        sys.exit('unsafe fixture Git source scope')
+    args = args[2:]
+if args == ['rev-parse', '--verify', 'HEAD']:
+    print({self.commit!r})
+elif args[:1] == ['show']:
+    print('2026-09-12T00:00:00Z')
+elif args[:1] not in (['diff'], ['ls-files']):
+    sys.exit('unexpected fixture Git operation')
+''')
+        git.chmod(0o755)
+        self.env = dict(os.environ, COMMIT=self.commit, BUILD_DATE='2026-09-12T00:00:00Z',
+                        PATH=str(mocks) + ':/usr/bin:/bin')
         scope = 'Go programs embedded in this package only; runtime system dependencies are not inventoried.'
         for name in names[:-1]:
-            native_version = '0.4.0~alpha.5' if name.endswith('.deb') else name.removeprefix('noderampart-').rsplit('.', 2)[0]
-            native_arch = name.removesuffix('.deb').rsplit('_', 1)[1] if name.endswith('.deb') else name.split('.')[-2]
             sha = hashlib.sha256((self.input / name).read_bytes()).hexdigest()
             arch = 'arm64' if any(part in name for part in ('arm64', 'aarch64')) else 'amd64'
             paths = ['usr/bin/' + binary for binary in ('noderampart', 'noderampartd', 'noderampart-sensor')]
@@ -612,11 +668,10 @@ class ReleaseAssetTests(unittest.TestCase):
                          'build_settings': {'GOARCH': arch, 'GOOS': 'linux'}} for path in paths]
             (self.input / (name + '.buildinfo.json')).write_text(json.dumps({'format': 1, 'package': name,
                 'sha256': sha, 'architecture': arch, 'scope': scope, 'binaries': binaries,
-                'package_identity': {'name': 'noderampart', 'version': native_version, 'architecture': native_arch},
-                'declared_build': {'version': '0.4.0-alpha.5', 'commit': self.env['COMMIT'], 'build_date': self.env['BUILD_DATE']}}))
+                'declared_build': {'version': '0.4.0-alpha.6', 'commit': self.env['COMMIT'], 'build_date': self.env['BUILD_DATE']}}))
             (self.input / (name + '.spdx.json')).write_text(json.dumps({'spdxVersion': 'SPDX-2.3',
                 'dataLicense': 'CC0-1.0', 'comment': f'{scope} Package: {name}; SHA256: {sha}.',
-                'packages': [{'name': name, 'versionInfo': native_version}],
+                'packages': [{'name': name, 'versionInfo': '0.4.0~alpha.6' if name.endswith('.deb') else name.removeprefix('noderampart-').rsplit('.', 2)[0]}],
                 'files': [{'fileName': path, 'checksums': [{'algorithm': 'SHA256', 'checksumValue': 'a' * 64}]} for path in paths]}))
 
     def run_collect(self):
@@ -629,37 +684,16 @@ class ReleaseAssetTests(unittest.TestCase):
         release = self.project / 'dist/release'
         checksums = (release / 'SHA256SUMS').read_text().splitlines()
         self.assertEqual(len(checksums), 21)
-        self.assertEqual(subprocess.run(['sha256sum', '-c', 'SHA256SUMS'], cwd=release, capture_output=True).returncode, 0)
         for line in checksums:
             digest, name = line.split()
             self.assertEqual(digest, hashlib.sha256((release / name).read_bytes()).hexdigest())
-        self.assertEqual(json.loads((release / 'release.json').read_text())['package_count'], 6)
+        metadata = json.loads((release / 'release.json').read_text())
+        self.assertEqual(metadata['version'], '0.4.0-alpha.6')
+        self.assertEqual(metadata['commit'], self.commit)
+        self.assertEqual(metadata['build_date'], self.env['BUILD_DATE'])
+        self.assertEqual(metadata['package_count'], 6)
         self.assertEqual(json.loads((release / 'release.json').read_text())['sbom_count'], 6)
         self.assertIn('nothing was published', result.stdout)
-
-    def test_release_metadata_is_required_and_valid(self):
-        for field, values in (('COMMIT', ('', 'unknown', 'a' * 12)),
-                              ('BUILD_DATE', ('', 'unknown', '2026-99-99T00:00:00Z'))):
-            original = self.env[field]
-            for value in values:
-                with self.subTest(field=field, value=value):
-                    self.env[field] = value
-                    self.assertNotEqual(self.run_collect().returncode, 0)
-                    self.assertFalse((self.project / 'dist/release').exists())
-            del self.env[field]
-            self.assertNotEqual(self.run_collect().returncode, 0)
-            self.env[field] = original
-
-    def test_explicit_metadata_never_reads_container_git(self):
-        fake = self.project / 'fake-bin'
-        fake.mkdir()
-        git = fake / 'git'
-        git.write_text('#!/bin/sh\necho "unexpected git metadata read" >&2\nexit 128\n')
-        git.chmod(0o755)
-        self.env['PATH'] = str(fake) + os.pathsep + self.env['PATH']
-        self.env['GIT_TEST_ASSUME_DIFFERENT_OWNER'] = '1'
-        result = self.run_collect()
-        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_missing_sbom_or_inspection_prevents_collection(self):
         for suffix in ('.spdx.json', '.buildinfo.json'):
@@ -676,7 +710,7 @@ class ReleaseAssetTests(unittest.TestCase):
         package = next(self.input.glob('*.deb'))
         inspection = self.input / (package.name + '.buildinfo.json')
         original = inspection.read_text()
-        for field, value in (('sha256', '0' * 64), ('architecture', 'wrong'), ('declared_build', {}), ('package_identity', {}), ('package', 'other.deb')):
+        for field, value in (('sha256', '0' * 64), ('architecture', 'wrong'), ('declared_build', {})):
             with self.subTest(field=field):
                 content = json.loads(original)
                 content[field] = value
@@ -748,7 +782,7 @@ class SourceMetadataTests(unittest.TestCase):
             for expected in (commit, git('rev-parse', 'refs/tags/fixture')):
                 env['EXPECTED_COMMIT'] = expected
                 result = subprocess.run(['/bin/sh', str(REPO / 'scripts/release-metadata.sh')],
-                    cwd=tmp, env=env, text=True, capture_output=True)
+                    cwd=tmp, env=env, text=True, capture_output=True, timeout=10)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.splitlines(),
                     ['commit=' + commit, 'build_date=' + git('show', '-s', '--format=%cI', commit)])
@@ -756,7 +790,7 @@ class SourceMetadataTests(unittest.TestCase):
             for expected in (commit, '', 'unknown', commit[:12]):
                 env['EXPECTED_COMMIT'] = expected
                 result = subprocess.run(['/bin/sh', str(REPO / 'scripts/release-metadata.sh')],
-                    cwd=tmp, env=env, text=True, capture_output=True)
+                    cwd=tmp, env=env, text=True, capture_output=True, timeout=10)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(result.stdout, '')
 

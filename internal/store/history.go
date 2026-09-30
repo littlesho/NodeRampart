@@ -14,6 +14,7 @@ import (
 )
 
 type ReportSnapshot struct {
+	Document    json.RawMessage   `json:"document,omitempty"`
 	Billing     *billing.Snapshot `json:"billing,omitempty"`
 	Date        string            `json:"date"`
 	Title       string            `json:"title"`
@@ -21,6 +22,45 @@ type ReportSnapshot struct {
 	PeriodStart time.Time         `json:"period_start_utc"`
 	PeriodEnd   time.Time         `json:"period_end_utc"`
 	GeneratedAt time.Time         `json:"generated_at_utc"`
+}
+
+func (r ReportSnapshot) MarshalJSON() ([]byte, error) {
+	type snapshot ReportSnapshot
+	state := "original_full_snapshot"
+	var note string
+	if len(r.Document) == 0 {
+		state, note = "legacy_full_unavailable", "Original full content unavailable; immutable short body is preserved and is not reconstructed."
+	}
+	return json.Marshal(struct {
+		snapshot
+		FullContentState string `json:"full_content_state"`
+		FullContentNote  string `json:"full_content_note,omitempty"`
+	}{snapshot(r), state, note})
+}
+
+const MaxReportDocumentBytes = 256 << 10
+const MaxReportFullBodyBytes = 128 << 10
+
+func validateReportDocument(report ReportSnapshot) error {
+	if len(report.Document) == 0 {
+		return nil
+	}
+	if len(report.Document) > MaxReportDocumentBytes {
+		return errors.New("report document exceeds byte limit")
+	}
+	var metadata struct {
+		SchemaVersion int       `json:"schema_version"`
+		Date          string    `json:"date"`
+		Title         string    `json:"title"`
+		Body          string    `json:"body"`
+		PeriodStart   time.Time `json:"period_start_utc"`
+		PeriodEnd     time.Time `json:"period_end_utc"`
+		GeneratedAt   time.Time `json:"generated_at_utc"`
+	}
+	if json.Unmarshal(report.Document, &metadata) != nil || metadata.SchemaVersion != 1 || metadata.Date != report.Date || metadata.Title != report.Title || metadata.Body == "" || len(metadata.Body) > MaxReportFullBodyBytes || !metadata.PeriodStart.Equal(report.PeriodStart) || !metadata.PeriodEnd.Equal(report.PeriodEnd) || metadata.GeneratedAt.UnixMilli() != report.GeneratedAt.UnixMilli() {
+		return errors.New("report document metadata does not match immutable snapshot")
+	}
+	return nil
 }
 
 func (s *Store) SaveReport(ctx context.Context, report ReportSnapshot) error {
@@ -45,6 +85,9 @@ func (s *Store) SaveReportIfAbsent(ctx context.Context, report ReportSnapshot) (
 	if !report.PeriodStart.Before(report.PeriodEnd) || len(report.Title) > 256 || report.Body == "" || len(report.Body) > 4096 || report.GeneratedAt.IsZero() {
 		return false, errors.New("invalid report snapshot")
 	}
+	if err := validateReportDocument(report); err != nil {
+		return false, err
+	}
 	if report.Billing != nil && (!report.Billing.PeriodEnd.Equal(report.PeriodEnd) || report.Billing.PeriodStart.After(report.PeriodStart) || report.Billing.GeneratedAt.UnixMilli() != report.GeneratedAt.UnixMilli()) {
 		return false, errors.New("pricing snapshot does not match report period or generation")
 	}
@@ -57,7 +100,7 @@ func (s *Store) SaveReportIfAbsent(ctx context.Context, report ReportSnapshot) (
 		return false, err
 	}
 	defer tx.Rollback()
-	result, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO report_snapshots(report_date,title,body,period_start,period_end,generated_at,billing_json) VALUES (?,?,?,?,?,?,?)`, report.Date, report.Title, report.Body, report.PeriodStart.UnixMilli(), report.PeriodEnd.UnixMilli(), report.GeneratedAt.UnixMilli(), pricing)
+	result, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO report_snapshots(report_date,title,body,period_start,period_end,generated_at,billing_json,document_json) VALUES (?,?,?,?,?,?,?,?)`, report.Date, report.Title, report.Body, report.PeriodStart.UnixMilli(), report.PeriodEnd.UnixMilli(), report.GeneratedAt.UnixMilli(), pricing, string(report.Document))
 	if err != nil {
 		return false, err
 	}
@@ -79,9 +122,16 @@ func (s *Store) Report(ctx context.Context, date string) (ReportSnapshot, error)
 	var report ReportSnapshot
 	var start, end, generated int64
 	var pricing string
-	err := s.db.QueryRowContext(ctx, `SELECT report_date,title,body,period_start,period_end,generated_at,CASE WHEN length(CAST(billing_json AS BLOB))<=16384 THEN billing_json ELSE NULL END FROM report_snapshots WHERE report_date=?`, date).Scan(&report.Date, &report.Title, &report.Body, &start, &end, &generated, &pricing)
+	var document string
+	err := s.db.QueryRowContext(ctx, `SELECT report_date,title,body,period_start,period_end,generated_at,CASE WHEN length(CAST(billing_json AS BLOB))<=16384 THEN billing_json ELSE NULL END,CASE WHEN length(CAST(document_json AS BLOB))<=262144 THEN document_json ELSE NULL END FROM report_snapshots WHERE report_date=?`, date).Scan(&report.Date, &report.Title, &report.Body, &start, &end, &generated, &pricing, &document)
 	if err != nil {
 		return report, err
+	}
+	if document != "" && !json.Valid([]byte(document)) {
+		return ReportSnapshot{}, errors.New("invalid report document")
+	}
+	if document != "" {
+		report.Document = json.RawMessage(document)
 	}
 	report.Billing, err = billing.DecodeSnapshot(pricing)
 	if err != nil {
@@ -90,6 +140,9 @@ func (s *Store) Report(ctx context.Context, date string) (ReportSnapshot, error)
 	report.PeriodStart = time.UnixMilli(start).UTC()
 	report.PeriodEnd = time.UnixMilli(end).UTC()
 	report.GeneratedAt = time.UnixMilli(generated).UTC()
+	if err := validateReportDocument(report); err != nil {
+		return ReportSnapshot{}, err
+	}
 	return report, nil
 }
 

@@ -296,3 +296,25 @@ func BenchmarkMMDBSharedPreflight(b *testing.B) {
 		})
 	}
 }
+
+func TestMMDBInheritedSharedTargetWithinPublishedBudgets(t *testing.T) {
+	data := []byte{20, 4}
+	for range 20 {
+		data = append(data, 0x41, 'x')
+	}
+	for range 3000000 {
+		data = append(data, 0x20, 0)
+	}
+	if err := checkMMDBValues(context.Background(), data, false); err != nil {
+		t.Fatalf("valid sharing within published aggregate budget rejected: %v", err)
+	}
+}
+func TestMMDBInheritedCumulativeExpansionBudget(t *testing.T) {
+	data := append([]byte{0x5e, 0xfe, 0xe3}, bytes.Repeat([]byte{'x'}, 65536)...)
+	for range 131073 {
+		data = append(data, 0x20, 0)
+	}
+	if err := checkMMDBValues(context.Background(), data, false); err == nil {
+		t.Fatal("cumulative expansion beyond published 8 GiB budget accepted")
+	}
+}

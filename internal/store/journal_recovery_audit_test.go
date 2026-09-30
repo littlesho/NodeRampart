@@ -82,7 +82,20 @@ func recoveryDataSnapshot(t *testing.T, db *sql.DB) map[string]string {
 			if err := rows.Scan(pointers...); err != nil {
 				t.Fatal(err)
 			}
-			data = append(data, values)
+			// Snapshot every legacy user column independently of new target,
+			// channel and full-report columns. Their own migrations cover those
+			// additions; they must not change the historical data assertion shape.
+			legacyValues := make([]any, 0, len(values))
+			for i, value := range values {
+				if table == "notification_outbox" && (columns[i] == "channel" || columns[i] == "isolated_at") {
+					continue
+				}
+				if table == "event_notifications" && columns[i] == "channel" || table == "report_snapshots" && columns[i] == "document_json" {
+					continue
+				}
+				legacyValues = append(legacyValues, value)
+			}
+			data = append(data, legacyValues)
 		}
 		if err := rows.Err(); err != nil {
 			t.Fatal(err)
@@ -128,9 +141,7 @@ func TestJournalRecoveryMigrationPreservesDataAndRestores(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if _, err := s.db.Exec(`DROP TABLE journal_recovery; DELETE FROM schema_migrations WHERE version=7`); err != nil {
-				t.Fatal(err)
-			}
+			downgradeJournalFixtureV6(t, s.db)
 			want := recoveryDataSnapshot(t, s.db)
 			legacyBackup := filepath.Join(t.TempDir(), "backup-six.db")
 			if _, err := s.Backup(ctx, legacyBackup); err != nil {
@@ -164,13 +175,13 @@ func TestJournalRecoveryMigrationPreservesDataAndRestores(t *testing.T) {
 							t.Fatal(err)
 						}
 						wantPending := recoveryDataSnapshot(t, upgraded.db)
-						backup := filepath.Join(t.TempDir(), "schema-seven.db")
+						backup := filepath.Join(t.TempDir(), "schema-current.db")
 						if _, err := upgraded.Backup(ctx, backup); err != nil {
 							t.Fatal(err)
 						}
 						target := filepath.Join(t.TempDir(), "restored-seven.db")
-						if info, err := RestoreBackup(ctx, backup, target); err != nil || info.SchemaVersion != 7 {
-							t.Fatalf("v7 restore: %+v %v", info, err)
+						if info, err := RestoreBackup(ctx, backup, target); err != nil || info.SchemaVersion != schemaVersion {
+							t.Fatalf("current-schema restore: %+v %v", info, err)
 						}
 						copy, err := Open(target)
 						if err != nil {

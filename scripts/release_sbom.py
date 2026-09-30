@@ -18,7 +18,7 @@ import tempfile
 import urllib.request
 
 
-VERSION = "0.4.0-alpha.5"
+VERSION = "0.4.0-alpha.6"
 SYFT_VERSION = "1.51.1"
 SYFT_ARCHIVE_SHA256 = "8fcb33017a0dc1058298c923c436d19dfa68ae93968e0b423248542e3afb9fc3"
 SYFT_BINARY_SHA256 = "abca2def61de9952fa06d3977bb1e064818facb9badfce502b450d3d6846a91f"
@@ -46,18 +46,18 @@ file:
 
 
 def package_arch(name):
-    match = re.fullmatch(r"noderampart_0\.4\.0-alpha\.5_(amd64|arm64)\.deb", name)
+    match = re.fullmatch(r"noderampart_0\.4\.0(?:~|-)alpha\.6_(amd64|arm64)\.deb", name)
     if match:
         return match[1]
-    match = re.fullmatch(r"noderampart-0\.4\.0-0\.alpha\.6\.fc(43|44)\.(x86_64|aarch64)\.rpm", name)
+    match = re.fullmatch(r"noderampart-0\.4\.0-0\.alpha\.7\.fc(43|44)\.(x86_64|aarch64)\.rpm", name)
     if match:
         return {"x86_64": "amd64", "aarch64": "arm64"}[match[2]]
     raise ValueError("unsupported runtime package name")
 
 
 def runtime_packages():
-    names = {f"noderampart_0.4.0-alpha.5_{arch}.deb" for arch in ("amd64", "arm64")}
-    names.update(f"noderampart-0.4.0-0.alpha.6.fc{fedora}.{arch}.rpm"
+    names = {f"noderampart_0.4.0-alpha.6_{arch}.deb" for arch in ("amd64", "arm64")}
+    names.update(f"noderampart-0.4.0-0.alpha.7.fc{fedora}.{arch}.rpm"
                  for fedora in (43, 44) for arch in ("x86_64", "aarch64"))
     return names
 
@@ -65,18 +65,20 @@ def runtime_packages():
 def package_identity(name):
     arch = package_arch(name)
     if name.endswith('.deb'):
-        return {"name": "noderampart", "version": "0.4.0~alpha.5", "architecture": arch}
-    match = re.fullmatch(r"noderampart-(0\.4\.0-0\.alpha\.6\.fc(?:43|44))\.(x86_64|aarch64)\.rpm", name)
-    return {"name": "noderampart", "version": match[1], "architecture": match[2]}
+        return {'name': 'noderampart', 'version': '0.4.0~alpha.6', 'architecture': arch}
+    match = re.fullmatch(r'noderampart-(0\.4\.0-0\.alpha\.7\.fc(?:43|44))\.(x86_64|aarch64)\.rpm', name)
+    return {'name': 'noderampart', 'version': match[1], 'architecture': match[2]}
 
 
 def release_assets():
     packages = runtime_packages()
     return (packages | {name + suffix for name in packages for suffix in ('.spdx.json', '.buildinfo.json')}
-            | {'noderampart-0.4.0-0.alpha.6.fc44.src.rpm', 'bootstrap.sh', 'release.json', 'SHA256SUMS'})
+            | {'noderampart-0.4.0-0.alpha.7.fc44.src.rpm', 'bootstrap.sh', 'release.json', 'SHA256SUMS'})
 
 
 def validate_uploaded(release, assets):
+    if not isinstance(release, dict) or not isinstance(assets, list) or len(assets) > 128 or any(not isinstance(asset, dict) for asset in assets):
+        raise ValueError('invalid uploaded release metadata')
     if (release.get('tag_name') != 'v' + VERSION or release.get('draft') is not True
             or release.get('prerelease') is not True):
         raise ValueError('uploaded release must be the current draft prerelease')
@@ -179,7 +181,8 @@ def inspect_package(package, destination):
     if package.suffix == ".deb":
         actual = [command(["dpkg-deb", "-f", str(package), field], capture_output=True, text=True).stdout.strip()
                   for field in ("Package", "Version", "Architecture")]
-        if actual != ["noderampart", "0.4.0~alpha.5", arch]:
+        expected = package_identity(package.name)
+        if actual != [expected['name'], expected['version'], expected['architecture']]:
             raise ValueError("Debian package identity mismatch")
         args = ["dpkg-deb", "--fsys-tarfile", str(package)]
         unpack = unpack_tar
@@ -232,12 +235,11 @@ def validate_pair(package, spdx_path, buildinfo_path, commit, build_date):
     info = json.loads(buildinfo_path.read_text())
     if (spdx.get("spdxVersion") != "SPDX-2.3" or spdx.get("dataLicense") != "CC0-1.0" or
             spdx.get("comment") != binding(package.name, sha256) or
-            not any(entry.get("name") == package.name and entry.get("versionInfo") == package_identity(package.name)["version"]
+            not any(entry.get("name") == package.name and entry.get("versionInfo") == package_identity(package.name)['version']
                     for entry in spdx.get("packages", []))):
         raise ValueError("SBOM is missing its matching package binding or SPDX content")
     if (info.get("format") != 1 or info.get("package") != package.name or info.get("sha256") != sha256 or
             info.get("architecture") != arch or info.get("scope") != SCOPE or
-            info.get("package_identity") != package_identity(package.name) or
             info.get("declared_build") != {"version": VERSION, "commit": commit, "build_date": build_date}):
         raise ValueError("binary inspection does not match the release package/build declaration")
     binaries = info.get("binaries", [])
@@ -307,7 +309,7 @@ def generate(package, output, syft, commit, build_date):
                "XDG_CONFIG_HOME": str(work / "config"), "XDG_CACHE_HOME": str(work / "cache")}
         command([str(syft), "scan", "dir:" + str(extracted), "--config", str(config),
                  "--override-default-catalogers", "go-module-binary-cataloger", "--source-name", package.name,
-                 "--source-version", package_identity(package.name)["version"], "--output", "spdx-json=" + str(sbom), "--quiet"], env=env, cwd=work)
+                 "--source-version", package_identity(package.name)['version'], "--output", "spdx-json=" + str(sbom), "--quiet"], env=env, cwd=work)
         digest(sbom, 4 * 1024 * 1024)
         document = json.loads(sbom.read_text())
         package_sha = digest(package)
@@ -315,7 +317,7 @@ def generate(package, output, syft, commit, build_date):
         sbom.write_text(json.dumps(document, indent=2) + "\n")
         inspected = work / "buildinfo.json"
         inspected.write_text(json.dumps({"format": 1, "package": package.name, "sha256": package_sha,
-            "architecture": arch, "scope": SCOPE, "package_identity": package_identity(package.name),
+            "architecture": arch, "scope": SCOPE,
             "declared_build": {"version": VERSION, "commit": commit, "build_date": build_date},
             "binaries": binaries}, indent=2) + "\n")
         validate_pair(package, sbom, inspected, commit, build_date)
@@ -334,8 +336,10 @@ def main():
     parser.add_argument("package", nargs="?", type=Path)
     args = parser.parse_args()
     if args.check_upload is not None:
-        if any(value is not None for value in (args.fetch_syft, args.package, args.syft, args.output)):
-            parser.error("--check-upload is a separate operation")
+        if args.fetch_syft is not None or args.package is not None or args.syft is not None or args.output is not None:
+            parser.error('--check-upload is a separate operation')
+        for path in args.check_upload:
+            digest(path, 4 * 1024 * 1024)
         validate_uploaded(*(json.loads(path.read_text()) for path in args.check_upload))
     elif args.fetch_syft is not None:
         if args.package is not None or args.syft is not None or args.output is not None:

@@ -47,12 +47,8 @@ func (a *App) observeBudgets(ctx context.Context, now time.Time, values []monito
 	values[3].Status.GrowthRatio = cfg.DailyGrowthRatio
 	loc := a.report.Location
 	if cfg.MonthlyBytes > 0 || cfg.MonthlyCost > 0 {
-		start, ok := report.MonthStart(now, loc)
-		// Resolve the next month's first real instant using a civil midday safely
-		// inside it; Add(24h) would be wrong across calendar offset transitions.
-		local := now.In(loc)
-		end, okEnd := report.MonthStart(time.Date(local.Year(), local.Month()+1, 15, 12, 0, 0, 0, loc), loc)
-		if !ok || !okEnd || start.After(now) {
+		start, end, ok := report.BillingCycle(now, loc, a.options.Config.Billing.CycleStartDay)
+		if !ok || start.After(now) {
 			values[0].Status.Reason = "calendar_unavailable"
 			values[1].Status.Reason = "calendar_unavailable"
 		} else {
@@ -65,7 +61,7 @@ func (a *App) observeBudgets(ctx context.Context, now time.Time, values []monito
 			}
 			for i := 0; i < 2; i++ {
 				s := &values[i].Status
-				s.Period = local.Format("2006-01")
+				s.Period = start.In(loc).Format("2006-01")
 				s.PeriodStart = start
 				s.PeriodEnd = end
 				s.ObservedBytes = amount.TXBytes
@@ -271,6 +267,12 @@ func (a *App) observeHealth(ctx context.Context, now time.Time, values []monitor
 		values[2].Condition = "failed"
 		values[2].Status.Reason = "journal_unavailable"
 		values[2].Since = journal.Since
+	} else if a.auth == nil {
+		values[2].Condition = "failed"
+		values[2].Status.Reason = "auth_state_unknown"
+	} else if !a.auth.StatsAt(now).CoverageComplete {
+		values[2].Condition = "failed"
+		values[2].Status.Reason = "auth_state_capacity"
 	}
 	budget, err := a.options.Store.BudgetStatus(ctx)
 	values[3] = observeStorageHealth(now, budget, err, a.monitorStorageFailure(), lastFailure)

@@ -33,16 +33,21 @@ import (
 )
 
 type Options struct {
-	Config          config.Config
-	Store           *store.Store
-	Geo             *enrich.Resolver
-	Notifier        notify.Sender
-	Billing         *billing.Profile
-	StorePrivacy    *privacy.Transformer
-	NotifyPrivacy   *privacy.Transformer
-	Logger          *slog.Logger
-	SensorUID       *uint32
-	AssetHealthPath string
+	Config                  config.Config
+	Store                   *store.Store
+	Geo                     *enrich.Resolver
+	Notifier                notify.Sender
+	NotificationDestination string
+	WebhookNotifier         notify.Sender
+	WebhookDestination      string
+	HeartbeatSender         notify.HeartbeatSender
+	Billing                 *billing.Profile
+	StorePrivacy            *privacy.Transformer
+	NotifyPrivacy           *privacy.Transformer
+	Logger                  *slog.Logger
+	SensorUID               *uint32
+	AssetHealthPath         string
+	OptionalFailures        map[string]string
 }
 
 type App struct {
@@ -63,6 +68,8 @@ type App struct {
 	journalStatus              collector.JournalStatus
 	pendingJournal             *store.JournalWrite
 	authStats                  detect.AuthStats
+	authCoverageState          string
+	sensorPrepared             map[string]*sensorPreparedEvents
 	pendingEvents              []queuedEvent
 	pendingEventBytes          int
 	eventLosses                [3]eventLoss
@@ -70,6 +77,7 @@ type App struct {
 	sensorConnections          atomic.Uint64
 	interfaces                 []collector.InterfaceObservation
 	sensorByInterface          map[string]time.Time
+	sensorCommittedByInterface map[string]time.Time
 	interfaceDiscoveryRequired bool
 	discoveryDegraded          bool
 	latestDiscoveryDegraded    bool
@@ -88,11 +96,21 @@ type networkDetector interface {
 }
 
 type Status struct {
+	GeneratedAt          time.Time                        `json:"generated_at_utc"`
+	Diagnosis            *Diagnosis                       `json:"diagnosis,omitempty"`
+	ForeignKeys          *store.ForeignKeyStatus          `json:"foreign_keys,omitempty"`
+	SensorEnabled        bool                             `json:"sensor_enabled"`
+	AuthEnabled          bool                             `json:"auth_enabled"`
+	Readiness            ReadinessStatus                  `json:"readiness"`
+	OptionalFailures     map[string]string                `json:"optional_failures"`
+	LastInterfaceCommit  time.Time                        `json:"last_interface_commit_utc"`
 	Monitoring           MonitorStatus                    `json:"monitoring"`
 	Interfaces           []collector.InterfaceObservation `json:"interfaces"`
 	SensorInterfaces     map[string]time.Time             `json:"sensor_interfaces"`
 	Budget               *store.StorageBudgetStatus       `json:"storage_budget,omitempty"`
 	AuthDetection        detect.AuthStats                 `json:"auth_detection"`
+	SensorCommits        []store.SensorWatermark          `json:"sensor_commits"`
+	SensorCommitUnknown  bool                             `json:"sensor_commit_unknown"`
 	AuthWindowReadyAfter time.Time                        `json:"auth_window_ready_after_utc"`
 	CoverageGaps         []store.CoverageGap              `json:"coverage_gaps"`
 	Version              version.Info                     `json:"version"`
@@ -102,6 +120,8 @@ type Status struct {
 	LastSensorBatch      time.Time                        `json:"last_sensor_batch_utc,omitempty"`
 	SensorPeer           ipc.Peer                         `json:"sensor_peer"`
 	Batches              uint64                           `json:"batches"`
+	WebhookEnabled       bool                             `json:"webhook_enabled"`
+	HeartbeatEnabled     bool                             `json:"heartbeat_enabled"`
 	TelegramEnabled      bool                             `json:"telegram_enabled"`
 	GeoEnabled           bool                             `json:"geo_enabled"`
 	Components           []store.ComponentStatus          `json:"components"`
@@ -125,6 +145,39 @@ func New(options Options) (*App, error) {
 	if err := options.Store.ConfigureNotifications(options.Config.Notifications.MergeWindow.Duration); err != nil {
 		return nil, err
 	}
+	if options.NotificationDestination == "" {
+		if sender, ok := options.Notifier.(interface{ Destination() string }); ok {
+			options.NotificationDestination = sender.Destination()
+		}
+	}
+	if options.NotificationDestination == "" && options.Config.Notifications.Telegram.ChatID != "" {
+		// Resolve identity even while delivery is disabled so a disable/enable
+		// cycle pauses a known same-target backlog instead of adopting a new one.
+		options.NotificationDestination, _ = notify.TelegramDestination(options.Config.Notifications.Telegram.TokenFile, options.Config.Notifications.Telegram.ChatID)
+	}
+	if options.NotificationDestination == "" {
+		options.NotificationDestination = "telegram:unknown"
+	}
+	if err := options.Store.ConfigureNotificationTarget(context.Background(), "telegram", options.NotificationDestination, options.Config.Privacy.NotificationIP, options.Config.Notifications.Telegram.Enabled, time.Now().UTC()); err != nil {
+		return nil, err
+	}
+	if options.WebhookDestination == "" {
+		if sender, ok := options.WebhookNotifier.(interface{ Destination() string }); ok {
+			options.WebhookDestination = sender.Destination()
+		}
+	}
+	if options.WebhookDestination == "" {
+		w := options.Config.Notifications.Webhook
+		if sender, err := notify.NewWebhook(w.Endpoint, w.ReceiverID, w.CredentialFile, w.Timeout.Duration); err == nil {
+			options.WebhookDestination = sender.Destination()
+		}
+	}
+	if options.WebhookDestination == "" {
+		options.WebhookDestination = "webhook:unknown"
+	}
+	if err := options.Store.ConfigureNotificationTarget(context.Background(), "webhook", options.WebhookDestination, options.Config.Privacy.NotificationIP, options.Config.Notifications.Webhook.Enabled, time.Now().UTC()); err != nil {
+		return nil, err
+	}
 	if options.Logger == nil {
 		options.Logger = slog.Default()
 	}
@@ -132,7 +185,7 @@ func New(options Options) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &App{options: options, network: detect.NewFleet(options.Config.Detection, options.Config.Sensor.InterfaceLimit()), auth: detect.NewAuth(options.Config.Auth), report: &report.Builder{Store: options.Store, Hostname: options.Config.Hostname, Location: location, TopN: options.Config.Reports.TopN, Billing: options.Billing}, started: time.Now().UTC()}, nil
+	return &App{options: options, network: detect.NewFleet(options.Config.Detection, options.Config.Sensor.InterfaceLimit()), auth: detect.NewAuth(options.Config.Auth), report: &report.Builder{Store: options.Store, Hostname: options.Config.Hostname, Location: location, TopN: options.Config.Reports.TopN, Billing: options.Billing, CycleStartDay: options.Config.Billing.CycleStartDay, ThresholdBytes: options.Config.Alerts.Budget.MonthlyBytes, ThresholdCost: options.Config.Alerts.Budget.MonthlyCost}, started: time.Now().UTC()}, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
@@ -172,6 +225,18 @@ func (a *App) Run(ctx context.Context) error {
 	if err := a.options.Store.ResetComponentStatus(ctx); err != nil {
 		return fmt.Errorf("reset component status: %w", err)
 	}
+	for name, enabled := range map[string]bool{"geoip": a.options.Config.Geo.CityMMDB != "" || a.options.Config.Geo.ASNMMDB != "", "billing": a.options.Config.Billing.Enabled} {
+		state := "disabled"
+		if enabled {
+			state = "running"
+		}
+		if a.options.OptionalFailures[name] != "" {
+			state = "degraded"
+		}
+		if err := a.options.Store.SetComponentStatus(ctx, name, state, time.Now().UTC()); err != nil {
+			return fmt.Errorf("record optional feature state: %w", err)
+		}
+	}
 	// The retry queue is process-local. A restart cannot prove how many
 	// uncommitted network events the previous process held.
 	a.eventLosses[eventRestart] = eventLoss{active: true, start: a.started, end: a.started}
@@ -184,7 +249,9 @@ func (a *App) Run(ctx context.Context) error {
 		a.setSensorState(ctx, "disabled")
 	}
 	go func() { <-child.Done(); _ = sensorListener.Close(); _ = controlListener.Close() }()
-	batches := make(chan protocol.Batch, 64)
+	// One configured interface round is sufficient burst storage. A peer's
+	// largest legal frames cannot accumulate sixty-four detail maps in RAM.
+	batches := make(chan protocol.Batch, a.options.Config.Sensor.InterfaceLimit())
 	journalEntries := make(chan journalDelivery, 1)
 	totals := make(chan model.InterfaceTotals, 64)
 	componentErrors := make(chan componentFailure, 16)
@@ -264,17 +331,49 @@ func (a *App) Run(ctx context.Context) error {
 	}}
 	start("interface_counter", "degraded", false, func() error { return netdev.Run(child, totals) })
 	if a.options.Notifier != nil {
-		worker := &notify.Worker{Store: a.options.Store, Sender: a.options.Notifier, Logger: a.options.Logger}
+		worker := &notify.Worker{Store: a.options.Store, Sender: a.options.Notifier, Destination: a.options.NotificationDestination, Logger: a.options.Logger}
 		start("notification_worker", "running", false, func() error { return worker.Run(child) })
-	} else if err := a.options.Store.SetComponentStatus(ctx, "notification_worker", "disabled", time.Now().UTC()); err != nil {
-		a.options.Logger.Warn("record disabled component", "component", "notification_worker", "error", err)
+	} else {
+		state := "disabled"
+		if a.options.Config.Notifications.Telegram.Enabled {
+			state = "degraded"
+		}
+		if err := a.options.Store.SetComponentStatus(ctx, "notification_worker", state, time.Now().UTC()); err != nil {
+			a.options.Logger.Warn("record notification component", "component", "notification_worker", "error", err)
+		}
+	}
+	if a.options.WebhookNotifier != nil {
+		worker := &notify.Worker{Store: a.options.Store, Sender: a.options.WebhookNotifier, Destination: a.options.WebhookDestination, Logger: a.options.Logger}
+		start("webhook_worker", "running", false, func() error { return worker.Run(child) })
+	} else {
+		state := "disabled"
+		if a.options.Config.Notifications.Webhook.Enabled {
+			state = "degraded"
+		}
+		if err := a.options.Store.SetComponentStatus(ctx, "webhook_worker", state, time.Now().UTC()); err != nil {
+			a.options.Logger.Warn("record webhook component", "error", err)
+		}
+	}
+	if a.options.Config.Heartbeat.Enabled && a.options.HeartbeatSender != nil {
+		start("heartbeat", "starting", false, func() error { return a.runHeartbeat(child) })
+	} else {
+		state := "disabled"
+		if a.options.Config.Heartbeat.Enabled {
+			state = "degraded"
+		}
+		if err := a.options.Store.SetComponentStatus(ctx, "heartbeat", state, time.Now().UTC()); err != nil {
+			a.options.Logger.Warn("record heartbeat component", "error", err)
+		}
 	}
 	if a.options.Config.Reports.Enabled {
-		destination := ""
-		if a.options.Notifier != nil {
-			destination = "telegram"
+		destinations := []string{}
+		if a.options.Config.Notifications.Telegram.Enabled {
+			destinations = append(destinations, a.options.NotificationDestination)
 		}
-		scheduler := &report.Scheduler{Store: a.options.Store, Builder: a.report, DailyAt: a.options.Config.Reports.DailyAt, Destination: destination, Logger: a.options.Logger, BackfillDays: a.options.Config.Reports.BackfillDays}
+		if a.options.Config.Notifications.Webhook.Enabled {
+			destinations = append(destinations, a.options.WebhookDestination)
+		}
+		scheduler := &report.Scheduler{Store: a.options.Store, Builder: a.report, DailyAt: a.options.Config.Reports.DailyAt, Destinations: destinations, NotificationPrivacy: a.options.Config.Privacy.NotificationIP, Logger: a.options.Logger, BackfillDays: a.options.Config.Reports.BackfillDays}
 		start("report_scheduler", "running", false, func() error { return scheduler.Run(child) })
 	} else if err := a.options.Store.SetComponentStatus(ctx, "report_scheduler", "disabled", time.Now().UTC()); err != nil {
 		a.options.Logger.Warn("record disabled component", "component", "report_scheduler", "error", err)
@@ -310,10 +409,13 @@ func (a *App) Run(ctx context.Context) error {
 		case delivery := <-journalEntries:
 			delivery.ack <- a.handleJournal(ctx, delivery.entry)
 		case value := <-totals:
-			a.mu.Lock()
-			a.interfaceCounterAt = time.Now().UTC()
-			a.mu.Unlock()
-			a.recordWrite(a.options.Store.AddInterface(ctx, value), "interface", true)
+			err := a.options.Store.AddInterface(ctx, value)
+			a.recordWrite(err, "interface", true)
+			if err == nil {
+				a.mu.Lock()
+				a.interfaceCounterAt = time.Now().UTC()
+				a.mu.Unlock()
+			}
 		case <-eventTicker.C:
 			a.flushEvents(ctx)
 		case now := <-pruneTicker.C:
@@ -321,6 +423,7 @@ func (a *App) Run(ctx context.Context) error {
 				a.options.Logger.Warn("prune storage", "error", err)
 			}
 		case now := <-coverageTicker.C:
+			a.refreshAuthCoverage(ctx, now.UTC())
 			a.recordWrite(a.options.Store.MaintainBudget(ctx, now.UTC()), "budget_maintenance", false)
 			a.recordWrite(a.options.Store.HeartbeatCoverage(ctx, now.UTC()), "coverage", false)
 			if a.options.Config.Sensor.Enabled {
@@ -331,10 +434,15 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) handleBatch(ctx context.Context, batch protocol.Batch) {
+	if batch.ProtocolVersion >= 5 && batch.SessionID != "" && batch.Sequence > 0 {
+		a.handleSequencedBatch(ctx, batch)
+		return
+	}
 	if len(a.pendingEvents) > 0 {
 		a.flushEvents(ctx)
 	}
 	a.mu.Lock()
+	previousCommit := a.sensorCommittedByInterface[batch.Interface]
 	a.lastSensor = batch.SentAt
 	if a.sensorByInterface == nil {
 		a.sensorByInterface = make(map[string]time.Time)
@@ -352,7 +460,18 @@ func (a *App) handleBatch(ctx context.Context, batch protocol.Batch) {
 	a.batches++
 	a.mu.Unlock()
 	a.refreshSensorState(ctx)
-	a.recordWrite(a.options.Store.RecordBatchHealth(ctx, batch), "sensor_health", true)
+	windowStart := batch.SentAt.Add(-time.Duration(batch.IntervalMillis) * time.Millisecond)
+	if !previousCommit.IsZero() && windowStart.Sub(previousCommit) > time.Millisecond {
+		// The intervening detail was never committed. Count is unknown; IPC
+		// loss counters are separate conservative estimates, not this duration.
+		err := a.options.Store.RecordCoverageGap(ctx, store.CoverageGap{Name: "sensor_feed", Reason: "sensor_observation_gap", Start: previousCommit, End: windowStart})
+		a.recordWrite(err, "sensor_observation_gap", false)
+		if err != nil {
+			return // Do not advance beyond evidence that could not be recorded.
+		}
+	}
+	healthErr := a.options.Store.RecordBatchHealth(ctx, batch)
+	a.recordWrite(healthErr, "sensor_health", true)
 	for _, event := range a.network.Observe(batch) {
 		a.queueEvent(event)
 	}
@@ -367,7 +486,27 @@ func (a *App) handleBatch(ctx context.Context, batch protocol.Batch) {
 		attributed := geo.CountryCode != "" && geo.CountryCode != "PRIVATE"
 		trafficBatch = append(trafficBatch, model.Traffic{HourUTC: batch.SentAt, Direction: flow.Direction, Country: geo.CountryCode, Region: geo.Region, ASN: geo.ASN, ASNOrg: geo.ASNOrg, Bytes: flow.Bytes, Packets: flow.Packets, Attributed: attributed})
 	}
-	a.recordWrite(a.options.Store.AddTrafficBatch(ctx, trafficBatch), "traffic", len(trafficBatch) > 0)
+	trafficErr := a.options.Store.AddTrafficBatch(ctx, trafficBatch)
+	a.recordWrite(trafficErr, "traffic", len(trafficBatch) > 0)
+	if healthErr == nil && trafficErr == nil {
+		a.mu.Lock()
+		if a.sensorCommittedByInterface == nil {
+			a.sensorCommittedByInterface = make(map[string]time.Time)
+		}
+		if _, exists := a.sensorCommittedByInterface[batch.Interface]; !exists && len(a.sensorCommittedByInterface) >= protocol.MaxInterfaces {
+			oldest := ""
+			for name, at := range a.sensorCommittedByInterface {
+				if oldest == "" || at.Before(a.sensorCommittedByInterface[oldest]) {
+					oldest = name
+				}
+			}
+			delete(a.sensorCommittedByInterface, oldest)
+		}
+		if batch.SentAt.After(a.sensorCommittedByInterface[batch.Interface]) {
+			a.sensorCommittedByInterface[batch.Interface] = batch.SentAt
+		}
+		a.mu.Unlock()
+	}
 }
 
 func (a *App) sensorStaleAfter() time.Duration {
@@ -380,8 +519,10 @@ func (a *App) handleAuth(ctx context.Context, observation collector.AuthObservat
 		a.options.Logger.Error("store authentication observation", "kind", observation.Kind, "error", err)
 	}
 	if event := a.auth.Observe(observation); event != nil {
+		a.addAuthHistoryHints(ctx, observation, event)
 		a.handleEvent(ctx, *event)
 	}
+	a.refreshAuthCoverage(ctx, time.Now().UTC())
 }
 
 func (a *App) handleEvent(ctx context.Context, event model.Event) {
@@ -406,14 +547,32 @@ func (a *App) prepareEvent(event model.Event) (model.Event, *store.OutboxMessage
 	if event.SourceIP != "" {
 		stored.SourceIP, stored.SourceRange = a.options.StorePrivacy.IP(event.SourceIP)
 	}
-	if a.options.Notifier == nil || (event.Phase != "recovery" && severityRank(event.Severity) < severityRank(model.SeverityMedium)) {
+	if (!a.options.Config.Notifications.Telegram.Enabled && !a.options.Config.Notifications.Webhook.Enabled) || (event.Phase != "recovery" && severityRank(event.Severity) < severityRank(model.SeverityMedium)) {
 		return stored, nil
 	}
 	notification := event
 	if event.SourceIP != "" {
 		notification.SourceIP, notification.SourceRange = a.options.NotifyPrivacy.IP(event.SourceIP)
 	}
-	return stored, &store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "event:" + event.ID + ":telegram", Destination: "telegram", Body: notify.FormatEvent(a.options.Config.Hostname, notification)}
+	var primary *store.OutboxMessage
+	for _, target := range []struct {
+		channel, destination string
+		enabled              bool
+	}{
+		{"telegram", a.options.NotificationDestination, a.options.Config.Notifications.Telegram.Enabled},
+		{"webhook", a.options.WebhookDestination, a.options.Config.Notifications.Webhook.Enabled},
+	} {
+		if !target.enabled {
+			continue
+		}
+		message := &store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "event:" + event.ID + ":" + target.channel, Channel: target.channel, PrivacyMode: a.options.Config.Privacy.NotificationIP, Destination: target.destination, Body: notify.FormatEvent(a.options.Config.Hostname, notification)}
+		if primary == nil {
+			primary = message
+		} else {
+			primary.Secondary = message
+		}
+	}
+	return stored, primary
 }
 
 func severityRank(value model.Severity) int {
@@ -435,8 +594,16 @@ func (a *App) Status(ctx context.Context) Status {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	a.mu.RLock()
-	status := Status{Version: version.Current(), StartedAt: a.started, Uptime: time.Since(a.started).Round(time.Second).String(), SensorRequired: a.options.Config.Sensor.Required, LastSensorBatch: a.lastSensor, SensorPeer: a.sensorPeer, Batches: a.batches, TelegramEnabled: a.options.Notifier != nil, GeoEnabled: a.options.Config.Geo.CityMMDB != "" || a.options.Config.Geo.ASNMMDB != ""}
+	status := Status{Version: version.Current(), StartedAt: a.started, Uptime: time.Since(a.started).Round(time.Second).String(), SensorRequired: a.options.Config.Sensor.Required, LastSensorBatch: a.lastSensor, SensorPeer: a.sensorPeer, Batches: a.batches, TelegramEnabled: a.options.Config.Notifications.Telegram.Enabled, GeoEnabled: a.options.Config.Geo.CityMMDB != "" || a.options.Config.Geo.ASNMMDB != ""}
+	status.GeneratedAt = time.Now().UTC()
+	status.WebhookEnabled, status.HeartbeatEnabled = a.options.Config.Notifications.Webhook.Enabled, a.options.Config.Heartbeat.Enabled
+	status.SensorEnabled, status.AuthEnabled = a.options.Config.Sensor.Enabled, a.options.Config.Auth.Enabled
+	status.OptionalFailures = make(map[string]string, len(a.options.OptionalFailures))
+	for name, reason := range a.options.OptionalFailures {
+		status.OptionalFailures[name] = reason
+	}
 	status.Interfaces = append([]collector.InterfaceObservation(nil), a.interfaces...)
+	status.LastInterfaceCommit = a.interfaceCounterAt
 	status.SensorInterfaces = make(map[string]time.Time, len(a.sensorByInterface))
 	for name, at := range a.sensorByInterface {
 		status.SensorInterfaces[name] = at
@@ -449,6 +616,9 @@ func (a *App) Status(ctx context.Context) Status {
 	}
 	status.Monitoring = a.MonitorStatus()
 	status.Detection = a.network.Stats()
+	var commitStatusErr error
+	status.SensorCommits, commitStatusErr = a.options.Store.SensorWatermarks(ctx)
+	status.SensorCommitUnknown = commitStatusErr != nil
 	budget, budgetErr := a.options.Store.BudgetStatus(ctx)
 	if budgetErr == nil {
 		status.Budget = &budget
@@ -465,12 +635,18 @@ func (a *App) Status(ctx context.Context) Status {
 	}
 	a.mu.RLock()
 	status.Storage = a.storageHealth
-	status.AuthDetection = a.authStats
 	status.Journal = a.journalStatus
 	status.EventIngest = a.eventIngest
 	status.EventIngest.PendingLimit = maxPendingEvents
 	status.EventIngest.ByteLimit = maxPendingEventBytes
+	status.AuthDetection = a.authStats
 	a.mu.RUnlock()
+	if a.auth != nil {
+		status.AuthDetection = a.auth.Stats()
+	}
+	status.Readiness = a.readiness(status, err == nil && budgetErr == nil, time.Now().UTC())
+	diagnosis := Diagnose(status, false)
+	status.Diagnosis = &diagnosis
 	return status
 }
 
@@ -480,7 +656,7 @@ func (a *App) serveSensor(ctx context.Context, listener *net.UnixListener, outpu
 	if minimumInterval < 50*time.Millisecond {
 		minimumInterval = 50 * time.Millisecond
 	}
-	readGate := sensorReadGate{interval: minimumInterval / time.Duration(a.options.Config.Sensor.InterfaceLimit())}
+	readGate := sensorReadGate{interval: minimumInterval / time.Duration(a.options.Config.Sensor.InterfaceLimit()), burst: a.options.Config.Sensor.InterfaceLimit()}
 	for {
 		connection, err := listener.AcceptUnix()
 		if err != nil {
@@ -502,6 +678,11 @@ func (a *App) serveSensor(ctx context.Context, listener *net.UnixListener, outpu
 				defer stopClose()
 				reader := bufio.NewReaderSize(conn, 64<<10)
 				previousTimes := make(map[string]time.Time)
+				previousSequences := make(map[string]struct {
+					session  string
+					sequence uint64
+				})
+				var replyMu sync.Mutex
 				connectionID := a.sensorConnections.Add(1)
 				for {
 					if err := readGate.wait(ctx); err != nil {
@@ -513,6 +694,7 @@ func (a *App) serveSensor(ctx context.Context, listener *net.UnixListener, outpu
 					if err := protocol.ReadFrame(reader, &batch); err != nil {
 						return
 					}
+					readGate.readComplete()
 					if err := batch.Validate(); err != nil {
 						a.options.Logger.Warn("reject invalid sensor batch", "uid", peer.UID, "error", err)
 						return
@@ -521,20 +703,18 @@ func (a *App) serveSensor(ctx context.Context, listener *net.UnixListener, outpu
 						return
 					}
 					previousSentAt := previousTimes[batch.Interface]
+					previousSequence := previousSequences[batch.Interface]
+					duplicate := batch.Sequence > 0 && batch.SessionID == previousSequence.session && batch.Sequence <= previousSequence.sequence
 					if previousSentAt.IsZero() && len(previousTimes) >= a.options.Config.Sensor.InterfaceLimit() {
 						return
 					}
 					claimedInterval := time.Duration(batch.IntervalMillis) * time.Millisecond
-					if previousSentAt.IsZero() {
-						maximumInterval := 10 * a.options.Config.Sensor.BatchInterval.Duration
-						if a.options.Config.Sensor.InterfaceLimit() > 1 {
-							maximumInterval = max(maximumInterval, 5*time.Second)
-						}
-						if claimedInterval < minimumInterval || claimedInterval > maximumInterval {
-							a.options.Logger.Warn("reject sensor interval outside configured bounds", "uid", peer.UID)
-							return
-						}
-					} else {
+					maximumInterval := protocol.MaxElapsedInterval(a.options.Config.Sensor.BatchInterval.Duration)
+					if claimedInterval < minimumInterval || claimedInterval > maximumInterval {
+						a.options.Logger.Warn("reject sensor interval outside configured bounds", "uid", peer.UID)
+						return
+					}
+					if !previousSentAt.IsZero() && !duplicate {
 						sentDelta := batch.SentAt.Sub(previousSentAt)
 						if sentDelta < minimumInterval || claimedInterval < sentDelta/2 || claimedInterval > 2*sentDelta {
 							a.options.Logger.Warn("reject inconsistent or non-monotonic sensor interval", "uid", peer.UID)
@@ -546,8 +726,24 @@ func (a *App) serveSensor(ctx context.Context, listener *net.UnixListener, outpu
 						a.sensorPeer = peer
 						a.mu.Unlock()
 					}
-					previousTimes[batch.Interface] = batch.SentAt
+					if !duplicate {
+						previousTimes[batch.Interface] = batch.SentAt
+						previousSequences[batch.Interface] = struct {
+							session  string
+							sequence uint64
+						}{batch.SessionID, batch.Sequence}
+					}
 					batch.ConnectionID = connectionID
+					if batch.ProtocolVersion >= 5 && batch.Sequence > 0 {
+						batch.Acknowledge = func(ack protocol.CommitACK) error {
+							replyMu.Lock()
+							defer replyMu.Unlock()
+							if err := conn.SetWriteDeadline(time.Now().Add(250 * time.Millisecond)); err != nil {
+								return err
+							}
+							return protocol.WriteFrame(conn, ack)
+						}
+					}
 					select {
 					case output <- batch:
 					case <-ctx.Done():

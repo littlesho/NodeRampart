@@ -263,8 +263,8 @@ func requireManagementLab(t *testing.T) {
 			fields[key] = strings.Trim(value, "\"")
 		}
 	}
-	if fields["ID"] != "fedora" && !(fields["ID"] == "debian" && fields["VERSION_ID"] == "13") {
-		t.Fatal("management lab is restricted to Debian 13 or Fedora")
+	if fields["ID"] != "fedora" && !(fields["ID"] == "debian" && (fields["VERSION_ID"] == "12" || fields["VERSION_ID"] == "13")) {
+		t.Fatal("management lab is restricted to authorized Debian 12/13 or Fedora")
 	}
 	const sentinel = "disposable-v04-management-lab\n"
 	fd, err := unix.Open("/run/noderampart-v04-authorized-lab", unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
@@ -407,7 +407,7 @@ func verifyLabGeoTimer(t *testing.T, ctx context.Context, m *Manager) {
 		t.Fatal("private timer fixture directory unavailable")
 	}
 	defer os.RemoveAll(dir)
-	staged := *m
+	staged := copyManagerFixture(m)
 	staged.unitDir = dir
 	staged.tmpfilesDir = filepath.Join(dir, "tmpfiles")
 	var calls []string

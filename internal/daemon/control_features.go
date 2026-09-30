@@ -38,7 +38,7 @@ func (a *App) dispatchControlFeatures(ctx context.Context, request api.Request) 
 		}
 		response.Data = value
 	default:
-		return controlFailure("unknown command")
+		return a.dispatchControlReports(ctx, request)
 	}
 	return response
 }

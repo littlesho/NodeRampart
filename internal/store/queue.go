@@ -81,7 +81,7 @@ func (s *Store) RetryNotification(ctx context.Context, id string, now time.Time)
 	defer release()
 
 	result, err := s.db.ExecContext(ctx, `UPDATE notification_outbox SET attempts=0, quarantined_at=NULL, lease_until=NULL, merge_until=0, next_attempt=?, last_error=''
- WHERE id=? AND sent_at IS NULL AND suppressed_at IS NULL AND (lease_until IS NULL OR lease_until<=?) AND expires_at>?`, now.UnixMilli(), id, now.UnixMilli(), now.UnixMilli())
+ WHERE id=? AND sent_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL AND (lease_until IS NULL OR lease_until<=?) AND expires_at>?`, now.UnixMilli(), id, now.UnixMilli(), now.UnixMilli())
 	if err != nil {
 		return err
 	}
@@ -120,6 +120,7 @@ func (s *Store) ExpireNotifications(ctx context.Context, now time.Time) error {
 }
 
 type QueueStatus struct {
+	Isolated      int64                 `json:"isolated"`
 	Suppressed    int64                 `json:"suppressed"`
 	Pending       int64                 `json:"pending"`
 	PendingBytes  int64                 `json:"pending_bytes"`
@@ -146,6 +147,9 @@ func (s *Store) QueueStatus(ctx context.Context, now time.Time) (QueueStatus, er
 		return status, err
 	}
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NOT NULL`).Scan(&status.Suppressed); err != nil {
+		return status, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL AND isolated_at IS NOT NULL AND expires_at>?`, now.UnixMilli()).Scan(&status.Isolated); err != nil {
 		return status, err
 	}
 	if err := s.db.QueryRowContext(ctx, `SELECT rejected, expired, last_sent_at FROM notification_counters WHERE id=1`).Scan(&status.Rejected, &status.Expired, &sent); err != nil {
@@ -219,7 +223,7 @@ func (s *Store) Notifications(ctx context.Context, beforeID string, count int) (
 	if count < 1 || count > 100 || len(beforeID) > 128 {
 		return nil, errors.New("invalid notification query")
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id,destination,CASE WHEN sent_at IS NOT NULL THEN 'sent' WHEN suppressed_at IS NOT NULL THEN 'silenced' WHEN expires_at<=? THEN 'expired' WHEN quarantined_at IS NOT NULL THEN 'quarantined' ELSE 'pending' END,
+	rows, err := s.db.QueryContext(ctx, `SELECT id,destination,CASE WHEN sent_at IS NOT NULL THEN 'sent' WHEN suppressed_at IS NOT NULL THEN CASE WHEN isolated_at IS NOT NULL THEN 'discarded' ELSE 'silenced' END WHEN expires_at<=? THEN 'expired' WHEN isolated_at IS NOT NULL THEN 'isolated' WHEN quarantined_at IS NOT NULL THEN 'quarantined' ELSE 'pending' END,
  attempts,LENGTH(CAST(body AS BLOB)),created_at,next_attempt,expires_at,last_error FROM notification_outbox WHERE (?='' OR id<?) ORDER BY id DESC LIMIT ?`, time.Now().UTC().UnixMilli(), beforeID, beforeID, count)
 	if err != nil {
 		return nil, err

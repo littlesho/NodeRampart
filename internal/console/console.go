@@ -55,6 +55,7 @@ type ui struct {
 	back                func()
 	results             chan func()
 	cancelWork          context.CancelFunc
+	workers             sync.WaitGroup
 }
 
 // alreadyInitialized avoids tview.SetScreen's unchecked second Init call.
@@ -210,6 +211,9 @@ func Run(ctx context.Context, backend Backend, options Options) error {
 	close(finished)
 	cancel()
 	<-watcherDone
+	// Cooperative removal may still be finishing a package transaction. Keep
+	// the caller alive until its supervisor and inherited lock are settled.
+	u.workers.Wait()
 	if err != nil {
 		return errors.New("terminal session ended unexpectedly")
 	}
@@ -286,7 +290,7 @@ func (u *ui) quit() {
 		if u.cancelWork != nil {
 			u.cancelWork()
 		}
-		u.output(u.tr("Waiting for operation recovery", "等待操作恢复完成"), u.tr("Cancellation requested. Wait for the current operation and any configuration recovery to finish before exiting. Completed changes may already have taken effect.", "已请求取消。请等待当前操作及可能的配置恢复完成后再退出；已完成的修改可能已经生效。"), u.quit)
+		u.output(u.tr("Waiting for operation recovery", "等待操作恢复完成"), u.tr("Cancellation requested; finishing the current operation and recovery. Installation state may need inspection. Wait before exiting.", "取消已请求 / 正在收尾 / 安装状态需检查。请等待当前操作及配置恢复结束后再退出。"), u.quit)
 		return
 	}
 	if u.dirty {
@@ -372,9 +376,11 @@ func (u *ui) background(title string, work func(context.Context) func(), back fu
 	u.cancelWork = cancel
 	u.output(title, u.tr("Working… Esc requests cancellation. Completed changes may already have taken effect.", "正在处理… 按 Esc 请求取消；已完成的修改可能已经生效。"), func() {
 		cancel()
-		u.output(title, u.tr("Cancellation requested. Waiting for the current operation to finish.", "已请求取消，等待当前操作结束。"), u.home)
+		u.output(title, u.tr("Cancellation requested; finishing the current operation. Installation state may need inspection.", "取消已请求 / 正在收尾 / 安装状态需检查。"), u.home)
 	})
+	u.workers.Add(1)
 	go func() {
+		defer u.workers.Done()
 		result := work(ctx)
 		cancel()
 		select {

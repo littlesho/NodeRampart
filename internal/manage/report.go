@@ -14,6 +14,8 @@ import (
 	"unicode"
 
 	"github.com/littlesho/NodeRampart/internal/billing"
+	"github.com/littlesho/NodeRampart/internal/protocol"
+	"github.com/littlesho/NodeRampart/internal/report"
 )
 
 const maxReportDisplayBytes = 64 << 10
@@ -22,12 +24,13 @@ const maxReportDisplayBytes = 64 << 10
 // tariff or recalculates an archived body under today's configuration.
 func formatReport(data []byte, archived bool) (string, error) {
 	invalid := errors.New("saved report is unavailable or exceeds display bounds")
-	if len(data) > maxReportDisplayBytes {
+	if len(data) > protocol.MaxFrameSize {
 		return "", invalid
 	}
 	var value struct {
 		Title, Body, Report string
 		Billing             json.RawMessage `json:"billing"`
+		Document            json.RawMessage `json:"document"`
 	}
 	if json.Unmarshal(data, &value) != nil || len(value.Title) > 256 {
 		return "", invalid
@@ -38,8 +41,23 @@ func formatReport(data []byte, archived bool) (string, error) {
 	if len(value.Body) > 4096 {
 		return "", invalid
 	}
+	var fullNote string
+	if len(value.Document) > 0 {
+		doc, err := report.DecodeDocument(value.Document)
+		if err != nil {
+			return "", invalid
+		}
+		if len(doc.Body) <= 32<<10 {
+			value.Body = doc.Body
+		} else {
+			fullNote = "\n\nFull content is saved. This bounded TUI preview uses the short body; export with report show --date YYYY-MM-DD --format html/json. / 完整内容已保存；此有界界面显示短正文，可用 report show --date YYYY-MM-DD --format html/json 导出。\n"
+		}
+	} else if archived {
+		fullNote = "\n\nFull original content unavailable for this legacy snapshot; original short body preserved. / 此旧快照缺少原始完整内容，保留原短正文。\n"
+	}
 	var out strings.Builder
 	out.WriteString(reportText(value.Title) + "\n" + reportText(value.Body))
+	out.WriteString(fullNote)
 	if !archived {
 		out.WriteString("\n\nCurrent report / 当前即时报告: no archived billing snapshot is attached. / 未附带已归档计费快照。\n")
 		return out.String(), nil

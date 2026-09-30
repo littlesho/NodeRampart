@@ -26,7 +26,7 @@ func TestWorkerRechecksPrefetchedNotificationEligibility(t *testing.T) {
 			enqueueSynthetic(t, db, "first", "telegram", now.Add(-2*time.Second))
 			enqueueSynthetic(t, db, "second", "telegram", now.Add(-time.Second))
 			calls := 0
-			worker := &Worker{Store: db, Sender: senderFunc(func(context.Context, string) error {
+			worker := &Worker{Store: db, Destination: "telegram", Sender: senderFunc(func(context.Context, string) error {
 				calls++
 				if calls != 1 {
 					return nil

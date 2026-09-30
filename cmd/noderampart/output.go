@@ -26,15 +26,32 @@ func writeResponse(output io.Writer, options commandOptions, data any) error {
 		return errors.New("could not encode report")
 	}
 	var report struct {
-		Title  string `json:"title"`
-		Body   string `json:"body"`
-		Report string `json:"report"`
+		Date     string `json:"date"`
+		Title    string `json:"title"`
+		Body     string `json:"body"`
+		Report   string `json:"report"`
+		Document *struct {
+			Title string   `json:"title"`
+			Body  string   `json:"body"`
+			Notes []string `json:"notes"`
+		} `json:"document"`
 	}
 	if json.Unmarshal(encoded, &report) != nil {
 		return errors.New("invalid report response")
 	}
 	if report.Body == "" {
 		report.Body = report.Report
+	}
+	if report.Document != nil && report.Document.Body != "" {
+		report.Body = report.Document.Body
+		if report.Document.Title != "" {
+			report.Title = report.Document.Title
+		}
+		if len(report.Document.Notes) > 0 {
+			report.Body += "\n\n" + strings.Join(report.Document.Notes, "\n")
+		}
+	} else if report.Date != "" {
+		report.Body += "\n\nFull original content is unavailable for this legacy snapshot; its immutable short body is preserved."
 	}
 	if report.Body == "" {
 		return errors.New("report body is missing")

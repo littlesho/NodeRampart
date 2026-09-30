@@ -133,12 +133,12 @@ func (m *Manager) showPrices(ctx context.Context) (string, error) {
 		return "", err
 	}
 	now := time.Now().UTC()
-	start, ok := report.MonthStart(now, location)
+	start, _, ok := report.BillingCycle(now, location, snapshot.Config.Billing.CycleStartDay)
 	if !ok || !start.Before(now) {
-		return "", errors.New("current report month has no measurable period yet")
+		return "", errors.New("current billing cycle has no measurable period yet")
 	}
 	var out strings.Builder
-	fmt.Fprintf(&out, "Observed month-to-date egress estimate / 本月已观测出站费用估算\n%s — %s (%s)\n", start.Format(time.RFC3339), now.Format(time.RFC3339), location)
+	fmt.Fprintf(&out, "Observed cycle-to-date egress estimate / 本结算周期已观测出站费用估算\n%s — %s (%s)\n", start.Format(time.RFC3339), now.Format(time.RFC3339), location)
 	var evidence struct {
 		History store.IntegrityView      `json:"history"`
 		Traffic store.InterfaceBreakdown `json:"interface_traffic"`

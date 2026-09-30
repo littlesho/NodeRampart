@@ -31,13 +31,15 @@ type GeoBundle struct {
 	CityPath  string
 	ASNPath   string
 	// Notices names are relative to Directory and are selected by the client.
-	Notices   []string
-	CityBuild time.Time
-	ASNBuild  time.Time
-	mu        sync.Mutex
-	root      *os.Root
-	ownedDir  string
-	identity  os.FileInfo
+	Notices    []string
+	CityBuild  time.Time
+	ASNBuild   time.Time
+	CityDigest string
+	ASNDigest  string
+	mu         sync.Mutex
+	root       *os.Root
+	ownedDir   string
+	identity   os.FileInfo
 }
 
 type PriceSnapshot struct {

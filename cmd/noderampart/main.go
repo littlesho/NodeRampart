@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/littlesho/NodeRampart/internal/api"
+	"github.com/littlesho/NodeRampart/internal/assets"
 	"github.com/littlesho/NodeRampart/internal/config"
 	"github.com/littlesho/NodeRampart/internal/ipc"
 	"github.com/littlesho/NodeRampart/internal/protocol"
@@ -26,6 +27,10 @@ const defaultConfig = "/etc/noderampart/config.json"
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		var diagnostic *diagnosticExit
+		if errors.As(err, &diagnostic) {
+			os.Exit(diagnostic.code)
+		}
 		fmt.Fprintln(os.Stderr, "noderampart:", err)
 		os.Exit(1)
 	}
@@ -42,6 +47,9 @@ func run(arguments []string) error {
 	case "tui", "setup":
 		return managementCommand(arguments[0], arguments[1:])
 	case "assets":
+		if len(arguments) >= 2 && arguments[1] == "validate-mmdb" {
+			return assets.ValidatorCommand(arguments[2:], os.Stdout)
+		}
 		if len(arguments) < 2 || arguments[1] != "update" {
 			return usageError()
 		}
@@ -68,6 +76,12 @@ func run(arguments []string) error {
 		return nil
 	case "doctor":
 		return doctorCommand(arguments[1:], os.Stdout)
+	case "metrics":
+		return metricsCommand(arguments[1:], os.Stdout)
+	case "upgrade":
+		return upgradeCommand(arguments[1:], os.Stdout)
+	case "threshold":
+		return thresholdCommand(arguments[1:], os.Stdout)
 	case "status":
 		return command(arguments[1:], "status")
 	case "health":
@@ -103,8 +117,8 @@ func run(arguments []string) error {
 		commands := map[string]map[string]string{
 			"events":   {"list": "events_list", "show": "events_show", "timeline": "events_timeline"},
 			"incident": {"list": "incident_list", "show": "incident_show"},
-			"report":   {"now": "report_now", "list": "report_list", "show": "report_show", "backfill": "report_backfill"},
-			"notify":   {"test": "notify_test", "status": "notify_status", "list": "notify_list", "retry": "notify_retry", "quarantine": "notify_quarantine", "resume": "notify_resume", "resume-destination": "notify_resume"},
+			"report":   {"now": "report_now", "list": "report_list", "show": "report_show", "export": "report_export", "trend": "report_trend", "forecast": "report_forecast", "backfill": "report_backfill"},
+			"notify":   {"test": "notify_test", "status": "notify_status", "list": "notify_list", "retry": "notify_retry", "quarantine": "notify_quarantine", "discard-isolated": "notify_discard_isolated", "resume": "notify_resume", "resume-destination": "notify_resume"},
 			"backup":   {"create": "backup_create", "verify": "backup_verify", "restore": "backup_restore"},
 		}
 		name, ok := commands[arguments[0]][arguments[1]]
@@ -148,9 +162,10 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 	var id, before, kind, start, end, date, destination, output string
 	var incident, cursorTime, cursorID, expires, reason string
 	var limit int
+	var days int
 	var offset int
 	var retentionBefore int64
-	var dataset string
+	var dataset, channel string
 	switch name {
 	case "retention":
 		flags.StringVar(&start, "since", now.Add(-7*24*time.Hour).UTC().Format(time.RFC3339Nano), "inclusive affected-data period start; maximum 400 days")
@@ -203,13 +218,21 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 	case "report_show":
 		flags.StringVar(&date, "date", "", "report date YYYY-MM-DD")
 		flags.StringVar(&options.Format, "format", "text", "json, text, or html")
+	case "report_export":
+		flags.StringVar(&date, "date", "", "archived report date YYYY-MM-DD")
+		flags.StringVar(&options.Format, "format", "html", "json or self-contained html to stdout")
+	case "report_trend":
+		flags.IntVar(&days, "days", 7, "7 or 30 completed civil dates")
+	case "report_forecast":
 	case "report_now":
 		flags.StringVar(&options.Format, "format", "text", "json, text, or html")
 	case "notify_resume":
 		flags.StringVar(&destination, "destination", "", "destination to resume")
 	case "backup_create":
 		flags.StringVar(&output, "output", "", "new backup path under the daemon state backups directory")
-	case "status", "alerts_status", "notify_status", "notify_test", "notify_silence_list":
+	case "notify_test", "notify_discard_isolated":
+		flags.StringVar(&channel, "channel", "telegram", "telegram or webhook; default telegram")
+	case "status", "alerts_status", "notify_status", "notify_silence_list":
 	default:
 		return options, usageError()
 	}
@@ -219,6 +242,11 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 	var args any = struct{}{}
 	invalid := errors.New("invalid or missing command argument")
 	switch name {
+	case "notify_test", "notify_discard_isolated":
+		if channel != "telegram" && channel != "webhook" {
+			return options, invalid
+		}
+		args = api.NotifyChannelArgs{Channel: channel}
 	case "retention":
 		from, e1 := time.Parse(time.RFC3339Nano, start)
 		to, e2 := time.Parse(time.RFC3339Nano, end)
@@ -294,6 +322,16 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 			return options, invalid
 		}
 		args = api.DateArgs{Date: date}
+	case "report_export":
+		if !api.ValidDate(date) || options.Format != "json" && options.Format != "html" {
+			return options, invalid
+		}
+		args = api.ReportExportArgs{Date: date, Format: options.Format}
+	case "report_trend":
+		if days != 7 && days != 30 {
+			return options, invalid
+		}
+		args = api.ReportTrendArgs{Days: days}
 	case "notify_resume":
 		if !api.ValidID(destination) {
 			return options, invalid
@@ -405,5 +443,5 @@ func printJSON(output io.Writer, value any) error {
 }
 
 func usageError() error {
-	return errors.New("usage: noderampart {tui|setup|assets update|version|config test|doctor|status|health|alerts status|retention|evidence export|events list/show/timeline|incident list/show|report now/list/show/backfill|replay anonymize/compare|notify test/status/list/retry/quarantine/resume|notify silence add/list/remove|backup create/verify/restore} [flags]")
+	return errors.New("usage: noderampart {tui|setup|assets update|version|config test|doctor|status|health|alerts status|retention|metrics export|upgrade preflight/rehearse|threshold preview/feedback|evidence export|events list/show/timeline|incident list/show|report now/list/show/backfill|replay anonymize/compare|notify test/status/list/retry/quarantine/discard-isolated/resume|notify silence add/list/remove|backup create/verify/restore} [flags]")
 }

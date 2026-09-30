@@ -33,13 +33,33 @@ func allowedURL(u *url.URL, geo bool) bool {
 }
 
 func (c *Client) request(ctx context.Context, endpoint string, credentials *Credentials, maximum int64) ([]byte, error) {
+	body, err := c.requestStream(ctx, endpoint, credentials, maximum)
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GeoIP consumes the response as a stream. Catalog callers retain the existing
+// bounded []byte API; endpoints, credentials and redirect policy stay shared.
+func (c *Client) requestStream(ctx context.Context, endpoint string, credentials *Credentials, maximum int64) (io.ReadCloser, error) {
 	u, err := url.Parse(endpoint)
 	geo := credentials != nil
 	if err != nil || !allowedURL(u, geo) {
 		return nil, errors.New("asset endpoint is not permitted")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
+	success := false
+	defer func() {
+		if !success {
+			cancel()
+		}
+	}()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, errors.New("cannot create asset request")
@@ -68,21 +88,45 @@ func (c *Client) request(ctx context.Context, endpoint string, credentials *Cred
 		// url.Error includes a full URL, potentially an R2 signature. Never wrap it.
 		return nil, errors.New("asset request failed or timed out")
 	}
-	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
+		_ = response.Body.Close()
 		return nil, fmt.Errorf("asset download returned HTTP %d", response.StatusCode)
 	}
 	if response.ContentLength > maximum {
+		_ = response.Body.Close()
 		return nil, errors.New("asset response exceeds size limit")
 	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, maximum+1))
-	if err != nil {
-		return nil, errors.New("asset response could not be read")
+	success = true
+	return &assetStream{body: response.Body, cancel: cancel, remaining: maximum + 1}, nil
+}
+
+type assetStream struct {
+	body      io.ReadCloser
+	cancel    context.CancelFunc
+	remaining int64
+}
+
+func (s *assetStream) Read(p []byte) (int, error) {
+	if s.remaining <= 0 {
+		return 0, errors.New("asset response exceeds size limit")
 	}
-	if int64(len(body)) > maximum {
-		return nil, errors.New("asset response exceeds size limit")
+	if int64(len(p)) > s.remaining {
+		p = p[:s.remaining]
 	}
-	return body, nil
+	n, err := s.body.Read(p)
+	s.remaining -= int64(n)
+	if s.remaining <= 0 {
+		return n, errors.New("asset response exceeds size limit")
+	}
+	if err != nil && !errors.Is(err, io.EOF) {
+		return n, errors.New("asset response could not be read")
+	}
+	return n, err
+}
+
+func (s *assetStream) Close() error {
+	s.cancel()
+	return s.body.Close()
 }
 
 // checkJSON bounds nesting, strings and object identity before typed decoding.

@@ -1,5 +1,20 @@
 # Verify a NodeRampart release
 
+This document describes the asset format produced for the current workspace's
+`VERSION`, `0.4.0-alpha.6`. This is an unreleased candidate; the bootstrap
+default remains published `v0.4.0-alpha.5`. Select the intended published tag and verify that its
+matching assets and attestations exist before using the download examples.
+The release workflow creates a draft for a maintainer to inspect; local workflow
+edits and tests neither publish a release nor prove that hosted checks ran.
+
+Remote policy recommendations require separate maintainer approval: require the
+actual CI validation/build/package/fuzz check names observed in hosted runs
+before merging main, prevent force-push/deletion of release tags, and review
+the complete draft asset set before publication. Local scripts do not configure
+GitHub branch/tag rules or approve a release.
+
+## Published alpha.5 baseline
+
 [v0.4.0-alpha.5](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.5)
 was published as an alpha prerelease at `2026-09-29T14:50:47Z` (Release ID
 `395132661`). Its source and tag are
@@ -27,6 +42,14 @@ The runtime matrix is Debian `amd64`/`arm64` and Fedora 43/44
 asset and has no runtime SBOM. `bootstrap.sh`, `release.json` and `SHA256SUMS`
 complete the download set.
 
+For alpha.6, public DEB names are
+`noderampart_0.4.0-alpha.6_ARCH.deb`, with native Debian version
+`0.4.0~alpha.6`. RPM names contain `0.4.0-0.alpha.7.fc43` or
+`0.4.0-0.alpha.7.fc44`; the source RPM uses Fedora 44. SBOM/buildinfo names,
+checksums and attestations bind the final public filename and actual bytes.
+No alpha.6 hosted run, upload or native runtime acceptance is implied by this
+format description. Consult the candidate's recorded acceptance before use.
+
 The SBOM covers only the three packaged Go programs. It does **not** inventory
 runtime system dependencies, inspect your installed host, provide a complete
 function-call dependency graph or prove that a component is vulnerability-free.
@@ -41,12 +64,38 @@ Go version and module data are read from the actual packaged files. Cross
 architecture inspection does not execute ARM64 binaries or replace ARM64
 runtime testing.
 
+Official release builds and collection require the declared full commit to equal
+the checkout's HEAD and reject tracked or untracked source changes. The fixed
+`release-input` directory is reserved for downloaded workflow artifacts and is
+not treated as build source. CI and release required validation share
+`scripts/validate.sh`, including uncached tests, race, coverage, static builds,
+packaging/bootstrap/SBOM regressions and pinned `govulncheck@v1.7.0`.
+
+Secret scanning and seven bounded fuzz targets run separately in the shared
+`.github/workflows/safety.yml` workflow. Both CI and release invoke it for their
+own exact `github.sha`; package jobs and draft creation wait for these results.
+The release validation job verifies the version tag and records full commit and
+commit timestamp once. Packages, SBOM declarations and collection consume that
+same metadata. A local `validate.sh` PASS does not mean the hosted secret/fuzz
+jobs, upload checks or attestations ran.
+
+秘密扫描与七项有界 fuzz 在共享 safety workflow 独立执行；CI 与 release 均绑定
+各自的准确 `github.sha`，构建和 draft 必须等待这些检查。发行验证一次确定完整提交
+及其提交时间，包、SBOM 与收集沿用同一元数据。本地验证不代表远端检查或发布已执行。
+
 ## Download and verify
 
 Use a current [GitHub CLI](https://cli.github.com/manual/gh_attestation_verify)
 with artifact attestation support. Select the full commit SHA from the release
 source you have reviewed; do not treat a value downloaded beside the package as
 independent evidence of the expected source.
+
+The example selects the reviewed public `v0.4.0-alpha.5` baseline, not the
+unreleased working tree. Whether that historical release contains an SBOM and
+matching attestations must be checked against its actual published assets.
+Missing statements cannot pass the corresponding verification commands; do not
+substitute another release's statements or infer that this local work published
+them.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
@@ -152,15 +201,19 @@ For a reviewed local package, with Go 1.26.8 and the appropriate read-only
 ```sh
 TOOLS_DIR=$(mktemp -d)
 python3 scripts/release_sbom.py --fetch-syft "$TOOLS_DIR/syft"
-COMMIT=$(git rev-parse HEAD)
-BUILD_DATE=$(git show -s --format=%cI HEAD)
+COMMIT=unknown
+BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 export COMMIT BUILD_DATE
-python3 scripts/release_sbom.py dist/noderampart_0.4.0-alpha.5_amd64.deb \
+make build
+./scripts/build-deb.sh
+python3 scripts/release_sbom.py dist/noderampart_0.4.0~alpha.6_amd64.deb \
   --syft "$TOOLS_DIR/syft/syft" --output dist/sbom
 ```
 
-Supply the actual intended build declarations when inspecting a package built
-elsewhere. A local build without a known commit may use literal `COMMIT=unknown`;
+This local example records its declarations before building. Supply the actual
+recorded build declarations when inspecting a package built elsewhere, rather
+than deriving them from the inspecting checkout. Ordinary dirty local builds
+default to literal `COMMIT=unknown`;
 that does not certify a source revision and cannot pass the release collector's
 required hexadecimal commit declaration. Distribution Go version suffixes are
 retained as read from the binary. The helper refuses existing output files; retain or remove the

@@ -602,6 +602,37 @@ func TestMonitorPassCancellationKeepsBoundedPending(t *testing.T) {
 	}
 }
 
+func TestMonitorJournalRecoveryFailureSurvivesCoverageRecovery(t *testing.T) {
+	for _, recoveredCoverage := range []bool{false, true} {
+		name := "independent_recovery_failure"
+		if recoveredCoverage {
+			name = "coverage_gap_recovered"
+		}
+		t.Run(name, func(t *testing.T) {
+			a := eventTestApp(t)
+			failure := errors.New("synthetic journal recovery persistence failure")
+			a.recordWrite(failure, "journal_recovery", false)
+			if recoveredCoverage {
+				a.recordWrite(failure, "coverage_gap", false)
+				a.recordWrite(nil, "coverage_gap", false)
+			}
+			if a.storageHealth.Healthy || !a.storageFailures["journal_recovery"] || a.storageFailures["coverage_gap"] {
+				t.Fatal("unrelated successful write cleared the recovery failure")
+			}
+			budget := store.StorageBudgetStatus{Configured: true, State: "running"}
+			observation := observeStorageHealth(time.Now().UTC(), budget, nil, a.monitorStorageFailure(), a.storageHealth.LastFailure)
+			if observation.Condition != "failed" || observation.Status.Reason != "storage_write_failed" {
+				t.Fatalf("unresolved journal recovery storage failure became healthy: %+v", observation)
+			}
+			a.recordWrite(nil, "journal_recovery", false)
+			observation = observeStorageHealth(time.Now().UTC(), budget, nil, a.monitorStorageFailure(), a.storageHealth.LastFailure)
+			if !a.storageHealth.Healthy || observation.Condition != "healthy" {
+				t.Fatal("matching successful journal recovery write did not clear failure")
+			}
+		})
+	}
+}
+
 func TestMonitorStorageBusyAndUnconfiguredDoNotRecover(t *testing.T) {
 	cfg := config.Defaults().Alerts
 	cfg.Health.Enabled = true

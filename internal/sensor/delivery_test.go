@@ -44,7 +44,7 @@ func (c *recordingConnection) Write(payload []byte) (int, error) {
 
 func deliveryBatch(packets uint64) protocol.Batch {
 	return protocol.Batch{
-		ProtocolVersion: protocol.Version, SentAt: time.Now().UTC(), IntervalMillis: 1000, Interface: "eth0",
+		ProtocolVersion: 4, SentAt: time.Now().UTC(), IntervalMillis: 1000, Interface: "eth0",
 		RXPackets: packets, TXPackets: packets + 1, RXBytes: packets * 100, TXBytes: (packets + 1) * 100,
 		InboundUDP: packets, KernelPackets: 2*packets + 1, KernelDrops: packets,
 		KernelStatsErrors: 1, ParseErrors: packets + 2, OverflowPackets: 1, OverflowBytes: 20,
@@ -68,7 +68,7 @@ func TestBatchSenderRetainsHealthAcrossDialAndPartialWriteFailures(t *testing.T)
 	partial := &recordingConnection{failAfter: 1}
 	good := &recordingConnection{maxWrite: 7}
 	connections := 0
-	sender := &BatchSender{connect: func() (batchConnection, error) {
+	sender := &BatchSender{connect: func(time.Duration) (batchConnection, error) {
 		connections++
 		switch connections {
 		case 1:
@@ -116,8 +116,9 @@ func TestBatchSenderRetainsHealthAcrossDialAndPartialWriteFailures(t *testing.T)
 	if err := sender.Send(next); err != nil {
 		t.Fatal(err)
 	}
-	if got := readDeliveredBatch(t, good); !reflect.DeepEqual(got, next) {
-		t.Fatalf("a later batch repeated delivered health: %#v", got)
+	clean := readDeliveredBatch(t, good)
+	if !reflect.DeepEqual(clean, next) {
+		t.Fatalf("a later batch repeated delivered health: %#v", clean)
 	}
 	if connections != 3 || good.deadlineCalls != 2 {
 		t.Fatal("healthy connection was not reused with a fresh write deadline")
@@ -132,7 +133,7 @@ func TestBatchSenderWriteTimeoutRecovers(t *testing.T) {
 	defer watchdog.Stop()
 	good := &recordingConnection{}
 	connections := 0
-	sender := &BatchSender{connect: func() (batchConnection, error) {
+	sender := &BatchSender{connect: func(time.Duration) (batchConnection, error) {
 		connections++
 		if connections == 1 {
 			return client, nil
@@ -156,7 +157,7 @@ func TestBatchSenderWriteTimeoutRecovers(t *testing.T) {
 func TestBatchSenderSaturationIsReportedAndCleared(t *testing.T) {
 	good := &recordingConnection{}
 	connections := 0
-	sender := &BatchSender{connect: func() (batchConnection, error) {
+	sender := &BatchSender{connect: func(time.Duration) (batchConnection, error) {
 		connections++
 		if connections == 1 {
 			return nil, io.ErrClosedPipe

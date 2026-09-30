@@ -31,7 +31,8 @@ func (unusedEventSender) Send(context.Context, string) error {
 
 func eventTestApp(t *testing.T) *App {
 	t.Helper()
-	db, err := store.Open(filepath.Join(t.TempDir(), "state.db"))
+	databasePath := filepath.Join(t.TempDir(), "state.db")
+	db, err := store.Open(databasePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,10 +47,12 @@ func eventTestApp(t *testing.T) *App {
 		t.Fatal(err)
 	}
 	cfg := config.Defaults()
+	cfg.Paths.Database = databasePath
+	cfg.Notifications.Telegram.Enabled = true
 	cfg.Detection.SYNPacketsPerSecond = 10
 	cfg.Detection.UpdateInterval = config.Duration{Duration: 2 * time.Second}
 	cfg.Detection.RecoveryWindows = 2
-	a, err := New(Options{Config: cfg, Store: db, Geo: geo, StorePrivacy: transformer, NotifyPrivacy: transformer, Notifier: unusedEventSender{}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	a, err := New(Options{Config: cfg, Store: db, Geo: geo, StorePrivacy: transformer, NotifyPrivacy: transformer, Notifier: unusedEventSender{}, NotificationDestination: "telegram:" + strings.Repeat("a", 64), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	if err != nil {
 		t.Fatal(err)
 	}

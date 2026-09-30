@@ -55,7 +55,7 @@ func TestEvidenceSnapshotBoundsAndSharedAsOf(t *testing.T) {
 	}
 }
 
-func TestEvidenceSnapshotAtomicReadWithWriter(t *testing.T) {
+func TestEvidenceSnapshotUsesOneTransactionDuringConcurrentWrites(t *testing.T) {
 	s := budgetStore(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

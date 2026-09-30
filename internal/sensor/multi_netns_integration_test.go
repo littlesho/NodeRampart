@@ -99,7 +99,7 @@ func TestNetNSMultipleInterfacesIPv6AndRouteChanges(t *testing.T) {
 	resolve([]string{"nr4", "nr6"})
 	output := make(chan protocol.Batch, 128)
 	var readers sync.WaitGroup
-	sender := &BatchSender{connect: func() (batchConnection, error) {
+	sender := &BatchSender{connect: func(time.Duration) (batchConnection, error) {
 		client, peer := net.Pipe()
 		readers.Add(1)
 		go func() {

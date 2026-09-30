@@ -34,7 +34,7 @@ type SilenceResult struct {
 
 // Legacy messages are resolved through the exact event dedupe key and the
 // event primary key; no unindexed search through event evidence is required.
-const silenceMessageMatch = `destination='telegram' AND (
+const silenceMessageMatch = `(channel IN ('telegram','webhook') OR destination='telegram') AND (
  (event_kind<>'' AND (?='' OR incident_id=?) AND (?='' OR event_kind=?)) OR
  (event_kind='' AND EXISTS(SELECT 1 FROM events e WHERE e.id=substr(notification_outbox.dedupe_key,7,length(notification_outbox.dedupe_key)-15)
  AND notification_outbox.dedupe_key='event:'||e.id||':telegram' AND (?='' OR e.incident_id=?) AND (?='' OR e.kind=?))))`

@@ -83,11 +83,16 @@ func (b *Builder) archiveDate(ctx context.Context, date string, now time.Time) (
 		return current, "unavailable", err
 	}
 	title := "Daily security report " + date
-	body, pricing, err := b.rangeWithBilling(ctx, title, start, end, now)
+	document, err := b.StructuredRange(ctx, title, start, end, now)
 	if err != nil {
 		return current, "unavailable", err
 	}
-	snapshot := store.ReportSnapshot{Billing: pricing, Date: date, Title: title, Body: body, PeriodStart: start, PeriodEnd: end, GeneratedAt: now.UTC()}
+	document.Date = date
+	data, err := EncodeDocument(document)
+	if err != nil {
+		return current, "unavailable", err
+	}
+	snapshot := store.ReportSnapshot{Document: data, Billing: document.Billing, Date: date, Title: title, Body: ShortBody(document.Body), PeriodStart: start, PeriodEnd: end, GeneratedAt: now.UTC()}
 	inserted, err := b.Store.SaveReportIfAbsent(ctx, snapshot)
 	if errors.Is(err, store.ErrReportPeriodConflict) {
 		return current, "conflict", err

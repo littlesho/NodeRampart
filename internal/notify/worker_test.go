@@ -66,8 +66,14 @@ func TestWorkerDestinationCooldownSurvivesPassAndRestart(t *testing.T) {
 		}
 		return nil
 	})
-	worker := &Worker{Store: db, Sender: sender}
+	worker := &Worker{Store: db, Destination: "telegram", Sender: sender}
 	if err := worker.process(ctx); err != nil {
+		t.Fatal(err)
+	}
+	// Each sender is permanently bound to its receiver; a different destination
+	// needs a separate sender even within the same fetched batch.
+	other := &Worker{Store: db, Destination: "other", Sender: sender}
+	if err := other.process(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if calls != 2 {
@@ -91,7 +97,7 @@ func TestWorkerDestinationCooldownSurvivesPassAndRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	enqueueSynthetic(t, db, "new-after-restart", "telegram", now)
-	worker = &Worker{Store: db, Sender: sender}
+	worker = &Worker{Store: db, Destination: "telegram", Sender: sender}
 	if err := worker.process(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +125,7 @@ func TestWorkerRateLimitWithoutHintPausesBatch(t *testing.T) {
 	enqueueSynthetic(t, db, "first", "telegram", now.Add(-time.Second))
 	enqueueSynthetic(t, db, "second", "telegram", now)
 	calls := 0
-	worker := &Worker{Store: db, Sender: senderFunc(func(context.Context, string) error {
+	worker := &Worker{Store: db, Destination: "telegram", Sender: senderFunc(func(context.Context, string) error {
 		calls++
 		return &DeliveryError{StatusCode: 429, RateLimited: true}
 	})}
@@ -139,7 +145,7 @@ func TestWorkerPermanentFailureQuarantinedUntilManualRetry(t *testing.T) {
 	enqueueSynthetic(t, db, "permanent", "telegram", now.Add(-time.Second))
 	enqueueSynthetic(t, db, "successful", "telegram", now)
 	calls := 0
-	worker := &Worker{Store: db, Sender: senderFunc(func(context.Context, string) error {
+	worker := &Worker{Store: db, Destination: "telegram", Sender: senderFunc(func(context.Context, string) error {
 		calls++
 		if calls == 1 {
 			return &DeliveryError{StatusCode: 403, Permanent: true}
@@ -187,7 +193,7 @@ func TestWorkerQuarantinesExhaustedRetries(t *testing.T) {
 				}
 			}
 			calls := 0
-			worker := &Worker{Store: db, Sender: senderFunc(func(context.Context, string) error {
+			worker := &Worker{Store: db, Destination: "telegram", Sender: senderFunc(func(context.Context, string) error {
 				calls++
 				if rateLimited {
 					return &DeliveryError{StatusCode: 429, RateLimited: true, RetryAfter: time.Hour}
@@ -226,8 +232,9 @@ func TestWorkerOnlyMarksConfirmedDeliverySent(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			db := openNotifyStore(t)
-			enqueueSynthetic(t, db, "message", "telegram", time.Now().UTC())
-			worker := &Worker{Store: db, Sender: syntheticTelegram(200, strings.NewReader(tc.body), "")}
+			sender := syntheticTelegram(200, strings.NewReader(tc.body), "")
+			enqueueSynthetic(t, db, "message", sender.Destination(), time.Now().UTC())
+			worker := &Worker{Store: db, Sender: sender}
 			if err := worker.process(context.Background()); err != nil {
 				t.Fatal(err)
 			}
@@ -246,7 +253,7 @@ func TestWorkerExcessiveWaitRequiresDestinationResume(t *testing.T) {
 	enqueueSynthetic(t, db, "first", "telegram", now.Add(-time.Second))
 	enqueueSynthetic(t, db, "second", "telegram", now)
 	calls := 0
-	worker := &Worker{Store: db, Sender: senderFunc(func(context.Context, string) error {
+	worker := &Worker{Store: db, Destination: "telegram", Sender: senderFunc(func(context.Context, string) error {
 		calls++
 		return &DeliveryError{StatusCode: 429, RateLimited: true, SuspendDestination: true}
 	})}
@@ -274,7 +281,7 @@ func TestWorkerCancellationDoesNotConsumeAttempt(t *testing.T) {
 	enqueueSynthetic(t, db, "message", "telegram", now)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	worker := &Worker{Store: db, Sender: senderFunc(func(context.Context, string) error {
+	worker := &Worker{Store: db, Destination: "telegram", Sender: senderFunc(func(context.Context, string) error {
 		cancel()
 		return context.Canceled
 	})}
