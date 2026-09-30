@@ -8,13 +8,13 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.5：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.5) 修复 SSH journal session scope 来源兼容以及子进程、整个 daemon 重启后的恢复状态。数据库升级至 schema 7，升级前请保留已验证的兼容备份。
+> **v0.4.0-alpha.6：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6) 增加通知目标隔离、完整本地报告、诊断及采集提交水位。数据库升级至 schema 11，采集协议升级至 v5；升级前请保留已验证的兼容备份。
 
-> **验收范围：** 22 项资产匿名下载与校验和、22 项 provenance、6 项 SPDX attestation，以及 Debian 12/13、Fedora 43/44 的 amd64/x86_64 原生与安装包生命周期已通过。Debian 12、Fedora 43 的公开 bootstrap 安装也已通过。ARM64 实机仍未验收，beta 前必需；这不代表生产就绪。详见[发布验证](docs/RELEASE_VERIFICATION.md#alpha5-publication-and-distribution-verification)。
+> **验收范围：** 22 项资产的新环境匿名下载及校验和通过，字节与已认证核验的 22 项 provenance、6 项 SPDX 一致。Debian 12/13、Fedora 43/44 的准确最终包跨版本升级及生命周期通过；Debian 13、Fedora 44 的公开 bootstrap 与分开运行 setup 通过。真实 ARM64 和 SSH 自然恢复链仍未验证，不代表生产就绪。详见[发布验证](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification)。
 
 > **GeoIP 修复范围：** alpha.4 修复共享 MMDB 数据重复解析造成的预算误拒绝，并提供安全的 MMDB 校验/资源预算错误提示。匹配候选对 City/ASN 的完整离线校验通过；用户正式下载、激活和每日更新尚未验证。详见[验证范围与资源限制](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)及[升级与 GeoIP 验收](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance)。
 
-> **alpha.6 候选，尚未公开发布：** 本分支准备 `0.4.0-alpha.6`，schema 11、协议 v5。正常安装器仍选择公开 alpha.5。候选验收范围见[验收摘要](docs/ALPHA6_ACCEPTANCE.md)，隔离升级前须验证匹配备份。
+> **固定版本安装：** 请在下列命令中明确选择 `v0.4.0-alpha.6`。冻结的 bootstrap 省略 `--version` 时仍默认 alpha.5。[验收摘要](docs/ALPHA6_ACCEPTANCE.md#publication-and-distribution-2026-10-01)区分实际结果与未验证范围。
 
 ## 能帮你做什么？
 
@@ -31,33 +31,30 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 还可以合并重复告警、设置到期自动解除的静默、补齐缺失日报、备份数据库，以及通过离线脱敏元数据比较不同检测阈值。
 
-## 一行安装
+## 固定版本安装
 
-安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载这一行命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。
+安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。ARM64 安装包已提供，但真实 ARM64 运行尚未验收。
 
-~~~bash
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.5
-~~~
-
-也可以先下载到独立目录，查看脚本后再决定是否执行：
+先下载到独立目录，查看脚本后再决定是否执行：
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.6/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # 查看并接受脚本行为后，再单独执行：
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.5
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.6 --no-setup
+sudo noderampart setup
 ~~~
 
 安装包与证明的人工核验步骤见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。HTTPS 下载、同一 Release 的 SHA256 和 GitHub attestation 是不同检查；bootstrap 会检查包校验和与包身份，**不会自动执行 attestation 验证**。
 
-安装器会识别系统和 CPU，下载对应 DEB/RPM，核对 SHA256、版本和架构，通过包管理器安装，随后进入配置向导。已有配置和服务启用/禁用状态会保留；下载源或制品尚未发布时会明确报错并停止。
+安装器会识别系统和 CPU，下载对应 DEB/RPM，核对 SHA256、版本和架构，通过包管理器安装。`--no-setup` 将菜单留给随后单独运行的 setup。已有配置和服务启用/禁用状态会保留；下载源或制品尚未发布时会明确报错并停止。
 
-该示例选择已审查的公开 `v0.4.0-alpha.5` 基线，不会安装本工作区尚未发布的改动。本轮改动请按[本地安装说明](docs/V0.4_OPERATIONS.md#local-installation-before-publication)使用经过审查的本地构建或安装包。支持构建的平台不等于所有平台均已完成真实运行验收，具体边界见[当前限制](docs/ALPHA_LIMITATIONS.md)。
+明确选择 alpha.6、下载后用 `--no-setup` 安装并单独运行 setup 的路径已在 Debian 13、Fedora 44 实测；本轮未执行受支持的 curl 管道交互安装路径。省略 `--version` 仍选择 alpha.5。支持构建的平台不等于所有平台均已完成真实运行验收，具体边界见[当前限制](docs/ALPHA_LIMITATIONS.md)。
 
-无人值守安装可在命令末尾加 **--no-setup**，之后再打开配置向导。安装器不会从脚本管道读取交互答案或凭据。Debian 首次装包会按系统服务策略启用服务并以安全默认配置开始观察；Fedora 遵循系统的服务 preset。
+上述安装命令使用 **--no-setup** 完成无人值守安装，之后再单独打开配置向导。安装器不会从脚本管道读取交互答案或凭据。Debian 首次装包会按系统服务策略启用服务并以安全默认配置开始观察；Fedora 遵循系统的服务 preset。
 
 ## 第一次怎么配置？
 
@@ -254,7 +251,7 @@ SSH 会话没有终端时，可用 ssh -t 分配终端，或使用原有的非�
 项目原创代码采用 [MIT License](LICENSE)。编译依赖保留各自许可证，见[第三方声明](THIRD_PARTY_NOTICES.md)；MaxMind 数据使用独立的数据许可。
 
 新生成的日报会保存完整单价、来源、免费额度、字节单位和观测流量，便于复算。
-历史补报使用生成时配置的价格，已有存档不会重新计价。本工作区未发布改动自动迁移到 schema 11，保留公开 schema 7 的日志恢复状态，并新增目标隔离、完整报告文档、采集提交水位及分通道投递决策。
+历史补报使用生成时配置的价格，已有存档不会重新计价。alpha.6 自动迁移到 schema 11，保留公开 schema 7 的日志恢复状态，并新增目标隔离、完整报告文档、采集提交水位及分通道投递决策。
 升级前请备份，旧版程序不能直接打开已迁移的数据库；只有通道名、没有可靠收件归属的历史 Telegram 消息会保留隔离，不绑定当前收件方。
 
-已发布 alpha.5 产物附有 Go 依赖 SBOM 与 GitHub 来源证明；alpha.6 须独立核验本候选证明，验证步骤见[发布验证](docs/RELEASE_VERIFICATION.md)。
+已发布 alpha.6 产物附有 Go 依赖 SBOM 与匹配的 GitHub 来源证明，验证步骤见[发布验证](docs/RELEASE_VERIFICATION.md)。包内 README 与许可证保持冻结发布源码的快照；之后的文档更新不替换安装包字节，也不代表包中安装了完整离线手册。

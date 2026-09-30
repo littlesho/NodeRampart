@@ -1,4 +1,10 @@
-# alpha.6 candidate acceptance / 候选验收
+# alpha.6 acceptance / 验收
+
+The original preparation snapshot below is retained with its date and pending
+claims. Current publication results are appended in
+[Publication and distribution (2026-10-01)](#publication-and-distribution-2026-10-01).
+
+## Preparation snapshot (2026-09-30)
 
 This is a scoped, public-safe preparation record dated 2026-09-30, before
 candidate freeze. It does not announce publication. Final run IDs and exact
@@ -62,3 +68,70 @@ certification. Historical public validation remains in
 隔离、服务意图及未完成恢复；v5 部分 ACK 不代表外发成功，损失仍是估计。
 旧程序拒绝新 schema，回退须恢复匹配旧备份。真实 ARM64、长跑及真实可选外发未跑；
 草稿不是匿名公开发行，候选保持 draft=true、prerelease=true。
+
+
+## Publication and distribution (2026-10-01)
+
+[v0.4.0-alpha.6](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6)
+was published at `2026-09-30T18:54:24Z` (Release ID `400047056`),
+`draft=false`, `prerelease=true`, not marked latest. Frozen source/tag is
+`4d204b43499ca2f41c15b92334537d57bfc8b20c`, source BUILD_DATE
+`2026-09-30T20:19:52+08:00`; later documentation cannot change these identities.
+[Main CI](https://github.com/littlesho/NodeRampart/actions/runs/36714019589)
+and [release attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/36716260742)
+passed. Schema 11, protocol v5 and config/API 1 retain the upgrade/partial-ACK
+limits in the preparation snapshot.
+
+| Scope | Actual result |
+| --- | --- |
+| Public distribution | PASS: fresh anonymous downloads of all 22 exact assets, SHA256SUMS and native/ELF/Go/buildinfo identities. |
+| Build proofs | PASS: unchanged bytes match authenticated 22 provenance and six runtime SPDX verifications; source RPM is not runtime. |
+| Actual alpha.5 → final alpha.6 | PASS on Debian 12/13 and matching Fedora 43/44 x86_64; actual old program-created schema 7 → 11, with labelled history/recovery fixtures. |
+| Final package lifecycle | PASS on all four systems; same-version reinstall and preserve/remove/purge cases remain separate from cross-version upgrade. |
+| Public bootstrap | PASS on Debian 13/Fedora 44: explicit alpha.6 download, normal APT/DNF install with `--no-setup`, actual separate setup and basic collection. |
+| Online backup and watermarks | PASS on both bootstrap guests: consistent schema-11 backup and actual committed-watermark progression. |
+| Strict diagnosis snapshots | Unknown / exit 2 on both; Fedora retained `auth_window_warmup` and transient `sensor_commit_unavailable`. Later progress does not rewrite this snapshot. |
+| Publication bootstrap cleanup | PASS: actual helper purge, separately retained evidence/backups, owned-process and lease/lock cleanup; fixed soft-stop and independent status confirmed both STOPPED. |
+| Known-pending SSH recovery | PASS on independent copies in two tested VMs; injected/known state is distinct from natural onset. |
+| Natural SSH pending/recovery chain | BLOCKED: natural record-quality pending onset not proved; dependent checks NOT RUN. |
+| Fedora native preset/unit flags before and after Start / boot-time enable state | NOT RUN; actual runtime start and basic readiness passed. |
+| Native ARM64 / VM race / first Fedora control timing | NOT RUN; inspected ARM64 artifacts are not native execution. |
+| Sustained pressure / 72-hour soak / real MMDB / real outbound receivers | NOT RUN. |
+
+Published bootstrap's default remains alpha.5; the README explicitly pins
+alpha.6. Debian default-auto/enabled collection passed. Fedora's RPM follows
+host presets by source mechanism; actual setup / Services Start, basic readiness
+and process-executable identity passed, with SELinux Enforcing. Independent
+native preset/unit-flag samples before and after Start, and boot-time enable
+state, were **NOT RUN**.
+The curl-pipe interactive installation path was NOT RUN here.
+Package README/license files remain the frozen source snapshot; runtime packages
+do not install the complete offline manual. See [distribution verification](RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification)
+for exact package hashes and proof scope.
+
+First failures remain part of the acceptance scope. PR CI attempt 1 had two
+30-second fuzz deadline failures with no crash sample; one bounded same-source,
+same-parameter rerun passed. A possible Go cancellation race is an inference
+from toolchain source; precise hosted scheduling was not reconstructed. Debian
+12 default-auto readiness failed without a usable default route; documented
+explicit interface selection passed without adding routes. Fedora 43's first
+old backup was lost under application-state purge; a separate actual old→final
+case independently retained its old backup/configuration/synthetic key outside
+application paths and passed. It does not reconstruct the missing original.
+
+Publication callers retained an initial response-header-limit SIGXFSZ, direct
+network failures and Fedora's post-Save omitted-field assertion. Only the
+bounded caller header limit and scoped proxy environment were corrected;
+completed installs/Saves were not replayed. The final missing anonymous file
+then passed. Fixture recovery, quiet logs and later status success do not prove
+natural SSH recovery or retroactively make an unknown diagnostic healthy.
+
+保留上方 2026-09-30 冻结前快照；本节才记录已发布 alpha.6 的准确来源和实际结果。
+22 个资产匿名下载/校验、已认证证明的同字节复用、四系统最终包升级/生命周期及
+Debian 13/Fedora 44 公开 bootstrap、实际 setup/基本采集/在线备份通过。
+两台 strict 快照仍 unknown/2；Fedora 的预热及瞬时提交不可用原因保留。
+Fedora 实际运行启动/基础就绪/进程身份通过，原生 preset/unit flags 前后及开机启用状态 NOT RUN。
+known-pending 独立副本恢复闭环仅在两台实测通过，自然置位未证明，链仍 BLOCKED。
+首次失败不抹去，后续独立补验收不冒称原件；真实 ARM64、VM race、Fedora 首次控制
+计时、72 小时、持续压力、真实 MMDB/外发 NOT RUN。实际 helper purge、独立证据/备份核验、
+自己的进程/锁/lease 清理通过；固定 soft-stop 后独立确认两台 STOPPED。
