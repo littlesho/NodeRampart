@@ -97,9 +97,10 @@ func TestControlEventListUsesBoundedSummariesAndPagination(t *testing.T) {
 
 func TestControlNotificationTransitionsAreExplicitAndBodyFree(t *testing.T) {
 	app := controlTestApp(t)
+	app.options.NotificationDestination = "telegram:" + strings.Repeat("a", 64)
 	ctx := context.Background()
 	now := time.Now().UTC()
-	if _, err := app.options.Store.Enqueue(ctx, store.OutboxMessage{ID: "msg_1", DedupeKey: "test", Destination: "telegram", Body: "synthetic_private_body", NextAttempt: now}); err != nil {
+	if _, err := app.options.Store.Enqueue(ctx, store.OutboxMessage{ID: "msg_1", DedupeKey: "test", Destination: app.options.NotificationDestination, Body: "synthetic_private_body", NextAttempt: now}); err != nil {
 		t.Fatal(err)
 	}
 	if response := controlRequest(t, app, "notify_quarantine", api.IDArgs{ID: "msg_missing"}); response.OK {
@@ -116,10 +117,10 @@ func TestControlNotificationTransitionsAreExplicitAndBodyFree(t *testing.T) {
 	if response := controlRequest(t, app, "notify_retry", api.IDArgs{ID: "msg_1"}); !response.OK {
 		t.Fatal(response.Error)
 	}
-	if err := app.options.Store.MarkRateLimited(ctx, "msg_1", "telegram", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), "synthetic hold"); err != nil {
+	if err := app.options.Store.MarkRateLimited(ctx, "msg_1", app.options.NotificationDestination, time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), "synthetic hold"); err != nil {
 		t.Fatal(err)
 	}
-	if response := controlRequest(t, app, "notify_resume", api.DestinationArgs{Destination: "telegram"}); !response.OK {
+	if response := controlRequest(t, app, "notify_resume", api.DestinationArgs{Destination: app.options.NotificationDestination}); !response.OK {
 		t.Fatal(response.Error)
 	}
 	pending, err := app.options.Store.Pending(ctx, time.Now().UTC().Add(time.Second), 20)

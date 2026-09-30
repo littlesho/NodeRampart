@@ -114,15 +114,15 @@ class SBOMTests(unittest.TestCase):
                 release.inspect_binary(binary, 'amd64')
 
     def test_source_rpm_and_arbitrary_package_names_are_rejected(self):
-        for name in ('noderampart-0.4.0-0.alpha.6.fc44.src.rpm', 'other_0.4.0~alpha.5_amd64.deb',
-                     'noderampart_0.4.0-alpha.5_amd64.deb/../escape', 'noderampart_0.4.0-alpha.5_i386.deb'):
+        for name in ('noderampart-0.4.0-0.alpha.7.fc44.src.rpm', 'other_0.4.0~alpha.6_amd64.deb',
+                     'noderampart_0.4.0~alpha.6_amd64.deb/../escape', 'noderampart_0.4.0~alpha.6_i386.deb'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 release.package_arch(name)
 
     def test_wrong_tool_digest_and_existing_outputs_are_rejected(self):
         tool = self.root / 'syft'
         tool.write_text('synthetic wrong tool')
-        package = self.root / 'noderampart_0.4.0-alpha.5_amd64.deb'
+        package = self.root / 'noderampart_0.4.0~alpha.6_amd64.deb'
         package.write_text('synthetic package')
         with patch.object(release, 'command') as command:
             with self.assertRaisesRegex(ValueError, 'verified Syft'):
@@ -148,49 +148,61 @@ class SBOMTests(unittest.TestCase):
                 release.fetch_syft(destination)
         self.assertFalse((destination / 'syft').exists())
 
-
-    def test_public_names_native_versions_and_uploaded_set(self):
+    def test_exact_uploaded_portable_set_and_native_package_identity(self):
         document = {'tag_name': 'v' + release.VERSION, 'draft': True, 'prerelease': True}
         assets = [{'name': name, 'state': 'uploaded'} for name in sorted(release.release_assets())]
         self.assertEqual(len(assets), 22)
         release.validate_uploaded(document, assets)
-        for arch in ('amd64', 'arm64'):
-            name = f'noderampart_0.4.0-alpha.5_{arch}.deb'
-            self.assertIn(name, release.runtime_packages())
-            self.assertEqual(release.package_identity(name),
-                             {'name': 'noderampart', 'version': '0.4.0~alpha.5', 'architecture': arch})
+        for separator in ('-', '~'):
+            for arch in ('amd64', 'arm64'):
+                name = f'noderampart_0.4.0{separator}alpha.6_{arch}.deb'
+                self.assertEqual(release.package_identity(name),
+                                 {'name': 'noderampart', 'version': '0.4.0~alpha.6', 'architecture': arch})
+                self.assertEqual(name in release.runtime_packages(), separator == '-')
+        for fedora in (43, 44):
+            self.assertEqual(release.package_identity(f'noderampart-0.4.0-0.alpha.7.fc{fedora}.x86_64.rpm')['version'],
+                             f'0.4.0-0.alpha.7.fc{fedora}')
         for changed in (assets[:-1], assets + [assets[0]],
-                        [dict(a, state='starter') if i == 0 else a for i, a in enumerate(assets)],
-                        [dict(a, name='extra.txt') if i == 0 else a for i, a in enumerate(assets)]):
+                        [dict(asset, state='starter') if index == 0 else asset for index, asset in enumerate(assets)],
+                        [dict(assets[0], name='extra.txt')] + assets[1:],
+                        [dict(asset, name=asset['name'].replace('-alpha.6_', '.alpha.6_')) for asset in assets]):
             with self.assertRaises(ValueError):
                 release.validate_uploaded(document, changed)
         for name in ('bad~name', '.hidden', 'trailing.', 'a/b', 'a%20b', 'a b'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 release.validate_uploaded(document, [dict(assets[0], name=name)] + assets[1:])
+        for changed in ({}, dict(document, draft=False), dict(document, prerelease=False), dict(document, tag_name='v0.4.0-alpha.5')):
+            with self.assertRaises(ValueError):
+                release.validate_uploaded(changed, assets)
+        with self.assertRaises(ValueError):
+            release.validate_uploaded(document, {})
 
-    def test_actual_alpha1_upload_renaming_is_detected(self):
-        fixture = json.loads((Path(__file__).parent / 'testdata/alpha1-uploaded-assets.json').read_text())
-        # Exact old names expected by alpha.1's unchanged checksum manifest.
-        expected = {a['name'].replace('noderampart_0.4.0.alpha.1_', 'noderampart_0.4.0~alpha.1_')
-                    for a in fixture['assets']}
-        self.assertEqual(sum(a['name'] not in expected for a in fixture['assets']), 6)
-        with patch.object(release, 'VERSION', '0.4.0-alpha.1'), patch.object(release, 'release_assets', return_value=expected):
-            with self.assertRaisesRegex(ValueError, 'exact release set'):
-                release.validate_uploaded(fixture, fixture['assets'])
-
-    def test_valid_deb_filename_does_not_override_native_identity(self):
-        package = self.root / 'noderampart_0.4.0-alpha.5_amd64.deb'
+    def test_portable_deb_name_cannot_override_native_version(self):
+        package = self.root / 'noderampart_0.4.0-alpha.6_amd64.deb'
         package.write_bytes(b'synthetic package')
-        for values in (('other', '0.4.0~alpha.5', 'amd64'),
-                       ('noderampart', '0.4.0-alpha.5', 'amd64'),
+        for values in (('other', '0.4.0~alpha.6', 'amd64'),
+                       ('noderampart', '0.4.0-alpha.6', 'amd64'),
                        ('noderampart', '0.4.0~alpha.1', 'amd64'),
-                       ('noderampart', '0.4.0~alpha.5', 'arm64')):
+                       ('noderampart', '0.4.0~alpha.6', 'arm64')):
             def response(args, **kwargs):
                 self.assertEqual(args[:2], ['dpkg-deb', '-f'])
                 return subprocess.CompletedProcess(args, 0, values[('Package', 'Version', 'Architecture').index(args[-1])])
             with self.subTest(values=values), patch.object(release, 'command', side_effect=response):
                 with self.assertRaisesRegex(ValueError, 'identity mismatch'):
                     release.inspect_package(package, self.output)
+
+    def test_actual_alpha1_uploaded_names_do_not_match_checksum_assets(self):
+        fixture = json.loads((Path(__file__).parent / 'testdata/alpha1-uploaded-assets.json').read_text())
+        # The public API reported all assets uploaded, but GitHub replaced '~'
+        # in six alpha.1 DEB/SBOM/buildinfo names while checksums kept old names.
+        expected = {asset['name'].replace('noderampart_0.4.0.alpha.1_', 'noderampart_0.4.0~alpha.1_')
+                    for asset in fixture['assets']}
+        self.assertEqual(len(fixture['assets']), 22)
+        self.assertTrue(all(asset['state'] == 'uploaded' for asset in fixture['assets']))
+        self.assertEqual(sum(asset['name'] not in expected for asset in fixture['assets']), 6)
+        with patch.object(release, 'VERSION', '0.4.0-alpha.1'), patch.object(release, 'release_assets', return_value=expected):
+            with self.assertRaisesRegex(ValueError, 'exact release set'):
+                release.validate_uploaded(fixture, fixture['assets'])
 
 
 if __name__ == '__main__':

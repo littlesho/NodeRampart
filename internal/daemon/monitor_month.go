@@ -24,6 +24,7 @@ type MonitorPeriodResult struct {
 }
 
 type monitorMonthPolicy struct {
+	CycleStartDay  int            `json:"cycle_start_day,omitempty"`
 	ThresholdBytes uint64         `json:"threshold_bytes,omitempty"`
 	ThresholdCost  float64        `json:"threshold_cost,omitempty"`
 	Currency       string         `json:"currency,omitempty"`
@@ -47,6 +48,9 @@ func (p monitorMonthPolicy) profile() billing.Profile {
 
 func (p monitorMonthPolicy) validate(key string) error {
 	bad := errors.New("invalid recorded monthly policy")
+	if p.CycleStartDay < 0 || p.CycleStartDay > 28 {
+		return bad
+	}
 	if key == "budget_month_bytes" {
 		if p.ThresholdBytes == 0 || p.ThresholdBytes > math.MaxInt64 || p.ThresholdCost != 0 || p.Currency != "" || p.UnitBytes != 0 || p.FreeGB != 0 || len(p.Tiers) != 0 {
 			return bad
@@ -91,7 +95,7 @@ func validatePeriodResult(p MonitorPeriodResult) error {
 		if !p.Evaluated {
 			return errors.New("invalid evaluated period")
 		}
-	case "historical_policy_unavailable":
+	case "historical_policy_unavailable", "billing_cycle_changed":
 		if p.Evaluated {
 			return errors.New("unavailable period cannot be evaluated")
 		}
@@ -106,17 +110,39 @@ func (a *App) currentMonthPolicy(s MonitorRuleStatus) *monitorMonthPolicy {
 		return nil
 	}
 	if s.Key == "budget_month_bytes" {
-		return &monitorMonthPolicy{ThresholdBytes: s.ThresholdBytes}
+		return &monitorMonthPolicy{ThresholdBytes: s.ThresholdBytes, CycleStartDay: recordedCycleDay(a.options.Config.Billing.CycleStartDay)}
 	}
 	if s.Key != "budget_month_cost" || a.options.Billing == nil {
 		return nil
 	}
 	p := a.options.Billing
-	return &monitorMonthPolicy{ThresholdCost: s.ThresholdCost, Currency: p.Currency, UnitBytes: p.UnitBytes, FreeGB: p.FreeGB, Tiers: append([]billing.Tier(nil), p.InternetEgress...)}
+	return &monitorMonthPolicy{ThresholdCost: s.ThresholdCost, Currency: p.Currency, UnitBytes: p.UnitBytes, FreeGB: p.FreeGB, Tiers: append([]billing.Tier(nil), p.InternetEgress...), CycleStartDay: recordedCycleDay(a.options.Config.Billing.CycleStartDay)}
+}
+
+func recordedCycleDay(day int) int {
+	if day == 1 {
+		return 0
+	}
+	return day
+}
+
+func billingCycleChanged(previous monitorData, in monitorObservation) bool {
+	if in.Closing || previous.Period == "" || in.MonthPolicy == nil || (in.Status.Key != "budget_month_bytes" && in.Status.Key != "budget_month_cost") {
+		return false
+	}
+	oldDay := 0
+	if previous.MonthPolicy != nil {
+		oldDay = recordedCycleDay(previous.MonthPolicy.CycleStartDay)
+	}
+	return oldDay != recordedCycleDay(in.MonthPolicy.CycleStartDay)
+}
+
+func monitorRollback(previous monitorData, in monitorObservation) bool {
+	return in.Now.Before(previous.ObservedAt) || in.Status.Period != "" && previous.Period != "" && in.Status.Period < previous.Period && !billingCycleChanged(previous, in)
 }
 
 func needsMonthClose(previous monitorData, in monitorObservation) bool {
-	return in.Status.Enabled && (in.Status.Key == "budget_month_bytes" || in.Status.Key == "budget_month_cost") && previous.Period != "" && in.Status.Period > previous.Period && !previous.MonthFinalized
+	return in.Status.Enabled && !billingCycleChanged(previous, in) && (in.Status.Key == "budget_month_bytes" || in.Status.Key == "budget_month_cost") && previous.Period != "" && in.Status.Period > previous.Period && !previous.MonthFinalized
 }
 
 func (a *App) closingObservation(ctx context.Context, now time.Time, previous monitorData) (monitorObservation, error) {

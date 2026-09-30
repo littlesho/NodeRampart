@@ -3,6 +3,7 @@
 package evidence
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -35,6 +36,16 @@ func TestProjectionExcludesFreeTextAndRekeysEveryIdentity(t *testing.T) {
 	}
 	if err := checkFixturePrivacy(data); err != nil {
 		t.Fatal(err)
+	}
+	// Retain the current exact-value check alongside the independent allowlist.
+	var projected any
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&projected); err != nil {
+		t.Fatal(err)
+	}
+	if containsExactJSONValue(projected, "991") {
+		t.Fatal("raw retention ID appeared as a JSON value")
 	}
 	if !reflect.DeepEqual(b.Events[0], b.RelatedSSH[0]) || b.Events[0].IncidentAlias != b.Incident.Alias {
 		t.Fatal("within-bundle references were not preserved")
@@ -176,6 +187,28 @@ func TestFixturePrivacyAssertion(t *testing.T) {
 			}
 		})
 	}
+}
+
+func containsExactJSONValue(value any, needle string) bool {
+	switch value := value.(type) {
+	case json.Number:
+		return string(value) == needle
+	case string:
+		return value == needle
+	case []any:
+		for _, child := range value {
+			if containsExactJSONValue(child, needle) {
+				return true
+			}
+		}
+	case map[string]any:
+		for _, child := range value {
+			if containsExactJSONValue(child, needle) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func TestUnknownCategoriesAndMonitorStateDoNotLeak(t *testing.T) {

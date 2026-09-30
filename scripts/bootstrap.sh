@@ -7,7 +7,8 @@ umask 077
 bootstrap_main() {
   PATH=/usr/sbin:/usr/bin:/sbin:/bin
   export PATH
-  # Keep machine parsing deterministic without passing ASCII to the TUI.
+  # Machine parsing stays deterministic while setup retains the caller's
+  # terminal encoding. An explicit legacy encoding reaches the TUI refusal.
   bootstrap_ui_locale=${LC_ALL:-${LC_CTYPE:-${LANG:-C.UTF-8}}}
   case "$bootstrap_ui_locale" in C|POSIX) bootstrap_ui_locale=C.UTF-8;; esac
   LC_ALL=C
@@ -16,13 +17,19 @@ bootstrap_main() {
   setup=true
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --version) [ "$#" -ge 2 ] || bootstrap_die '--version requires v0.4.0-alpha.5'; release=$2; shift 2;;
+      --version) [ "$#" -ge 2 ] || bootstrap_die '--version requires a supported fixed release tag'; release=$2; shift 2;;
       --no-setup|--non-interactive) setup=false; shift;;
-      --help) echo 'usage: bootstrap.sh [--version v0.4.0-alpha.5] [--no-setup|--non-interactive]'; return;;
+      --help) echo 'usage: bootstrap.sh [--version v0.4.0-alpha|v0.4.0-alpha.5|v0.4.0-alpha.6] [--no-setup|--non-interactive]'; return;;
       *) bootstrap_die 'unknown installer option';;
     esac
   done
-  [ "$release" = v0.4.0-alpha.5 ] || bootstrap_die 'this installer supports only v0.4.0-alpha.5; use the installer from the requested release'
+  case "$release" in
+    v0.4.0-alpha) deb_version=0.4.0~alpha; rpm_release=0.alpha.1;;
+    v0.4.0-alpha.5) deb_version=0.4.0~alpha.5; rpm_release=0.alpha.6;;
+    # Explicit candidate opt-in; its assets are unavailable until published.
+    v0.4.0-alpha.6) deb_version=0.4.0~alpha.6; rpm_release=0.alpha.7;;
+    *) bootstrap_die 'this installer supports v0.4.0-alpha, public v0.4.0-alpha.5 and explicit candidate v0.4.0-alpha.6; use the installer from the requested release';;
+  esac
   [ "$(id -u)" -eq 0 ] || bootstrap_die 'root is required: run the downloaded installer with sudo sh, or use curl ... | sudo sh -s -- (never sudo -S)'
   [ "$(uname -s)" = Linux ] || bootstrap_die 'Linux is required'
   if [ "$setup" = true ]; then
@@ -48,18 +55,18 @@ bootstrap_main() {
   done
   if [ "$kind" = deb ]; then
     [ "$(dpkg --print-architecture)" = "$arch" ] || bootstrap_die 'Debian userland and kernel architectures disagree'
-    asset="noderampart_0.4.0-alpha.5_${arch}.deb"
+    asset="noderampart_${release#v}_${arch}.deb"
     installed=$(dpkg-query -W -f='${Version}' noderampart 2>/dev/null || true)
     if [ -n "$installed" ]; then
-      dpkg --compare-versions "$installed" le '0.4.0~alpha.5' || bootstrap_die 'refusing an automatic package downgrade'
+      dpkg --compare-versions "$installed" le "$deb_version" || bootstrap_die 'refusing an automatic package downgrade'
     fi
   else
-    asset="noderampart-0.4.0-0.alpha.6.fc${os_version}.${rpm_arch}.rpm"
+    asset="noderampart-0.4.0-${rpm_release}.fc${os_version}.${rpm_arch}.rpm"
     installed=$(rpm -q --qf '%{VERSION}-%{RELEASE}\n' noderampart 2>/dev/null) || installed=
     if [ -n "$installed" ]; then
       printf '%s\n' "$installed" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-0\.alpha\.[0-9]+\.fc(43|44)$' || bootstrap_die 'unrecognized installed RPM version; use the package manager explicitly'
-      newest=$(printf '%s\n%s\n' "$installed" "0.4.0-0.alpha.6.fc${os_version}" | sort -V | tail -n 1)
-      [ "$newest" = "0.4.0-0.alpha.6.fc${os_version}" ] || bootstrap_die 'refusing an automatic package downgrade'
+      newest=$(printf '%s\n%s\n' "$installed" "0.4.0-${rpm_release}.fc${os_version}" | sort -V | tail -n 1)
+      [ "$newest" = "0.4.0-${rpm_release}.fc${os_version}" ] || bootstrap_die 'refusing an automatic package downgrade'
     fi
   fi
   # mktemp's private mode cannot protect a directory name in an untrusted
@@ -97,12 +104,12 @@ bootstrap_main() {
   [ "${actual%% *}" = "$digest" ] || bootstrap_die 'package checksum mismatch; NodeRampart was not changed'
   if [ "$kind" = deb ]; then
     [ "$(dpkg-deb -f "$bootstrap_tmp/$asset" Package)" = noderampart ] &&
-      [ "$(dpkg-deb -f "$bootstrap_tmp/$asset" Version)" = '0.4.0~alpha.5' ] &&
+      [ "$(dpkg-deb -f "$bootstrap_tmp/$asset" Version)" = "$deb_version" ] &&
       [ "$(dpkg-deb -f "$bootstrap_tmp/$asset" Architecture)" = "$arch" ] || bootstrap_die 'Debian package identity does not match the requested release'
     apt-get update
     apt-get install -y --no-install-recommends -o Dpkg::Options::=--force-confold "$bootstrap_tmp/$asset"
   else
-    [ "$(rpm -qp --qf '%{NAME}:%{VERSION}:%{RELEASE}:%{ARCH}' "$bootstrap_tmp/$asset")" = "noderampart:0.4.0:0.alpha.6.fc${os_version}:$rpm_arch" ] || bootstrap_die 'RPM package identity does not match the requested release'
+    [ "$(rpm -qp --qf '%{NAME}:%{VERSION}:%{RELEASE}:%{ARCH}' "$bootstrap_tmp/$asset")" = "noderampart:0.4.0:${rpm_release}.fc${os_version}:$rpm_arch" ] || bootstrap_die 'RPM package identity does not match the requested release'
     # Keep the administrator's repository and local-package signature policy.
     # A host requiring RPM signatures must use a properly signed release asset.
     dnf install -y "$bootstrap_tmp/$asset"

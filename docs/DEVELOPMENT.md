@@ -2,17 +2,82 @@
 
 ## Local checks
 
+The current module and dependency graph require **Go 1.25.0 or newer**:
+`go.mod`, `modernc.org/sqlite v1.56.0`, `modernc.org/libc v1.74.4`, and
+`golang.org/x/sys v0.47.0` declare Go 1.25.0. The source also uses `os.Root`
+(introduced in Go 1.24). CI pins Go 1.26.8 for validation; that tested toolchain
+is not the project's minimum, and it does not prove a Go 1.25 runtime test.
+Use the declared dependency versions; do not upgrade the graph to run checks.
+
 ```bash
-make fmt-check
-make vet
-make test
-make test-race
+make validate
 make build
-go mod verify
-python3 scripts/test-packaging.py
-python3 scripts/test-lab-check.py
-python3 scripts/test-netns.py --self-test
 ```
+
+`make validate` is the shared local/CI/release required entry: formatting,
+dependency verification, vet, uncached ordinary/race/coverage tests, static
+builds, packaging/bootstrap/SBOM and lab-harness safety regressions, and the
+existing fixed `govulncheck@v1.7.0` scanner. It stops on failures; unavailable
+tools or network checks are not treated as success. Run a package's targeted
+tests while iterating, then this entry for the final candidate. Hosted checks
+also reject a checkout that differs from the workflow's full commit.
+
+Ordinary local builds/packages accept dirty workspaces and default their existing
+commit declaration to `unknown`. Keep source/artifact digests with local test
+evidence. `scripts/build-release.sh` requires a clean checkout and an exact full
+HEAD declaration; it cannot turn an uncommitted local candidate into official
+release provenance. No command here commits, pushes or publishes a release.
+
+For a dirty local package, use the ordinary paths:
+
+```bash
+make build COMMIT=unknown
+./scripts/build-deb.sh
+# On a Fedora build host with the declared Go dependencies available:
+ARCH=amd64 COMMIT=unknown ./scripts/build-rpm.sh
+```
+
+An official candidate requires a reviewed clean commit and matching version tag.
+Read and verify its metadata before setting the exact values for every build:
+
+```bash
+export COMMIT="$(git rev-parse HEAD)"
+export BUILD_DATE="$(git show -s --format=%cI "$COMMIT")"
+EXPECTED_COMMIT="$COMMIT" ./scripts/release-metadata.sh
+./scripts/validate.sh
+./scripts/build-release.sh --deb amd64
+```
+
+Use `--rpm amd64` on Fedora, or the supported `arm64` cross-build target.
+Missing metadata, a mismatched commit/date, changed source, and existing official
+DEB output or collected release directory are rejected. The release workflow reads these two metadata values once
+and passes them to all package, SBOM, and collection jobs. Locally verify the
+helper's output before building; the local command does not create a tag.
+
+Ordinary local DEBs retain the filename
+`noderampart_0.4.0~alpha.6_amd64.deb`; the official entry renames its own output to
+`noderampart_0.4.0-alpha.6_amd64.deb`. Both have native Debian version
+`0.4.0~alpha.6`. Portable public names prevent GitHub's asset-name replacement
+from changing checksum references. The alpha.6 native RPM version is
+`0.4.0-0.alpha.7%{?dist}`; suffixes `.1` through `.6` retain the public
+DEB/RPM ordering rules. `VERSION` selects the alpha.6 candidate; local
+builds do not publish it. The bootstrap default remains published alpha.5,
+with alpha.6 available only through an explicit fixed-version opt-in after
+its assets become public. SBOMs use each package's native version, inspect its final bytes,
+and bind the three program digests to those bytes. `--collect` requires the
+complete package/SBOM/buildinfo set; the separate hosted draft step checks the
+actual uploaded names and states after upload. Local checks do not establish
+that the GitHub workflow, upload, or attestation ran.
+
+CI's static binaries cover amd64/arm64; its package artifacts cover Debian
+amd64 and Fedora 43/44 x86_64/aarch64. ARM64 packages are cross-built on the
+amd64 runner; this does not prove native ARM64 execution. They can support isolated tests only after
+the downloaded bytes, embedded version/commit and workflow source SHA are
+verified. This subset is not the complete release set. The release workflow
+builds all six runtime packages from its own verified commit and does not
+silently reuse artifacts from another CI run. Record new acceptance against
+the alpha.6 source and actual package hashes; earlier dirty `Commit=unknown`
+packages and VM evidence do not certify this candidate.
 
 The ordinary test suite does not require root or packet-capture privileges.
 Run `gofmt -w` on changed Go files before `make fmt-check`. The required direct
@@ -21,7 +86,14 @@ the three binaries with version and commit metadata. Packaging regressions use
 temporary paths and mocked lifecycle commands; the native RPM case is skipped
 when `rpmspec` is absent, so run it on Fedora as well.
 
-CI also runs a native Fedora 44 RPM/SRPM build and seven separate bounded fuzz
+CI and tag releases call the same safety workflow against their exact source
+SHA. It scans full Git history and the checkout with checksum-verified
+Gitleaks 8.30.1, upstream detectors, full redaction, and no inline/ignore-file
+suppression. Release package builds and draft creation require that scan and
+all seven bounded fuzz jobs to pass; a passing check on another commit is not
+accepted. Local checks do not execute hosted workflows or publish drafts.
+
+CI also builds Fedora 43/44 RPM/SRPMs for both architectures and runs seven separate bounded fuzz
 jobs for SSH text, journal JSON/checkpoints, sensor IPC frames, configuration,
 and Ethernet decoding. Each job mutates inputs for 30 seconds with two workers
 and a two-minute command timeout. Run one locally with:
@@ -79,20 +151,24 @@ drop-ins. A full custom unit must be reconciled explicitly because it overrides
 the package unit. Source uninstall also refuses native package files.
 
 Before changing installation type, create a consistent database backup and keep
-the previous build available. New source installations record SHA256 ownership
-for their three binaries and two full units. Prepare a source-to-package
+the previous build available. New source installations record six SHA256
+ownership entries: three binaries, two full units, and
+`/usr/local/libexec/noderampart/manage-remove`. The transition also accepts an
+older five-entry manifest containing the three binaries and two units; it
+never deletes an unrecorded helper. Prepare a source-to-package
 transition with the checked-out script, then install the reviewed package:
 
 ```bash
 sudo ./scripts/source-to-package.sh --prepare
-sudo apt install ./dist/noderampart_0.4.0-alpha.2_amd64.deb
+sudo apt install ./dist/noderampart_0.4.0~alpha.6_amd64.deb
 sudo /usr/bin/noderampart doctor
 sudo /usr/bin/noderampart status
 ```
 
 On Fedora, use `sudo dnf install ./dist/rpm/noderampart-*.x86_64.rpm` for the
 package step. The transition verifies every ownership hash before stopping
-services and removes only those five source files and their ownership manifest.
+services and removes those five source files, the helper when recorded, and
+their ownership manifest.
 It preserves configuration, database state, and systemd drop-ins. Modified files,
 symlinks, incomplete manifests, or services that cannot stop abort the operation.
 The package's first-install policy determines subsequent service activation.
@@ -120,7 +196,7 @@ performing a lifecycle or recovery scenario:
 
 ```bash
 sudo ./scripts/lab-check.py --authorized-disposable-lab \
-  --install-kind package --expected-version 0.4.0-alpha.2 \
+  --install-kind package --expected-version "$(cat VERSION)" \
   --expected-commit COMMIT_HEX --output /absolute/new/path/runtime-check.json
 ```
 
@@ -141,9 +217,11 @@ warmup, power-loss safety, throughput, or privileged package lifecycle behavior.
 `python3 scripts/test-lab-check.py` tests artifact reduction using synthetic
 fixtures without inspecting the host.
 
-Earlier private lab evidence applies only to its exact development snapshot.
-See [the public validation scope](ALPHA_LIMITATIONS.md) for the remaining gaps.
-These selected checks do not replace the VM matrix below.
+The public [current limitations](ALPHA_LIMITATIONS.md) and
+[v0.4 operations](V0.4_OPERATIONS.md) describe the validation boundaries.
+Historical v0.1/v0.2/v0.3 checks retain their original versions, dates and
+artifact scope; they do not certify this candidate or replace the remaining
+VM matrix below.
 
 ## Repository rules
 
@@ -169,9 +247,7 @@ These selected checks do not replace the VM matrix below.
 
 Use an isolated management network and a separate no-NAT traffic network. High-rate work must never have a route to the public Internet. A single-host VM lab validates logic; credible throughput measurements require a separate generator host.
 
-## Package release checklist
-
-Publishing source alone creates no package release or version tag.
+## Release checklist
 
 1. `go mod verify`, formatting, vet, race tests, and all unit tests pass.
 2. Static amd64 and arm64 binaries build with `CGO_ENABLED=0`.

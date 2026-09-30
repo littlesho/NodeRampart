@@ -11,12 +11,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/littlesho/NodeRampart/internal/assets"
 )
+
+// Child validation uses the same fixed entry as the CLI; all HTTP in these
+// fixtures stays on the mock transport.
+func TestMain(m *testing.M) {
+	if len(os.Args) >= 3 && os.Args[1] == "assets" && os.Args[2] == "validate-mmdb" {
+		if assets.ValidatorCommand(os.Args[3:], os.Stdout) != nil {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
 
 type geoDiagnosticTransport func(*http.Request) (*http.Response, error)
 
@@ -44,6 +57,17 @@ func geoDiagnosticErrorFixture(t *testing.T, edition string, budget bool) error 
 	}
 	if _, err := archive.Write(data); err != nil {
 		t.Fatal(err)
+	}
+	// Streaming extraction checks mandatory archive notices before MMDB
+	// validation; include them so this fixture reaches the typed boundary.
+	for _, name := range []string{"LICENSE.txt", "COPYRIGHT.txt"} {
+		notice := []byte("synthetic notice")
+		if err := archive.WriteHeader(&tar.Header{Name: edition + "_20260101/" + name, Typeflag: tar.TypeReg, Mode: 0o600, Size: int64(len(notice))}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := archive.Write(notice); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := archive.Close(); err != nil {
 		t.Fatal(err)

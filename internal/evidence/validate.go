@@ -130,7 +130,7 @@ func safeValue(v reflect.Value, field string) bool {
 		case "Decision":
 			return s == category(s, "legacy", "queued", "merged", "silenced", "ineligible", "rejected")
 		case "State":
-			return s == category(s, "running", "degraded", "disabled", "conflicting", "sent", "silenced", "ineligible", "rejected", "history_unavailable", "expired", "quarantined", "sending", "pending", "incident_active", "no_active_incident", "milestone_recorded", "no_milestone_recorded")
+			return s == category(s, "running", "degraded", "disabled", "conflicting", "sent", "silenced", "ineligible", "rejected", "history_unavailable", "expired", "quarantined", "sending", "pending", "isolated", "discarded", "paused", "incident_active", "no_active_incident", "milestone_recorded", "no_milestone_recorded")
 		case "Dataset":
 			return s == dataset(s)
 		case "Reason":

@@ -19,7 +19,8 @@
     "journalctl": "/usr/bin/journalctl",
     "threshold": 8,
     "window": "5m",
-    "cooldown": "15m"
+    "cooldown": "15m",
+    "history_hints_enabled": false
   },
   "detection": {
     "syn_packets_per_second": 5000,
@@ -43,6 +44,13 @@
       "token_file": "/etc/noderampart/telegram.token",
       "chat_id": "",
       "timeout": "10s"
+    },
+    "webhook": {
+      "enabled": false,
+      "endpoint": "",
+      "receiver_id": "",
+      "credential_file": "/etc/noderampart/webhook.token",
+      "timeout": "10s"
     }
   },
   "reports": {
@@ -59,7 +67,8 @@
   },
   "billing": {
     "enabled": false,
-    "profile_path": ""
+    "profile_path": "",
+    "cycle_start_day": 1
   },
   "storage": {
     "max_bytes": 1073741824,
@@ -82,5 +91,13 @@
       "geoip_failure_threshold": 2,
       "geoip_stale_after": "72h"
     }
+  },
+  "heartbeat": {
+    "enabled": false,
+    "endpoint": "",
+    "instance_id": "",
+    "credential_file": "/etc/noderampart/heartbeat.token",
+    "interval": "5m",
+    "timeout": "10s"
   }
 }

@@ -96,34 +96,44 @@ func ensureDirectory(path string, mode uint32, gid int) error {
 }
 
 func readFile(path string, maximum int64, secret bool, allowedUID int) ([]byte, error) {
-	if !cleanPath(path) {
-		return nil, errors.New("invalid management file path")
-	}
-	parent, err := openDirectory(filepath.Dir(path), false)
+	f, _, err := openManagedFile(path, maximum, secret, allowedUID)
 	if err != nil {
 		return nil, err
 	}
-	defer parent.Close()
-	fd, err := unix.Openat(int(parent.Fd()), filepath.Base(path), unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC|unix.O_NONBLOCK, 0)
-	if err != nil {
-		if errors.Is(err, unix.ENOENT) {
-			return nil, os.ErrNotExist
-		}
-		return nil, errors.New("management file could not be opened safely")
-	}
-	f := os.NewFile(uintptr(fd), "management-file")
 	defer f.Close()
-	var stat unix.Stat_t
-	if unix.Fstat(fd, &stat) != nil || stat.Mode&unix.S_IFMT != unix.S_IFREG || stat.Nlink != 1 ||
-		stat.Size < 0 || stat.Size > maximum || stat.Mode&0o022 != 0 || secret && stat.Mode&0o077 != 0 ||
-		stat.Uid != 0 && stat.Uid != uint32(os.Geteuid()) && stat.Uid != uint32(allowedUID) {
-		return nil, errors.New("management file ownership, type, permissions or size is unsafe")
-	}
 	data, err := io.ReadAll(io.LimitReader(f, maximum+1))
 	if err != nil || int64(len(data)) > maximum {
 		return nil, errors.New("management file could not be read within its limit")
 	}
 	return data, nil
+}
+
+// Pin a regular no-follow file before streaming; callers own the descriptor.
+func openManagedFile(path string, maximum int64, secret bool, allowedUID int) (*os.File, unix.Stat_t, error) {
+	var stat unix.Stat_t
+	if !cleanPath(path) {
+		return nil, stat, errors.New("invalid management file path")
+	}
+	parent, err := openDirectory(filepath.Dir(path), false)
+	if err != nil {
+		return nil, stat, err
+	}
+	defer parent.Close()
+	fd, err := unix.Openat(int(parent.Fd()), filepath.Base(path), unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC|unix.O_NONBLOCK, 0)
+	if err != nil {
+		if errors.Is(err, unix.ENOENT) {
+			return nil, stat, os.ErrNotExist
+		}
+		return nil, stat, errors.New("management file could not be opened safely")
+	}
+	f := os.NewFile(uintptr(fd), "management-file")
+	if unix.Fstat(fd, &stat) != nil || stat.Mode&unix.S_IFMT != unix.S_IFREG || stat.Nlink != 1 ||
+		stat.Size < 0 || stat.Size > maximum || stat.Mode&0o022 != 0 || secret && stat.Mode&0o077 != 0 ||
+		stat.Uid != 0 && stat.Uid != uint32(os.Geteuid()) && stat.Uid != uint32(allowedUID) {
+		_ = f.Close()
+		return nil, stat, errors.New("management file ownership, type, permissions or size is unsafe")
+	}
+	return f, stat, nil
 }
 
 // writeFile publishes inside a non-shared trusted directory. A new target uses

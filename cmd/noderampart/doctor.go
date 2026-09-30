@@ -3,49 +3,93 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/littlesho/NodeRampart/internal/api"
 	"github.com/littlesho/NodeRampart/internal/config"
+	"github.com/littlesho/NodeRampart/internal/store"
 	"github.com/littlesho/NodeRampart/internal/version"
 )
 
 type doctorCheck struct {
-	Name   string `json:"name"`
-	State  string `json:"state"`
-	Detail string `json:"detail"`
+	Name       string `json:"name"`
+	State      string `json:"state"`
+	Detail     string `json:"detail"`
+	ReasonCode string `json:"reason_code"`
+	Impact     string `json:"impact"`
+	NextStep   string `json:"next_step"`
 }
 
 type doctorResult struct {
-	Version version.Info  `json:"cli_version"`
-	Checks  []doctorCheck `json:"checks"`
-	Daemon  any           `json:"daemon,omitempty"`
+	Overall             string                  `json:"overall"`
+	StrictExitCode      int                     `json:"strict_exit_code"`
+	Version             version.Info            `json:"cli_version"`
+	Checks              []doctorCheck           `json:"checks"`
+	SnapshotForeignKeys *store.ForeignKeyStatus `json:"snapshot_foreign_keys,omitempty"`
+	Daemon              any                     `json:"daemon,omitempty"`
+}
+
+type diagnosticExit struct{ code int }
+
+func (e *diagnosticExit) Error() string {
+	return "strict diagnostics did not confirm all required checks"
 }
 
 func doctorCommand(arguments []string, output io.Writer) error {
 	flags := quietFlags("doctor")
 	path := flags.String("config", defaultConfig, "configuration file")
 	manual := flags.Bool("manual-current-uid", false, "explicitly trust a daemon running as the current UID for a manual lab")
+	snapshot := flags.String("foreign-keys-snapshot", "", "read-only orphan check on an explicit standalone private database copy; never migrates or repairs")
+	strict := flags.Bool("strict", false, "0 healthy, 1 confirmed degradation, 2 unable to reliably diagnose")
 	if err := parseFlags(flags, arguments); err != nil {
 		return err
 	}
-	result := doctorResult{Version: version.Current(), Checks: []doctorCheck{}}
+	result := doctorResult{Overall: "healthy", Version: version.Current(), Checks: []doctorCheck{}}
+	if *snapshot != "" {
+		if !cleanLocalPath(*snapshot) {
+			return fmt.Errorf("foreign-key snapshot requires a clean absolute path")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		foreignKeys, err := store.InspectForeignKeysSnapshot(ctx, *snapshot)
+		cancel()
+		state, detail := "valid", "Standalone snapshot has no detected foreign-key violations; this does not establish live monitoring health."
+		if err != nil {
+			state, detail = "unavailable", "Standalone historical relationships could not be inspected safely; retain all original evidence."
+		} else {
+			result.SnapshotForeignKeys = &foreignKeys
+			if len(foreignKeys.Violations) > 0 || foreignKeys.Truncated {
+				state, detail = "degraded", "Historical orphan relationships detected; preserve private evidence and follow the bounded manual procedure. No data was altered."
+			}
+		}
+		result.Checks = append(result.Checks, doctorCheck{Name: "snapshot_foreign_keys", State: state, Detail: detail})
+	}
 	cfg, err := config.Load(*path)
 	if err != nil {
-		result.Checks = append(result.Checks, doctorCheck{"configuration", "unavailable", "Configuration is missing, unreadable, unsafe, or invalid; diagnostics use standard paths."})
+		result.Checks = append(result.Checks, doctorCheck{Name: "configuration", State: "unavailable", Detail: "Configuration is missing, unreadable, unsafe, or invalid; diagnostics use standard paths."})
 		cfg = config.Defaults()
 	} else {
-		result.Checks = append(result.Checks, doctorCheck{"configuration", "valid", "Configuration passed local validation."})
+		result.Checks = append(result.Checks, doctorCheck{Name: "configuration", State: "valid", Detail: "Configuration passed local validation."})
 	}
-	result.Checks = append(result.Checks, inspectUnits("/")...)
+	units := inspectUnits("/")
+	for i := range units {
+		if *manual || units[i].Name == "noderampart-sensor.service" && !cfg.Sensor.Enabled {
+			units[i].State, units[i].Detail = "not_applicable", "Manual deployment or disabled sensor; a packaged system unit is not required."
+		}
+	}
+	result.Checks = append(result.Checks, units...)
 	for _, item := range []struct{ name, path string }{{"database", cfg.Paths.Database}, {"database_wal", cfg.Paths.Database + "-wal"}} {
 		info, err := os.Lstat(item.path)
 		state, detail := "unavailable", "File is missing or cannot be inspected."
+		if item.name == "database_wal" && os.IsNotExist(err) {
+			state, detail = "not_applicable", "An absent WAL sidecar is valid for the production rollback-journal configuration."
+		}
 		if err == nil {
 			if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 				state, detail = "unsafe", "Expected a regular file without a symlink."
@@ -53,15 +97,15 @@ func doctorCommand(arguments []string, output io.Writer) error {
 				state, detail = "present", fmt.Sprintf("Regular file present (%d bytes); daemon status provides live storage health.", info.Size())
 			}
 		}
-		result.Checks = append(result.Checks, doctorCheck{item.name, state, detail})
+		result.Checks = append(result.Checks, doctorCheck{Name: item.name, State: state, Detail: detail})
 	}
 	uid, err := expectedDaemonUID(*manual)
 	if err != nil {
-		result.Checks = append(result.Checks, doctorCheck{"daemon_identity", "unavailable", "Required daemon service account is unavailable."})
+		result.Checks = append(result.Checks, doctorCheck{Name: "daemon_identity", State: "unavailable", Detail: "Required daemon service account is unavailable."})
 	} else {
 		response, err := send(cfg.Paths.ControlSocket, api.Request{Version: api.Version, Command: "doctor"}, uid)
 		if err != nil || !response.OK {
-			result.Checks = append(result.Checks, doctorCheck{"daemon", "unavailable", "Daemon is stopped, inaccessible, incompatible, or failed peer verification."})
+			result.Checks = append(result.Checks, doctorCheck{Name: "daemon", State: "unavailable", Detail: "Daemon is stopped, inaccessible, incompatible, or failed peer verification."})
 		} else {
 			result.Daemon = response.Data
 			encoded, _ := json.Marshal(response.Data)
@@ -69,12 +113,20 @@ func doctorCommand(arguments []string, output io.Writer) error {
 				Version version.Info `json:"version"`
 			}
 			if json.Unmarshal(encoded, &daemon) == nil && daemon.Version.Version != "" && (daemon.Version.Version != version.Version || daemon.Version.Commit != version.Commit) {
-				result.Checks = append(result.Checks, doctorCheck{"binary_versions", "mismatch", "CLI and daemon build versions differ; check installation consistency."})
+				result.Checks = append(result.Checks, doctorCheck{Name: "binary_versions", State: "mismatch", Detail: "CLI and daemon build versions differ; check installation consistency."})
 			}
-			result.Checks = append(result.Checks, doctorCheck{"daemon", "reachable", "Daemon identity verified; collection and persistence status are shown below."})
+			result.Checks = append(result.Checks, doctorCheck{Name: "daemon", State: "reachable", Detail: "Daemon identity verified; collection and persistence status are shown below."})
+			appendRuntimeDiagnosis(&result, encoded, cfg)
 		}
 	}
-	return printJSON(output, result)
+	finalizeDoctor(&result)
+	if err := printJSON(output, result); err != nil {
+		return err
+	}
+	if *strict && result.StrictExitCode != 0 {
+		return &diagnosticExit{result.StrictExitCode}
+	}
+	return nil
 }
 
 func inspectUnits(root string) []doctorCheck {
@@ -95,7 +147,7 @@ func inspectUnits(root string) []doctorCheck {
 		} else if local != "missing" && vendor != "missing" {
 			state, detail = "override", "A local unit overrides a vendor unit; inspect installation consistency."
 		}
-		checks = append(checks, doctorCheck{name, state, detail})
+		checks = append(checks, doctorCheck{Name: name, State: state, Detail: detail})
 	}
 	return checks
 }

@@ -56,8 +56,10 @@ func TestAuthPrunesBeforeSaturatedAdmission(t *testing.T) {
 	stale := now.Add(-cfg.Window.Duration - cfg.Cooldown.Duration - time.Second)
 	for i := 0; i < maxAuthSources; i++ {
 		source := fmt.Sprint(i)
-		detector.failures[source] = []time.Time{stale}
+		detector.failures[source] = []authTimestamp{compactAuthTime(stale)}
 		detector.lastSeen[source] = stale
+		detector.entries++
+		detector.capacity++
 	}
 	event := detector.Observe(collector.AuthObservation{ObservedAt: now, Kind: collector.AuthFailure, Method: "password", SourceIP: netip.MustParseAddr("192.0.2.7")})
 	if event == nil || event.Count != 1 || len(detector.failures) != 1 || detector.Stats().RejectedSources != 0 {
@@ -69,7 +71,7 @@ func TestAuthSuccessIncludesOnlyPrecedingWindowFailures(t *testing.T) {
 	cfg := config.Defaults().Auth
 	detector := NewAuth(cfg)
 	now := time.Now().UTC()
-	detector.failures["192.0.2.7"] = []time.Time{now.Add(-2 * cfg.Window.Duration), now.Add(-time.Second), now.Add(time.Second)}
+	detector.failures["192.0.2.7"] = []authTimestamp{compactAuthTime(now.Add(-2 * cfg.Window.Duration)), compactAuthTime(now.Add(-time.Second)), compactAuthTime(now.Add(time.Second))}
 	observation, ok := collector.ParseSSH("Accepted password for bob from 192.0.2.7 port 22 ssh2", now)
 	if !ok {
 		t.Fatal("fixture did not parse")

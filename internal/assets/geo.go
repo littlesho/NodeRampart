@@ -66,11 +66,12 @@ func (c *Client) DownloadGeo(ctx context.Context, credentials Credentials) (*Geo
 	}()
 	for _, edition := range []string{"GeoLite2-City", "GeoLite2-ASN"} {
 		endpoint := "https://" + geoHost + "/geoip/databases/" + edition + "/download?suffix=tar.gz"
-		raw, err := c.request(ctx, endpoint, &credentials, maxCompressed)
+		stream, err := c.requestStream(ctx, endpoint, &credentials, maxCompressed)
 		if err != nil {
 			return nil, err
 		}
-		built, notices, err := extractGeo(ctx, bundle.root, raw, edition)
+		built, notices, digest, err := extractGeoStream(ctx, bundle.root, stream, edition)
+		_ = stream.Close()
 		if err != nil {
 			return nil, err
 		}
@@ -78,9 +79,11 @@ func (c *Client) DownloadGeo(ctx context.Context, credentials Credentials) (*Geo
 		if edition == "GeoLite2-City" {
 			bundle.CityPath = filepath.Join(directory, edition+".mmdb")
 			bundle.CityBuild = built
+			bundle.CityDigest = digest
 		} else {
 			bundle.ASNPath = filepath.Join(directory, edition+".mmdb")
 			bundle.ASNBuild = built
+			bundle.ASNDigest = digest
 		}
 	}
 	success = true
@@ -152,48 +155,52 @@ func (b *GeoBundle) Close() error {
 }
 
 func extractGeo(ctx context.Context, root *os.Root, compressed []byte, edition string) (time.Time, []string, error) {
-	z, err := gzip.NewReader(bytes.NewReader(compressed))
+	built, notices, _, err := extractGeoStream(ctx, root, bytes.NewReader(compressed), edition)
+	return built, notices, err
+}
+
+func extractGeoStream(ctx context.Context, root *os.Root, compressed io.Reader, edition string) (time.Time, []string, string, error) {
+	z, err := gzip.NewReader(compressed)
 	if err != nil {
-		return time.Time{}, nil, errors.New("GeoIP download is not a valid gzip archive")
+		return time.Time{}, nil, "", errors.New("GeoIP download is not a valid gzip archive")
 	}
 	defer z.Close()
 	limited := &io.LimitedReader{R: z, N: maxExpanded + 1}
 	archive := tar.NewReader(limited)
 	seen := make(map[string]bool)
 	var notices []string
-	var build time.Time
 	found := false
 	for member := 0; ; member++ {
 		if err := ctx.Err(); err != nil {
-			return time.Time{}, nil, errors.New("GeoIP validation cancelled")
+			return time.Time{}, nil, "", errors.New("GeoIP validation cancelled")
 		}
 		header, err := archive.Next()
 		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil || member >= maxMembers || limited.N <= 0 {
-			return time.Time{}, nil, errors.New("GeoIP archive is invalid or exceeds limits")
+			return time.Time{}, nil, "", errors.New("GeoIP archive is invalid or exceeds limits")
 		}
 		name := strings.TrimSuffix(header.Name, "/")
 		if !safeArchiveName(name) || seen[name] || header.Linkname != "" || len(header.PAXRecords) > 0 || len(header.Xattrs) > 0 {
-			return time.Time{}, nil, errors.New("GeoIP archive member is unsafe or duplicated")
+			return time.Time{}, nil, "", errors.New("GeoIP archive member is unsafe or duplicated")
 		}
 		seen[name] = true
 		if header.Typeflag == tar.TypeDir {
 			if header.Size != 0 {
-				return time.Time{}, nil, errors.New("GeoIP archive directory has data")
+				return time.Time{}, nil, "", errors.New("GeoIP archive directory has data")
 			}
 			continue
 		}
 		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeRegA {
-			return time.Time{}, nil, errors.New("GeoIP archive links and special files are forbidden")
+			return time.Time{}, nil, "", errors.New("GeoIP archive links and special files are forbidden")
 		}
 		base := path.Base(name)
 		target := ""
 		maximum := int64(maxNotice)
 		if base == edition+".mmdb" {
 			if found {
-				return time.Time{}, nil, errors.New("GeoIP database target is duplicated")
+				return time.Time{}, nil, "", errors.New("GeoIP database target is duplicated")
 			}
 			found = true
 			target = base
@@ -201,44 +208,44 @@ func extractGeo(ctx context.Context, root *os.Root, compressed []byte, edition s
 		} else if base == "LICENSE.txt" || base == "COPYRIGHT.txt" || base == "README.txt" {
 			target = edition + "-" + base
 		} else {
-			return time.Time{}, nil, errors.New("GeoIP archive contains an unexpected member")
+			return time.Time{}, nil, "", errors.New("GeoIP archive contains an unexpected member")
 		}
 		if header.Size <= 0 || header.Size > maximum {
-			return time.Time{}, nil, errors.New("GeoIP member exceeds size limit")
-		}
-		data, err := io.ReadAll(io.LimitReader(archive, maximum+1))
-		if err != nil || int64(len(data)) != header.Size || limited.N <= 0 {
-			return time.Time{}, nil, errors.New("GeoIP member is truncated or exceeds limits")
-		}
-		if base == edition+".mmdb" {
-			build, err = verifyMMDB(ctx, data, edition)
-			if err != nil {
-				return time.Time{}, nil, geoValidationFailure(ctx, edition, err)
-			}
-		} else {
-			if !utf8.Valid(data) || bytes.IndexByte(data, 0) >= 0 {
-				return time.Time{}, nil, errors.New("GeoIP notice is not valid text")
-			}
-			notices = append(notices, target)
+			return time.Time{}, nil, "", errors.New("GeoIP member exceeds size limit")
 		}
 		file, err := root.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if err != nil {
-			return time.Time{}, nil, errors.New("cannot stage GeoIP member")
+			return time.Time{}, nil, "", errors.New("cannot stage GeoIP member")
 		}
-		_, writeErr := file.Write(data)
+		var writeErr error
+		if base == edition+".mmdb" {
+			var written int64
+			written, writeErr = io.CopyBuffer(file, &geoContextReader{ctx: ctx, reader: io.LimitReader(archive, maximum+1)}, make([]byte, 32<<10))
+			if written != header.Size || limited.N <= 0 {
+				writeErr = errors.New("GeoIP member is truncated or exceeds limits")
+			}
+		} else {
+			data, err := io.ReadAll(io.LimitReader(archive, maximum+1))
+			if err != nil || int64(len(data)) != header.Size || limited.N <= 0 || !utf8.Valid(data) || bytes.IndexByte(data, 0) >= 0 {
+				writeErr = errors.New("GeoIP notice is truncated or not valid text")
+			} else {
+				_, writeErr = file.Write(data)
+				notices = append(notices, target)
+			}
+		}
 		if writeErr == nil {
 			writeErr = file.Sync()
 		}
 		closeErr := file.Close()
 		if writeErr != nil || closeErr != nil {
-			return time.Time{}, nil, errors.New("cannot persist staged GeoIP member")
+			return time.Time{}, nil, "", errors.New("cannot persist staged GeoIP member")
 		}
 	}
 	// Consume gzip trailers to check the CRC and detect extra expanded data;
 	// tar's end marker alone does not establish gzip stream integrity.
 	trailer, err := io.ReadAll(io.LimitReader(limited, (1<<20)+1))
 	if err != nil || limited.N <= 0 || len(trailer) > 1<<20 || bytes.IndexFunc(trailer, func(r rune) bool { return r != 0 }) >= 0 {
-		return time.Time{}, nil, errors.New("GeoIP archive trailer is invalid or excessive")
+		return time.Time{}, nil, "", errors.New("GeoIP archive trailer is invalid or excessive")
 	}
 	license, copyright := false, false
 	for _, name := range notices {
@@ -250,9 +257,18 @@ func extractGeo(ctx context.Context, root *os.Root, compressed []byte, edition s
 		}
 	}
 	if !found || !license || !copyright {
-		return time.Time{}, nil, errors.New("GeoIP archive lacks database or license notices")
+		return time.Time{}, nil, "", errors.New("GeoIP archive lacks database or license notices")
 	}
-	return build, notices, nil
+	file, err := root.OpenFile(edition+".mmdb", syscall.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return time.Time{}, nil, "", errors.New("staged GeoIP database is unavailable")
+	}
+	defer file.Close()
+	result, err := verifyMMDBFile(ctx, file, edition)
+	if err != nil {
+		return time.Time{}, nil, "", err
+	}
+	return time.Unix(result.BuildEpoch, 0).UTC(), notices, result.Digest, nil
 }
 
 func safeArchiveName(name string) bool {
@@ -303,10 +319,6 @@ func verifyMMDB(ctx context.Context, data []byte, edition string) (built time.Ti
 	// A DAG with heavily shared subtrees can require exponentially many network
 	// visits despite a small file. Bound search traversal before library Verify.
 	if err := boundMMDBTree(ctx, data, metadata); err != nil {
-		return time.Time{}, err
-	}
-	// The upstream verifier is synchronous; do not start it after cancellation.
-	if err := ctx.Err(); err != nil {
 		return time.Time{}, err
 	}
 	if err := reader.Verify(); err != nil {

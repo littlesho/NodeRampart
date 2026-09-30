@@ -20,7 +20,7 @@ func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) 
 
 func syntheticTelegram(status int, body io.Reader, retryAfter string) *Telegram {
 	return &Telegram{
-		token: fakeToken(), chatID: "synthetic-chat", endpoint: "https://telegram.invalid",
+		token: fakeToken(), chatID: "1", endpoint: "https://telegram.invalid",
 		client: &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			header := make(http.Header)
 			if retryAfter != "" {

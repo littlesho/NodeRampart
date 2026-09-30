@@ -72,13 +72,19 @@ func TestExtractGeoAddsSafeValidationBoundary(t *testing.T) {
 				}
 				t.Cleanup(func() { _ = root.Close() })
 				raw := geoArchive(t, edition, func(_ *[]*tar.Header, data *[][]byte) { (*data)[0] = tc.data })
-				_, _, err = extractGeo(context.Background(), root, raw, edition)
+				built, notices, err := extractGeo(context.Background(), root, raw, edition)
 				label, reason, ok := GeoValidationDiagnostic(err)
 				if !ok || label != strings.TrimPrefix(edition, "GeoLite2-") || reason != tc.reason {
 					t.Fatalf("missing validation classification: %q %q %v", label, reason, ok)
 				}
-				if _, statErr := root.Stat(edition + ".mmdb"); !errors.Is(statErr, os.ErrNotExist) {
-					t.Fatal("rejected database was staged")
+				// Streaming validation uses a private staged file instead of a second
+				// whole-file buffer. A rejected extraction has no usable result;
+				// DownloadGeo closes its owned bundle before returning the error.
+				if !built.IsZero() || len(notices) != 0 {
+					t.Fatal("rejected database returned publishable metadata")
+				}
+				if info, statErr := root.Stat(edition + ".mmdb"); statErr != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+					t.Fatal("validation input escaped private staging")
 				}
 			}
 		})

@@ -3,8 +3,11 @@
 package evidence
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -50,12 +53,88 @@ func TestStoredEventAlertContextRemainsHistoricalAndIdentityFree(t *testing.T) {
 		t.Fatal("saved event was replaced by current monitor inputs")
 	}
 	data, err := json.Marshal(b)
-	if err != nil || strings.Contains(string(data), "synthetic_private") || strings.Contains(string(data), "EUR") || strings.Contains(string(data), "999") {
-		t.Fatal("private/current policy data entered historical event export")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := checkHistoricalAlertPrivacy(data); err != nil {
+		t.Fatal(err)
 	}
 	*raw.Timeline.Events[0].Alert.ObservedCost = 777
 	if *b.Events[0].Alert.ObservedCost != 8 {
 		t.Fatal("typed projection shares mutable raw pointers")
+	}
+}
+
+// Inspect the wire JSON rather than decoding through the sharing DTO, which
+// could silently omit an unexpected policy field.
+func checkHistoricalAlertPrivacy(data []byte) error {
+	if strings.Contains(string(data), "synthetic_private") || strings.Contains(string(data), "EUR") {
+		return errors.New("private/current policy data entered historical event export")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var projected any
+	if err := decoder.Decode(&projected); err != nil || decoder.Decode(new(any)) != io.EOF {
+		return errors.New("invalid historical event export JSON")
+	}
+	// Inspect complete JSON values: random hexadecimal aliases may contain
+	// the digits 999 without disclosing the current policy's numeric value.
+	if containsExactJSONValue(projected, "999") {
+		return errors.New("current policy value entered historical event export")
+	}
+	return nil
+}
+
+func TestHistoricalAlertPrivacyAssertionNumericTokens(t *testing.T) {
+	b, err := Build(rawFixture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	alias := "event_999" + strings.Repeat("0", 29)
+	b.Events[0].Alias, b.RelatedSSH[0].Alias = alias, alias
+	if err := b.Validate(); err != nil {
+		t.Fatal("deterministic pseudonym fixture is invalid", err)
+	}
+	data, err := json.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(map[string]any)
+		reject bool
+	}{
+		{"legitimate_alias_contains_999", func(map[string]any) {}, false},
+		{"numeric_policy_value", func(doc map[string]any) { doc["current_policy"] = map[string]any{"observed_cost": json.Number("999")} }, true},
+		{"numeric_array_value", func(doc map[string]any) { doc["current_policy"] = []any{json.Number("999")} }, true},
+		{"string_policy_value", func(doc map[string]any) { doc["current_policy"] = "999" }, true},
+		{"current_policy_currency", func(doc map[string]any) { doc["current_policy"] = map[string]any{"currency": "EUR"} }, true},
+		{"current_policy_secret", func(doc map[string]any) { doc["current_policy"] = "synthetic_private_policy" }, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var doc map[string]any
+			if err := json.Unmarshal(data, &doc); err != nil {
+				t.Fatal(err)
+			}
+			tc.mutate(doc)
+			modified, err := json.Marshal(doc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := checkHistoricalAlertPrivacy(modified); (err != nil) != tc.reject {
+				t.Fatalf("historical alert privacy error=%v, want rejection=%v", err, tc.reject)
+			}
+		})
+	}
+	for name, malformed := range map[string][]byte{
+		"invalid_json":  []byte(`{"events":`),
+		"trailing_json": append(append([]byte(nil), data...), []byte(` {}`)...),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := checkHistoricalAlertPrivacy(malformed); err == nil {
+				t.Fatal("malformed historical event JSON accepted")
+			}
+		})
 	}
 }
 

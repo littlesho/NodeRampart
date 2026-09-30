@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-`0.4.0-alpha.2` is under development. Security fixes are applied to the latest alpha branch only until a stable support policy is published.
+`0.4.0-alpha.6` is the current unpublished candidate; alpha.5 remains the latest published prerelease. Security fixes are applied to the latest alpha branch only until a stable support policy is published.
 
 ## Reporting a vulnerability
 
@@ -16,7 +16,7 @@ The maintainer will acknowledge a complete report when possible, coordinate a fi
 
 ## Deployment warning
 
-The alpha has not completed independent security review, the full distribution/architecture VM matrix, or sustained high-rate testing. The public [validation scope and limitations](docs/ALPHA_LIMITATIONS.md) distinguish earlier bounded checks from unfinished work. Source publication is not package-release or production-readiness approval. NodeRampart is an observation tool and does not replace provider DDoS protection, a correctly configured firewall, SSH hardening, patch management, or backups.
+The alpha has not completed independent security review, the full distribution/architecture VM matrix, or sustained high-rate testing. The [current validation scope and limitations](docs/ALPHA_LIMITATIONS.md) distinguish bounded acceptance from unfinished work. Source publication is not package-release or production-readiness approval. NodeRampart is an observation tool and does not replace provider DDoS protection, a correctly configured firewall, SSH hardening, patch management, or backups.
 
 ## Installation and management boundaries
 

@@ -7,6 +7,33 @@ umask 077
 # script, its interpreter can still complete the already loaded removal routine.
 remove_die() { echo "NodeRampart removal: $*" >&2; exit 1; }
 
+# The manager signals only this supervisor, never apt/dnf or their maintainer
+# scripts. The open lock is inherited by transaction descendants as well.
+remove_checkpoint() {
+  if [ "$remove_cancel_requested" = true ]; then
+    echo 'NodeRampart removal: cancellation requested; current operation finished; installation state needs inspection.' >&2
+    exit 130
+  fi
+}
+
+remove_transaction() {
+  remove_checkpoint
+  "$@" &
+  transaction_pid=$!
+  while :; do
+    # wait can be interrupted by the cooperative signal. Keep supervising the
+    # same transaction, retaining fd 9, until the child has actually exited.
+    set +e
+    wait "$transaction_pid"
+    transaction_status=$?
+    set -e
+    if kill -0 "$transaction_pid" 2>/dev/null; then continue; fi
+    break
+  done
+  [ "$transaction_status" -eq 0 ] || remove_die 'package transaction failed; inspect the native package database before retrying'
+  remove_checkpoint
+}
+
 remove_trusted_dir() {
   [ ! -L "$1" ] || remove_die "refusing symlinked directory: $1"
   if [ -e "$1" ]; then
@@ -115,6 +142,8 @@ remove_validate_source() {
 }
 
 remove_main() {
+  remove_cancel_requested=false
+  trap 'remove_cancel_requested=true' USR1 INT TERM
   PATH=/usr/sbin:/usr/bin:/sbin:/bin
   export PATH
   purge=false
@@ -138,6 +167,7 @@ remove_main() {
   [ "$(stat -c '%a' "$lock")" = 600 ] || remove_die 'management lock must have mode 0600'
   exec 9<> "$lock"
   flock -x -w 30 9 || remove_die 'another management operation is in progress'
+  remove_checkpoint
   if [ "$purge" = true ]; then remove_validate_purge; fi
   for path in /etc/systemd/system/noderampart-geoip-update.service /etc/systemd/system/noderampart-geoip-update.timer /etc/systemd/system/noderampartd.service.d/90-noderampart-managed.conf /etc/tmpfiles.d/noderampart-management.conf; do
     if [ -L "$path" ] && [ "$(readlink "$path")" = /dev/null ]; then
@@ -177,23 +207,31 @@ remove_main() {
     done
     [ "$purge" = true ] || remove_die 'no installed NodeRampart package or owned source installation was found'
   fi
+  remove_checkpoint
   remove_stop noderampart-geoip-update.timer
+  remove_checkpoint
   remove_stop noderampart-geoip-update.service
+  remove_checkpoint
   remove_halt noderampart-sensor.service
+  remove_checkpoint
   remove_halt noderampartd.service
+  remove_checkpoint
   # Remove only our boot-time rule. Keep the runtime lock inode open and linked
   # until every concurrent user has released it; never unlink it during removal.
   rm -f -- /etc/systemd/system/noderampart-geoip-update.service /etc/systemd/system/noderampart-geoip-update.timer /etc/systemd/system/noderampartd.service.d/90-noderampart-managed.conf /etc/tmpfiles.d/noderampart-management.conf
   systemctl daemon-reload
+  remove_checkpoint
   if [ "$deb" = true ]; then
     operation=remove
     [ "$purge" = false ] || operation=purge
-    apt-get "$operation" -y --no-auto-remove noderampart
+    remove_transaction apt-get "$operation" -y --no-auto-remove noderampart
   elif [ "$rpm" = true ]; then
-    dnf remove -y --setopt=clean_requirements_on_remove=False noderampart
+    remove_transaction dnf remove -y --setopt=clean_requirements_on_remove=False noderampart
   elif [ "$source" = true ]; then
     remove_stop noderampart-sensor.service
+    remove_checkpoint
     remove_stop noderampartd.service
+    remove_checkpoint
     rm -f -- /usr/local/bin/noderampart /usr/local/bin/noderampartd /usr/local/bin/noderampart-sensor /etc/systemd/system/noderampartd.service /etc/systemd/system/noderampart-sensor.service /usr/local/libexec/noderampart/manage-remove /usr/local/share/doc/noderampart/source-install.manifest
     rm -f -- /usr/local/share/doc/noderampart/LICENSE /usr/local/share/doc/noderampart/README.md /usr/local/share/doc/noderampart/THIRD_PARTY_NOTICES.md
     for notice in github.com_dustin_go-humanize_LICENSE github.com_gdamore_encoding_LICENSE github.com_gdamore_tcell_v2_LICENSE github.com_google_uuid_LICENSE github.com_lucasb-eyer_go-colorful_LICENSE github.com_mattn_go-runewidth_LICENSE github.com_oschwald_maxminddb-golang_LICENSE github.com_remyoudompheng_bigfft_LICENSE github.com_rivo_tview_LICENSE github.com_rivo_uniseg_LICENSE golang.org_x_sys_LICENSE golang.org_x_term_LICENSE golang.org_x_term_PATENTS golang.org_x_text_LICENSE golang.org_x_text_PATENTS modernc.org_libc_LICENSE modernc.org_mathutil_LICENSE modernc.org_memory_LICENSE modernc.org_sqlite_LICENSE; do
@@ -203,15 +241,18 @@ remove_main() {
     rmdir /usr/local/share/doc/noderampart/third-party /usr/local/share/doc/noderampart /usr/local/libexec/noderampart 2>/dev/null || true
     systemctl daemon-reload
   fi
+  remove_checkpoint
   if [ "$purge" = true ]; then
     # Recheck after the package manager: never treat removal success as proof of
     # safe data paths or successful service termination.
     remove_validate_purge
     for unit in noderampart-sensor.service noderampartd.service; do
       remove_stop "$unit"
+      remove_checkpoint
     done
     for path in /etc/noderampart /var/lib/noderampart /var/cache/noderampart; do
       [ ! -e "$path" ] || rm -rf --one-file-system -- "$path"
+      remove_checkpoint
     done
     if id noderampart-sensor >/dev/null 2>&1; then userdel noderampart-sensor; fi
     if id noderampart >/dev/null 2>&1; then userdel noderampart; fi

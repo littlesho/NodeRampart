@@ -18,19 +18,25 @@ esac
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-COMMIT=${COMMIT:-$(git -C "$PROJECT_DIR" rev-parse --short=12 HEAD 2>/dev/null || printf unknown)}
+if [ -z "${COMMIT:-}" ]; then
+  COMMIT=unknown
+  if git -C "$PROJECT_DIR" diff --quiet HEAD -- 2>/dev/null && [ -z "$(git -C "$PROJECT_DIR" ls-files --others --exclude-standard 2>/dev/null)" ]; then
+    COMMIT=$(git -C "$PROJECT_DIR" rev-parse --short=12 HEAD 2>/dev/null || printf unknown)
+  fi
+fi
 BUILD_DATE=${BUILD_DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
 case "$COMMIT" in unknown) ;; ''|*[!0-9a-f]*) echo "invalid build commit" >&2; exit 1;; esac
 case "$BUILD_DATE" in ''|*[!0-9TZ:+.-]*) echo "invalid build date" >&2; exit 1;; esac
 FULL_VERSION=$(tr -d '\n' < "$PROJECT_DIR/VERSION")
 case "$FULL_VERSION" in
+  [0-9]*-alpha.6) RPM_VERSION=${FULL_VERSION%-alpha.6}; RPM_RELEASE=0.alpha.7;;
   [0-9]*-alpha.5) RPM_VERSION=${FULL_VERSION%-alpha.5}; RPM_RELEASE=0.alpha.6;;
   [0-9]*-alpha.4) RPM_VERSION=${FULL_VERSION%-alpha.4}; RPM_RELEASE=0.alpha.5;;
   [0-9]*-alpha.3) RPM_VERSION=${FULL_VERSION%-alpha.3}; RPM_RELEASE=0.alpha.4;;
   [0-9]*-alpha.2) RPM_VERSION=${FULL_VERSION%-alpha.2}; RPM_RELEASE=0.alpha.3;;
   [0-9]*-alpha.1) RPM_VERSION=${FULL_VERSION%-alpha.1}; RPM_RELEASE=0.alpha.2;;
   [0-9]*-alpha) RPM_VERSION=${FULL_VERSION%-alpha}; RPM_RELEASE=0.alpha.1;;
-  *) echo "VERSION must use the form X.Y.Z-alpha, X.Y.Z-alpha.1, X.Y.Z-alpha.2, X.Y.Z-alpha.3, X.Y.Z-alpha.4 or X.Y.Z-alpha.5" >&2; exit 1 ;;
+  *) echo "VERSION must use X.Y.Z-alpha or X.Y.Z-alpha.1 through alpha.6" >&2; exit 1 ;;
 esac
 case "$RPM_VERSION" in
   ''|*[!0-9.]*) echo "RPM version must contain only digits and dots" >&2; exit 1 ;;

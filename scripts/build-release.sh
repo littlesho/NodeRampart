@@ -7,30 +7,46 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 cd "$PROJECT_DIR"
 VERSION=$(tr -d '\n' < VERSION)
-[ "$VERSION" = 0.4.0-alpha.5 ] || { echo 'release tooling currently targets 0.4.0-alpha.5' >&2; exit 1; }
-# Release callers must supply metadata from the verified source checkout.
-# Empty job outputs must never fall back to local Git or the wall clock.
+[ "$VERSION" = 0.4.0-alpha.6 ] || { echo 'release tooling currently targets 0.4.0-alpha.6' >&2; exit 1; }
+# Empty workflow outputs must never fall back to local Git or the wall clock.
+# Obtain both declarations once with release-metadata.sh in the source job.
 COMMIT=${COMMIT-}
 BUILD_DATE=${BUILD_DATE-}
 python3 - "$COMMIT" "$BUILD_DATE" <<'METADATA'
 import datetime, re, sys
 commit, date = sys.argv[1:]
-if not re.fullmatch(r"[0-9a-f]{40}", commit):
-    raise SystemExit('invalid commit: full source SHA required')
-if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:Z|[+-][0-9]{2}:[0-9]{2})", date):
-    raise SystemExit('invalid build date: source commit timestamp required')
+if not re.fullmatch(r'[0-9a-f]{40}', commit):
+    raise SystemExit('invalid commit: release commit must be the full checked-out commit')
+if not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:Z|[+-][0-9]{2}:[0-9]{2})', date):
+    raise SystemExit('release build date must be the source commit timestamp')
 datetime.datetime.fromisoformat(date.replace('Z', '+00:00'))
 METADATA
 export COMMIT BUILD_DATE
 [ "$#" -eq 2 ] || { echo 'usage: build-release.sh {--deb|--rpm} {amd64|arm64} | --collect ARTIFACT_DIRECTORY' >&2; exit 1; }
+# Container builders may own the checkout differently. Trust only this fixed
+# source root for these commands; never change global Git configuration.
+CHECKED_COMMIT=$(git -c safe.directory="$PROJECT_DIR" rev-parse --verify HEAD)
+[ "$COMMIT" = "$CHECKED_COMMIT" ] || { echo 'release commit does not match the checked-out source' >&2; exit 1; }
+[ "$BUILD_DATE" = "$(git -c safe.directory="$PROJECT_DIR" show -s --format=%cI "$COMMIT")" ] || { echo 'release build date does not match the source commit' >&2; exit 1; }
+git -c safe.directory="$PROJECT_DIR" diff --quiet HEAD -- || { echo 'release source has tracked changes; use ordinary local build/package commands for dirty candidates' >&2; exit 1; }
+# Downloaded workflow artifacts are not source. Every other untracked input
+# makes an official clean-commit assertion uncertain; never print their names.
+UNTRACKED_INPUTS=$(git -c safe.directory="$PROJECT_DIR" ls-files --others --exclude-standard -- . ':(exclude)release-input')
+[ -z "$UNTRACKED_INPUTS" ] || { echo 'release source has untracked inputs; use ordinary local build/package commands for dirty candidates' >&2; exit 1; }
 case "$1" in
   --deb|--rpm)
     ARCH=$2
     case "$ARCH" in amd64|arm64) ;; *) echo 'unsupported architecture' >&2; exit 1;; esac
     export ARCH
     if [ "$1" = --deb ]; then
+      LOCAL_PACKAGE="dist/noderampart_0.4.0~alpha.6_${ARCH}.deb"
+      RELEASE_PACKAGE="dist/noderampart_${VERSION}_${ARCH}.deb"
+      [ ! -e "$RELEASE_PACKAGE" ] && [ ! -L "$RELEASE_PACKAGE" ] || { echo 'official package output already exists; preserve it before rebuilding' >&2; exit 1; }
       GOOS=linux GOARCH="$ARCH" make build
       ./scripts/build-deb.sh
+      # Native Debian Version retains '~' ordering; public asset names must
+      # remain portable so GitHub does not rename the checksum-bound package.
+      mv -- "$LOCAL_PACKAGE" "$RELEASE_PACKAGE"
     else
       ./scripts/build-rpm.sh
     fi
@@ -72,7 +88,7 @@ try:
     for name, path in found.items():
         shutil.copyfile(path, stage / name)
     shutil.copyfile(project / 'scripts/bootstrap.sh', stage / 'bootstrap.sh')
-    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha.5',
+    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha.6',
         'commit': commit, 'build_date': build_date, 'package_count': 6,
         'source_package_count': 1, 'sbom_count': 6,
         'sbom_scope': 'packaged Go programs; runtime system dependencies excluded'}, indent=2) + '\n')

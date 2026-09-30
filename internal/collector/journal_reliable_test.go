@@ -452,11 +452,12 @@ func TestReliableJournalSessionCloseThenIdle(t *testing.T) {
 				statuses := make(chan JournalStatus, 8)
 				done := make(chan error, 1)
 				go func() {
-					done <- (Journal{Path: path}).RunReliable(ctx, JournalOptions{
-						InitialObservedAt: at.Add(-time.Second), MaxBackfill: 100,
-						OnStatus: func(status JournalStatus) { statuses <- status },
-					}, func(_ context.Context, entry JournalEntry) error {
+					pending := false
+					done <- (Journal{Path: path}).runReliableAttempt(ctx, "", at.Add(-time.Second), time.Now().UTC(), 100, &pending, func(entry JournalEntry) error {
 						consumed <- entry
+						return nil
+					}, func(state, reason string, since time.Time, count uint64) error {
+						statuses <- JournalStatus{State: state, Reason: reason, Since: since, Count: count}
 						return nil
 					})
 				}()

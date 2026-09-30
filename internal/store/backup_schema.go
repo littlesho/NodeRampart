@@ -276,6 +276,25 @@ func schemaTokens(definition string) ([]schemaToken, error) {
 
 func downgradeSnapshotSchemaReference(ctx context.Context, db *sql.DB, version int) error {
 	var statements []string
+	if version < 11 {
+		statements = append(statements, `DROP INDEX event_notifications_message_idx`, `ALTER TABLE event_notifications RENAME TO event_notifications_v11`,
+			`CREATE TABLE event_notifications (
+		 event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
+		 notification_id TEXT NOT NULL DEFAULT '',
+		 decision TEXT NOT NULL CHECK(decision IN ('queued','merged','silenced','ineligible','rejected')),
+		 silence_id TEXT NOT NULL DEFAULT '', recorded_at INTEGER NOT NULL)`,
+			`INSERT INTO event_notifications SELECT event_id,notification_id,decision,silence_id,recorded_at FROM event_notifications_v11 WHERE channel='telegram'`,
+			`DROP TABLE event_notifications_v11`, `CREATE INDEX event_notifications_message_idx ON event_notifications(notification_id)`)
+	}
+	if version < 10 {
+		statements = append(statements, `DROP TABLE sensor_watermarks`, `DROP TABLE sensor_commit_state`)
+	}
+	if version < 9 {
+		statements = append(statements, `ALTER TABLE report_snapshots DROP COLUMN document_json`)
+	}
+	if version < 8 {
+		statements = append(statements, `DROP TABLE notification_targets`, `ALTER TABLE notification_outbox DROP COLUMN channel`, `ALTER TABLE notification_outbox DROP COLUMN isolated_at`)
+	}
 	if version < 7 {
 		statements = append(statements, `DROP TABLE journal_recovery`)
 	}

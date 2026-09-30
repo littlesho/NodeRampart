@@ -239,8 +239,14 @@ func (f *Fleet) flush(now time.Time) {
 			item.batch.KernelPackets, item.batch.KernelDrops = packets, drops
 		}
 	}
+	deadline := time.Now().Add(batchSendTimeout)
 	for _, item := range snapshots {
-		if err := f.Sender.Send(item.batch); err != nil {
+		if item.batch.IntervalMillis > protocol.MaxElapsedInterval(f.BatchInterval).Milliseconds() {
+			f.Sender.discard(item.batch)
+			f.Logger.Warn("sensor observation window exceeded scheduling tolerance; discarded and rebaselined", "interface", item.batch.Interface, "elapsed_millis", item.batch.IntervalMillis)
+			continue
+		}
+		if err := f.Sender.sendBefore(item.batch, deadline); err != nil {
 			batches, packets, bytes := f.Sender.PendingLoss()
 			f.Logger.Warn("sensor batch delivery failed; health retained per interface", "error", err, "undelivered_batches", batches, "undelivered_packets", packets, "undelivered_bytes", bytes)
 		}

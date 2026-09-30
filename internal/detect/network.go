@@ -29,29 +29,35 @@ type scanState struct {
 const (
 	maxScanSources      = 8192
 	maxUDPRequestTuples = 16384
+	maxScanPortEntries  = 262144
 	udpReplyWindow      = 30 * time.Second
 )
 
 // NetworkStats contains process-lifetime counters and current bounded-state
 // coverage, with no addresses or packet data. Observe and Stats may run together.
 type NetworkStats struct {
-	Scope                     string                  `json:"scope,omitempty"`
-	Interfaces                []InterfaceNetworkStats `json:"interfaces,omitempty"`
-	InterfaceLimit            int                     `json:"interface_limit,omitempty"`
-	EvictedInterfaces         uint64                  `json:"evicted_interfaces,omitempty"`
-	ScanSources               int                     `json:"scan_sources"`
-	ScanSourceLimit           int                     `json:"scan_source_limit"`
-	ScanIgnoredPackets        uint64                  `json:"scan_ignored_packets"`
-	ScanStateSaturated        bool                    `json:"scan_state_saturated"`
-	UDPRequestTuples          int                     `json:"udp_request_tuples"`
-	UDPRequestLimit           int                     `json:"udp_request_limit"`
-	UDPRequestIgnoredPackets  uint64                  `json:"udp_request_ignored_packets"`
-	UDPUnclassifiedPackets    uint64                  `json:"udp_unclassified_packets"`
-	UDPRepliesExcludedPackets uint64                  `json:"udp_replies_excluded_packets"`
-	UDPStateSaturated         bool                    `json:"udp_state_saturated"`
-	UDPScanCoverageComplete   bool                    `json:"udp_scan_coverage_complete"`
-	RecoverySuppressedBatches uint64                  `json:"recovery_suppressed_batches"`
-	CountersSaturated         bool                    `json:"counters_saturated"`
+	Scope                       string                  `json:"scope,omitempty"`
+	Interfaces                  []InterfaceNetworkStats `json:"interfaces,omitempty"`
+	InterfaceLimit              int                     `json:"interface_limit,omitempty"`
+	EvictedInterfaces           uint64                  `json:"evicted_interfaces,omitempty"`
+	ScanSources                 int                     `json:"scan_sources"`
+	ScanSourceLimit             int                     `json:"scan_source_limit"`
+	ScanIgnoredPackets          uint64                  `json:"scan_ignored_packets"`
+	ScanStateSaturated          bool                    `json:"scan_state_saturated"`
+	ScanPortEntries             int                     `json:"scan_port_entries"`
+	ScanPortLimit               int                     `json:"scan_port_limit"`
+	ScanPortStateSaturated      bool                    `json:"scan_port_state_saturated"`
+	ScanCoverageComplete        bool                    `json:"scan_coverage_complete"`
+	ScanCoverageIncompleteUntil time.Time               `json:"scan_coverage_incomplete_until_utc,omitzero"`
+	UDPRequestTuples            int                     `json:"udp_request_tuples"`
+	UDPRequestLimit             int                     `json:"udp_request_limit"`
+	UDPRequestIgnoredPackets    uint64                  `json:"udp_request_ignored_packets"`
+	UDPUnclassifiedPackets      uint64                  `json:"udp_unclassified_packets"`
+	UDPRepliesExcludedPackets   uint64                  `json:"udp_replies_excluded_packets"`
+	UDPStateSaturated           bool                    `json:"udp_state_saturated"`
+	UDPScanCoverageComplete     bool                    `json:"udp_scan_coverage_complete"`
+	RecoverySuppressedBatches   uint64                  `json:"recovery_suppressed_batches"`
+	CountersSaturated           bool                    `json:"counters_saturated"`
 }
 
 type udpTuple struct {
@@ -60,26 +66,48 @@ type udpTuple struct {
 }
 
 type Network struct {
-	mu                sync.Mutex
-	config            config.DetectionConfig
-	floods            map[string]*floodState
-	scans             map[string]*scanState
-	udpRequests       map[udpTuple]time.Time
-	udpUncertainUntil time.Time
-	lastBatch         time.Time
-	lastInterface     string
-	stats             NetworkStats
-	scanLimit         int
-	udpLimit          int
-	continuityReset   bool
+	mu                 sync.Mutex
+	config             config.DetectionConfig
+	floods             map[string]*floodState
+	scans              map[string]*scanState
+	udpRequests        map[udpTuple]time.Time
+	udpUncertainUntil  time.Time
+	lastBatch          time.Time
+	lastInterface      string
+	stats              NetworkStats
+	scanLimit          int
+	udpLimit           int
+	continuityReset    bool
+	portBudget         *scanPortBudget
+	scanPorts          int
+	scanUncertainUntil time.Time
 }
+
+// One fleet shares this small admission counter. It permits an interface to
+// reach the legal 65535-port threshold without multiplying total map capacity.
+type scanPortBudget struct {
+	mu          sync.Mutex
+	used, limit int
+}
+
+func (b *scanPortBudget) reserve() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.used >= b.limit {
+		return false
+	}
+	b.used++
+	return true
+}
+func (b *scanPortBudget) release(count int) { b.mu.Lock(); b.used -= count; b.mu.Unlock() }
+func (b *scanPortBudget) saturated() bool   { b.mu.Lock(); defer b.mu.Unlock(); return b.used >= b.limit }
 
 func NewNetwork(cfg config.DetectionConfig) *Network {
 	return newNetworkLimits(cfg, maxScanSources, maxUDPRequestTuples)
 }
 
 func newNetworkLimits(cfg config.DetectionConfig, scans, udp int) *Network {
-	return &Network{config: cfg, floods: make(map[string]*floodState), scans: make(map[string]*scanState), udpRequests: make(map[udpTuple]time.Time), scanLimit: scans, udpLimit: udp}
+	return &Network{config: cfg, floods: make(map[string]*floodState), scans: make(map[string]*scanState), udpRequests: make(map[udpTuple]time.Time), scanLimit: scans, udpLimit: udp, portBudget: &scanPortBudget{limit: maxScanPortEntries}}
 }
 
 func (n *Network) ResetContinuity() {
@@ -97,6 +125,10 @@ func (n *Network) Stats() NetworkStats {
 	stats := n.stats
 	stats.ScanSources, stats.ScanSourceLimit = len(n.scans), n.scanLimit
 	stats.ScanStateSaturated = len(n.scans) >= n.scanLimit
+	stats.ScanPortEntries, stats.ScanPortLimit = n.scanPorts, n.portBudget.limit
+	stats.ScanPortStateSaturated = n.portBudget.saturated()
+	stats.ScanCoverageIncompleteUntil = n.scanUncertainUntil
+	stats.ScanCoverageComplete = !n.lastBatch.Before(n.scanUncertainUntil)
 	stats.UDPRequestTuples, stats.UDPRequestLimit = len(n.udpRequests), n.udpLimit
 	stats.UDPStateSaturated = len(n.udpRequests) >= n.udpLimit
 	return stats
@@ -212,7 +244,10 @@ func (n *Network) Observe(batch protocol.Batch) []model.Event {
 	if suppressed {
 		n.addCounter(&n.stats.RecoverySuppressedBatches, 1)
 	}
-	events = append(events, n.scanEvents(batch.SentAt)...)
+	for _, event := range n.scanEvents(batch.SentAt) {
+		event.Evidence["coverage_complete"] = strconv.FormatBool(!batch.SentAt.Before(n.scanUncertainUntil))
+		events = append(events, event)
+	}
 	return events
 }
 
@@ -226,7 +261,7 @@ func absDuration(value time.Duration) time.Duration {
 func (n *Network) prune(now time.Time) {
 	for source, state := range n.scans {
 		if now.Sub(state.started) > n.config.ScanWindow.Duration {
-			delete(n.scans, source)
+			n.deleteScan(source)
 		}
 	}
 	for key, last := range n.udpRequests {
@@ -357,14 +392,26 @@ func (n *Network) observePort(flow protocol.Flow, now time.Time) {
 	if state == nil || now.Sub(state.started) > n.config.ScanWindow.Duration {
 		if state == nil && len(n.scans) >= n.scanLimit {
 			n.addCounter(&n.stats.ScanIgnoredPackets, flow.Packets)
+			n.markScanIncomplete(now)
 			return
+		}
+		if state != nil {
+			n.deleteScan(flow.RemoteIP)
 		}
 		state = &scanState{started: now, ports: make(map[uint16]struct{})}
 		n.scans[flow.RemoteIP] = state
 	}
 	state.last = now
 	if !state.emitted && len(state.ports) < n.config.ScanUniquePorts {
-		state.ports[flow.LocalPort] = struct{}{}
+		if _, exists := state.ports[flow.LocalPort]; !exists {
+			if n.portBudget.reserve() {
+				state.ports[flow.LocalPort] = struct{}{}
+				n.scanPorts++
+			} else {
+				n.addCounter(&n.stats.ScanIgnoredPackets, flow.Packets)
+				n.markScanIncomplete(now)
+			}
+		}
 	}
 	if ^uint64(0)-state.packets < flow.Packets {
 		state.packets = ^uint64(0)
@@ -373,11 +420,17 @@ func (n *Network) observePort(flow protocol.Flow, now time.Time) {
 	}
 }
 
+func (n *Network) markScanIncomplete(at time.Time) {
+	if until := at.Add(n.config.ScanWindow.Duration + time.Nanosecond); until.After(n.scanUncertainUntil) {
+		n.scanUncertainUntil = until
+	}
+}
+
 func (n *Network) scanEvents(now time.Time) []model.Event {
 	var events []model.Event
 	for source, state := range n.scans {
 		if now.Sub(state.last) > n.config.ScanWindow.Duration {
-			delete(n.scans, source)
+			n.deleteScan(source)
 			continue
 		}
 		if !state.emitted && len(state.ports) >= n.config.ScanUniquePorts {
@@ -386,6 +439,22 @@ func (n *Network) scanEvents(now time.Time) []model.Event {
 		}
 	}
 	return events
+}
+
+func (n *Network) deleteScan(source string) {
+	if state := n.scans[source]; state != nil {
+		n.portBudget.release(len(state.ports))
+		n.scanPorts -= len(state.ports)
+		delete(n.scans, source)
+	}
+}
+
+func (n *Network) releaseScanState() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	for source := range n.scans {
+		n.deleteScan(source)
+	}
 }
 
 func PrefixString(value string) string {

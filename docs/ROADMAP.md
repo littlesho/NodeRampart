@@ -16,7 +16,7 @@
 - Explicit IPC identities, safe source/package transition, administrator service
   state preservation, bounded fuzz jobs and native RPM CI.
 - Exact-source Debian 13/Fedora 44 lab validation; remaining distro/arm64/pressure
-  matrix stays unverified until actually run. See [validation scope](ALPHA_LIMITATIONS.md).
+  matrix stays unverified until actually run. See [current limitations](ALPHA_LIMITATIONS.md).
 
 ## `v0.3.0-alpha`
 
@@ -26,22 +26,30 @@
 - Multiple-interface capture, IPv6 route discovery and route changes.
 - Bounded historical daily-report backfill with coverage labels.
 - Offline pseudonymized metadata replay and threshold comparison.
-- See [v0.3 operations](V0.3_OPERATIONS.md) for the supported contracts.
+- See [v0.3 operations](V0.3_OPERATIONS.md) for supported contracts.
 
-## `v0.4.0-alpha.2` — current development version
+## `v0.4.0-alpha.6` — current unpublished candidate
 
 - Local terminal management, optional data-only GeoIP updates and public tariff caches.
 - Budget/health alerts, saved pricing evidence and bounded redacted local exports.
-- Source publication is separate from package releases; see [current limitations](ALPHA_LIMITATIONS.md).
+- Local review follow-ups add bounded diagnostics, reports and integrations; the
+  [operations guide](V0.4_OPERATIONS.md) describes implemented commands.
+- Source publication, local packages and an approved upgrade release are separate;
+  see [current validation scope and limitations](ALPHA_LIMITATIONS.md).
 
 ## `v0.5.0-beta`
 
-- TC/eBPF bounded collector and independently reviewed loader.
+- TC/eBPF collector and independently reviewed loader: independent research,
+  not a prerequisite for this alpha candidate.
 - Distribution/architecture compatibility matrix and 72-hour soak.
-- Distributed scan/brute-force correlation, data-quality reconciliation, signed price catalogs, and release SBOM/provenance.
+- Distributed scan/brute-force correlation, data-quality reconciliation and signed price catalogs.
+- Verify the existing SBOM/provenance release path for each exact candidate.
 
 ## `v1.0.0`
 
 - Independent security review, stable config/schema migration policy, reproducible release process, and documented support lifecycle.
 
 Automatic blocking remains a separate opt-in component considered only after false-positive data is available.
+
+TC/eBPF 是独立研究，不是本轮 alpha.6 的前置条件。SBOM/provenance 已有实现，
+本轮只验证准确候选的构建与证明，不新增发布系统。

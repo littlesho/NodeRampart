@@ -2,6 +2,32 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.6 - Unreleased
+
+- Integrate the consolidated reliability fixes: initialize every SQLite
+  connection, isolate notification recipients and legacy backlog, preserve
+  bounded multi-interface delivery and real sampling gaps, and make management
+  cancellation, service readiness and recovery report their actual state.
+- Keep optional GeoIP, billing and sender failures visible while basic
+  monitoring continues; retain fail-closed privacy, identity and file checks.
+- Add bounded local diagnostics, complete report JSON/HTML, 7/30-day trends,
+  fixed monthly billing cycles and usage scenarios, textfile monitoring,
+  offline threshold previews, optional SSH history hints, HTTPS heartbeat and
+  one HTTPS Webhook. New outbound features and SSH hints default to disabled.
+- SQLite schema 11 retains public schema 7 journal recovery and adds target
+  ownership, complete report documents, committed sensor watermarks and
+  per-channel notification decisions. Older binaries need a compatible
+  pre-upgrade backup; migration is not reversible in place. Sensor protocol 5
+  acknowledges committed datasets, with explicit legacy compatibility limits.
+- Project `0.4.0-alpha.6` maps to Debian internal `0.4.0~alpha.6` and RPM
+  `0.4.0-0.alpha.7%{?dist}`. Official public DEB names use `0.4.0-alpha.6`.
+  Verified source commit/date flow once through package, SBOM and collection
+  jobs; shared secret/fuzz checks and uploaded asset validation remain required.
+- The bootstrap default remains published `v0.4.0-alpha.5`. This alpha.6
+  candidate is unreleased; its hosted workflow, packages, cross-version runtime
+  acceptance, upload and attestations require separate recorded verification.
+  Earlier package and VM evidence applies to its original source and bytes.
+
 ## 0.4.0-alpha.5 - 2026-09-29 (UTC)
 
 - Accept trusted OpenSSH records from strictly bounded systemd login session

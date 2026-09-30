@@ -12,6 +12,7 @@ import (
 	"github.com/littlesho/NodeRampart/internal/api"
 	"github.com/littlesho/NodeRampart/internal/model"
 	"github.com/littlesho/NodeRampart/internal/protocol"
+	"github.com/littlesho/NodeRampart/internal/report"
 	"github.com/littlesho/NodeRampart/internal/store"
 )
 
@@ -49,35 +50,71 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 	invalid := func() api.Response { return controlFailure("invalid command arguments") }
 	now := time.Now().UTC()
 	switch request.Command {
-	case "status", "doctor", "report_now", "notify_status", "notify_test":
+	case "status", "doctor", "report_now", "notify_status":
 		if api.DecodeArgs(request.Args, &struct{}{}) != nil {
 			return invalid()
 		}
 		switch request.Command {
-		case "status", "doctor":
+		case "status":
 			response.Data = a.Status(ctx)
+		case "doctor":
+			status := a.Status(ctx)
+			check, cancel := context.WithTimeout(ctx, 2*time.Second)
+			foreignKeys, err := a.options.Store.ForeignKeys(check)
+			cancel()
+			if err == nil {
+				status.ForeignKeys = &foreignKeys
+			}
+			diagnosis := Diagnose(status, true)
+			status.Diagnosis = &diagnosis
+			response.Data = status
 		case "report_now":
-			body, err := a.report.Range(ctx, "Last 24 hours", now.Add(-24*time.Hour), now)
+			if a.report == nil {
+				return controlFailure("report builder unavailable")
+			}
+			document, err := a.report.StructuredRange(ctx, "Last 24 hours", now.Add(-24*time.Hour), now, now)
 			if err != nil {
 				return controlFailure("report generation failed")
 			}
-			response.Data = map[string]string{"report": body}
+			response.Data = map[string]any{"report": report.ShortBody(document.Body), "document": document}
 		case "notify_status":
 			status, err := a.options.Store.QueueStatus(ctx, now)
 			if err != nil {
 				return controlFailure("notification status unavailable")
 			}
 			response.Data = status
-		case "notify_test":
-			if a.options.Notifier == nil {
-				return controlFailure("Telegram is disabled")
+		}
+	case "notify_test", "notify_discard_isolated":
+		var args api.NotifyChannelArgs
+		if api.DecodeArgs(request.Args, &args) != nil {
+			return invalid()
+		}
+		if args.Channel == "" {
+			args.Channel = "telegram"
+		}
+		if args.Channel != "telegram" && args.Channel != "webhook" {
+			return invalid()
+		}
+		if request.Command == "notify_discard_isolated" {
+			count, err := a.options.Store.DiscardIsolatedNotifications(ctx, args.Channel, now)
+			if err != nil {
+				return controlFailure("isolated notification bodies could not be discarded")
+			}
+			response.Data = map[string]any{"channel": args.Channel, "discarded": count, "status": "isolated bodies discarded; active queue preserved"}
+		} else {
+			sender, destination, enabled := a.options.Notifier, a.options.NotificationDestination, a.options.Config.Notifications.Telegram.Enabled
+			if args.Channel == "webhook" {
+				sender, destination, enabled = a.options.WebhookNotifier, a.options.WebhookDestination, a.options.Config.Notifications.Webhook.Enabled
+			}
+			if sender == nil || !enabled {
+				return controlFailure("selected notification sender is disabled or unavailable")
 			}
 			id := model.NewID("msg")
-			_, err := a.options.Store.Enqueue(ctx, store.OutboxMessage{ID: id, DedupeKey: "test:" + model.NewID("once"), Destination: "telegram", Body: "✅ <b>NodeRampart notification test</b>\nHost: " + html.EscapeString(a.options.Config.Hostname)})
+			_, err := a.options.Store.Enqueue(ctx, store.OutboxMessage{ID: id, DedupeKey: "test:" + model.NewID("once"), Channel: args.Channel, PrivacyMode: a.options.Config.Privacy.NotificationIP, Destination: destination, Body: "✅ <b>NodeRampart notification test</b>\nHost: " + html.EscapeString(a.options.Config.Hostname)})
 			if err != nil {
 				return controlFailure("could not queue test notification")
 			}
-			response.Data = map[string]string{"status": "queued", "id": id}
+			response.Data = map[string]string{"status": "queued", "id": id, "channel": args.Channel}
 		}
 	case "events_list":
 		var args api.EventListArgs
@@ -176,6 +213,12 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 		var args api.DestinationArgs
 		if api.DecodeArgs(request.Args, &args) != nil || !api.ValidID(args.Destination) {
 			return invalid()
+		}
+		if args.Destination == "telegram" {
+			if a.options.NotificationDestination == "" {
+				return controlFailure("Telegram target identity unavailable")
+			}
+			args.Destination = a.options.NotificationDestination
 		}
 		if err := a.options.Store.ResumeDestination(ctx, args.Destination); err != nil {
 			return controlFailure("notification destination could not be resumed")

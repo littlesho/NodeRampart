@@ -1,9 +1,23 @@
-# `v0.4.0-alpha.5` limitations
+# `v0.4.0-alpha.6` candidate limitations
 
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
 
 ## Validation scope
+
+This source is the **unpublished alpha.6 candidate**. Its local checks, exact
+candidate packages, cross-version upgrades and hosted proofs must be evaluated
+separately; see the [candidate acceptance summary](ALPHA6_ACCEPTANCE.md).
+Earlier locally stamped `0.4.0-alpha` / `unknown` packages are not alpha.6
+release or upgrade evidence. Neither source integration nor a draft means the
+Release has been published. Native ARM64, sustained load, 72-hour soak and real
+optional external receivers remain NOT RUN for this candidate.
+
+本源码为尚未公开发布的 alpha.6 候选。具体本地检查、准确包、跨版本升级和 hosted
+证明以[候选验收摘要](ALPHA6_ACCEPTANCE.md)及其注明的时点为准；旧本地包不代表
+本候选已验收，草稿也不代表公开发布。真实 ARM64、持续负载、72 小时和真实外发仍未跑。
+
+### Historical public acceptance
 
 alpha.5 was published at `2026-09-29T14:50:47Z` from source
 `f539d18c9a91913a49e4c1d9f36d381965f2f7b7`. All 22 public assets passed fresh
@@ -73,9 +87,11 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
 
 ## Still unvalidated
 
-- Real `arm64` runtime, required before beta; cross-builds do not execute the sensor.
+- Candidate-specific different-version upgrade and separate fc43 package acceptance
+  until exact-package results are recorded; prior acceptance is scoped to its bytes.
+- Real `arm64` runtime; cross-builds do not execute the sensor.
 - Authenticated MaxMind downloads with real customer credentials and live
-  Telegram delivery from the new setup menu. Automated tests use synthetic
+  Telegram/Webhook delivery and HTTPS heartbeat to actual receivers. Tests use synthetic
   credentials, generated MMDB data and mocked HTTP responses.
 - Every systemd hardening directive under adversarial workloads.
 - Dedicated AppArmor confinement or a NodeRampart-specific SELinux policy.
@@ -86,11 +102,12 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
   multi-NIC interactions beyond the isolated veth fixture.
 - Sustained high PPS, real capture/socket loss under pressure, CPU/memory budgets,
   penetration testing, power-loss recovery, and a 72-hour soak. Bounded unit
-  tests for parser errors and IPC loss recovery do not establish these results.
+  tests, bounded RSS/CPU/storage measurements and the four-VM lifecycle window
+  do not establish full deployment resource ceilings or sustained-load results.
 
 ## Functional limits
 
-- AF_PACKET is the alpha sensor. The planned production path is a smaller TC/eBPF collector with fixed maps and an independently reviewed loader.
+- AF_PACKET is the alpha sensor. TC/eBPF with fixed maps and an independently reviewed loader remains independent research, not an alpha.6 prerequisite.
 - Automatic selection supports main-table IPv4/IPv6 defaults; ECMP, nexthop objects and policy routing require explicit interfaces. AF_PACKET capture supports Ethernet links.
 - Interface counters retry once per second when initial route lookup or reads
   fail. Selection/link identity is reconciled every second. After
@@ -101,13 +118,19 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
 - Single-source SYN and unmatched UDP scans are detected. ACK/FIN probe rules and distributed same-prefix/ASN correlation are not implemented. UDP request matching is bounded to 30 seconds/16,384 tuples and pauses uncertain classification after losses or cold starts.
 - SSH grammar and journal origins cover supported OpenSSH locations/units. Arbitrary custom units, localizations and PAM stacks are not accepted automatically. Journal replay is limited to 15 minutes/10,000 entries; invalid cursor boundaries may leave visible gaps. In-memory detection windows rebuild after restart.
 - Interface totals are authoritative for guest-visible bytes. Per-country/ASN attribution may be lower because of sensor loss, map overflow, non-IP frames, VPN outer addresses, or unsupported packets.
-- IPC send-loss counts are estimates, not daemon persistence acknowledgments.
-  Network events have a bounded process-local persistence retry queue; a daemon
-  crash/restart can lose uncommitted queued events. Capacity losses are counted,
-  and restart records uncertainty rather than claiming an exact recovery count.
-  Pending counters survive reconnects only within the sensor process; a sensor
-  restart loses them. Recovered health is recorded in the recovery hour, and
-  version 1 sensors do not provide the new IPC loss fields.
+- IPC send-loss counts remain estimates. Protocol v5 adds session/interface
+  sequences and durable commit ACKs: collector-health deltas, traffic and their
+  watermark commit in one transaction. Event persistence and per-channel outbox
+  decisions use separate transactions and explicit ACK flags; a partial result
+  remains partial even if later retries finish. `complete` never means external
+  delivery. Socket receipt/write alone does not advance a commit watermark.
+  At most 64 stream watermarks are retained; retired/uncertain old sessions are
+  refused rather than silently replayed. Duplicates do not repeat accounted
+  traffic/health. Older protocols 1–4 and unsequenced v5 have no commit-ACK
+  guarantee. Upgrade the daemon before the sensor when retaining old config;
+  older daemons reject v5. No disk spool, historical flow replay or exactly-once
+  end-to-end guarantee is implemented. Uncommitted in-memory event queues and
+  sensor counters can be lost on process restart; gap counts can be unknown.
 - Hourly traffic, authentication, and interface buckets can over-include partial UTC hours for timezones whose local-day boundary is not aligned to a UTC hour.
 - GeoIP city/region data is an estimate. Optional City/ASN downloads require the
   user's MaxMind enrollment and license acceptance. Downloads and daily updates
@@ -116,20 +139,43 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
   independent backups remain the user's responsibility.
 - Active database and rollback-journal bytes have a configured bound; explicit backups and filesystem metadata are outside it. Exclusive rollback mode trades WAL concurrency and dirty-page RAM for this bound. Automatic corruption repair and database downgrade are not implemented; see [Storage budget](STORAGE-BUDGET.md).
 - Update coalescing preserves event detail but only merges matching unattempted/unclaimed incident updates. Delivery remains at least once. A claimed send can finish after a silence is created; suppression prevents later retry.
-- Report backfill is bounded to 31 completed dates within thirteen months and archives locally. It cannot reconstruct missing data or pruned seven-day event details. Timezone conflicts preserve the existing snapshot.
+- Report backfill is bounded to 31 completed dates within thirteen months and
+  archives locally. New full documents are bounded to 256 KiB, with a 128 KiB
+  body and explicit entry/query limits; notification summaries are separate.
+  HTML is static and escaped. Old short snapshots stay immutable and explicitly
+  lack original full content. A partial snapshot created by `report now` is not
+  replaced later. Trends cover the preceding 7/30 civil dates and distinguish
+  complete/partial/missing/pruned; missing totals are null, never invented zero.
+  Backfill cannot reconstruct missing observations or pruned event details.
 - Timeline/incident context uses retained source keys and time proximity, which do not prove a common actor. Health history is bounded; no retained gap does not prove complete data.
 - Offline replay uses pseudonymized metadata, not payloads or reconstructed hourly windows. Timing/ports/volume remain linkable; rule counts are not measured false-positive rates.
 - Billing supports custom profiles and explicitly refreshed official AWS/OCI
   public-egress catalogs. Cache age, byte-unit assumptions, monthly host-assigned
   free allowance and coverage are shown; account usage is not discovered.
   Cross-region/AZ/NAT/LB/CDN paths, taxes and invoice reconciliation are excluded.
-  Guest TX can include private traffic and duplicate interface paths.
+  Guest TX can include private traffic and duplicate interface paths. Fixed
+  monthly cycle start days 1–28 share the report timezone across usage, free
+  allowance, budget alerts and prediction. Forecasts require complete current
+  coverage and 7/30 complete-day scenarios; they are simple extrapolations, not
+  statistical confidence intervals or bills. Insufficient history is unavailable.
 - Management edits the installed configuration path and preserves the service
   sandbox. External database paths, arbitrary unit customization, automatic
   history migration and an atomic transaction across external root edits and
   package operations are unsupported. Interrupted applies require recovery.
+- Default-off SSH history hints reuse at most 1000 retained privacy-transformed
+  successful logins. A restarted process observes seven days and needs complete
+  journal coverage plus at least 20 successes on three local dates. Missing,
+  pruned or excessive history suppresses hints. Prefix identity is a shared
+  range, not an exact host; privacy/key changes and restarts require observation
+  again. An unfamiliar source/hour is a history deviation, not proof of intrusion.
+- Doctor strict diagnosis distinguishes confirmed degradation from unknown;
+  disabled checks are not failures. Manual Prometheus textfile export has fixed
+  labels and a five-minute expiry. Failed publication cannot make an old file
+  current; consumers must check generation, expiry and collection success.
 - No active response, automatic executable update, signed rule feed, web UI,
-  Prometheus endpoint, or multi-node collector is included.
+  Prometheus listener, or multi-node collector is included. Default-off fixed
+  HTTPS heartbeat/Webhook send only to explicitly configured targets; they do
+  not install a receiver, timer or background broker.
 - Fedora RPM can create service accounts through native sysusers processing
   before an unsafe path is rejected by the package's pre-install script.
   Rejection preserves the symlink target, but does not guarantee an entirely
@@ -151,5 +197,10 @@ Healthy route families continue under partial discovery, while coverage stays
 degraded. ECMP/policy-routing limits remain. GeoIP unchanged detection avoids
 activation but still downloads and validates the pair. New report archives
 preserve configured pricing inputs; old archives contain no reconstructed
-tariff history. The current schema 7 requires a matching verified backup for a
-planned downgrade.
+tariff history. Schema 11 cannot be opened by alpha.5; planned rollback requires
+restoring a matching verified old backup in an isolated environment.
+
+alpha.6 safely copies GeoIP inputs as streams and uses a fixed-purpose,
+unprivileged verification subprocess with bounded cancellation and resources.
+This preserves full Verify and paired activation; it does not inherit the
+historical real-MMDB result as acceptance of new program bytes.

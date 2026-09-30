@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -84,7 +85,7 @@ func TestBackfillCalendarRetentionAndImmutableConflict(t *testing.T) {
 				t.Fatalf("timezone conflict overwritten: %+v %v", again, err)
 			}
 			after, err := b.Store.Report(context.Background(), tc.first)
-			if err != nil || before != after {
+			if err != nil || !reflect.DeepEqual(before, after) {
 				t.Fatal("immutable archive changed")
 			}
 		})

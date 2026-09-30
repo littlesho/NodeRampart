@@ -3,6 +3,8 @@
 package config
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,9 +16,17 @@ import (
 	"time"
 
 	"github.com/littlesho/NodeRampart/internal/protocol"
+	"golang.org/x/sys/unix"
 )
 
 const maxConfigSize = 1 << 20
+
+// Fingerprint identifies the effective loaded configuration, including defaults.
+// Credentials remain in protected files and are not read or hashed here.
+func Fingerprint(c Config) string {
+	data, _ := json.Marshal(c)
+	return fmt.Sprintf("%x", sha256.Sum256(data))
+}
 
 type Duration struct{ time.Duration }
 
@@ -49,6 +59,7 @@ type Config struct {
 	Privacy       PrivacyConfig       `json:"privacy"`
 	Billing       BillingConfig       `json:"billing"`
 	Alerts        AlertsConfig        `json:"alerts"`
+	Heartbeat     HeartbeatConfig     `json:"heartbeat"`
 }
 
 type PathsConfig struct {
@@ -73,11 +84,12 @@ type SensorConfig struct {
 }
 
 type AuthConfig struct {
-	Enabled    bool     `json:"enabled"`
-	Journalctl string   `json:"journalctl"`
-	Threshold  int      `json:"threshold"`
-	Window     Duration `json:"window"`
-	Cooldown   Duration `json:"cooldown"`
+	Enabled             bool     `json:"enabled"`
+	Journalctl          string   `json:"journalctl"`
+	Threshold           int      `json:"threshold"`
+	Window              Duration `json:"window"`
+	Cooldown            Duration `json:"cooldown"`
+	HistoryHintsEnabled bool     `json:"history_hints_enabled"`
 }
 
 func (c SensorConfig) InterfaceNames() []string {
@@ -116,6 +128,7 @@ type GeoConfig struct {
 
 type NotificationsConfig struct {
 	Telegram    TelegramConfig `json:"telegram"`
+	Webhook     WebhookConfig  `json:"webhook"`
 	MergeWindow Duration       `json:"merge_window"`
 }
 
@@ -141,8 +154,9 @@ type PrivacyConfig struct {
 }
 
 type BillingConfig struct {
-	Enabled     bool   `json:"enabled"`
-	ProfilePath string `json:"profile_path"`
+	Enabled       bool   `json:"enabled"`
+	ProfilePath   string `json:"profile_path"`
+	CycleStartDay int    `json:"cycle_start_day"`
 }
 
 func Defaults() Config {
@@ -164,17 +178,25 @@ func Defaults() Config {
 			BytesPerSecond: 100 * 1024 * 1024, RecoveryRatio: 0.5, RecoveryWindows: 3,
 			UpdateInterval: Duration{5 * time.Minute}, ScanUniquePorts: 20, ScanWindow: Duration{60 * time.Second},
 		},
-		Notifications: NotificationsConfig{Telegram: TelegramConfig{TokenFile: "/etc/noderampart/telegram.token", Timeout: Duration{10 * time.Second}}, MergeWindow: Duration{10 * time.Minute}},
+		Notifications: NotificationsConfig{Telegram: TelegramConfig{TokenFile: "/etc/noderampart/telegram.token", Timeout: Duration{10 * time.Second}}, Webhook: WebhookConfig{CredentialFile: "/etc/noderampart/webhook.token", Timeout: Duration{10 * time.Second}}, MergeWindow: Duration{10 * time.Minute}},
+		Heartbeat:     HeartbeatConfig{CredentialFile: "/etc/noderampart/heartbeat.token", Interval: Duration{5 * time.Minute}, Timeout: Duration{10 * time.Second}},
 		Reports:       ReportsConfig{Enabled: true, DailyAt: "09:00", Timezone: "Local", TopN: 10, BackfillDays: 7},
 		Privacy:       PrivacyConfig{NotificationIP: "prefix", StoreIP: "prefix"},
+		Billing:       BillingConfig{CycleStartDay: 1},
 	}
 }
 
 func Load(path string) (Config, error) {
 	cfg := Defaults()
-	info, err := os.Lstat(path)
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
-		return cfg, fmt.Errorf("stat config: %w", err)
+		return cfg, fmt.Errorf("open config: %w", err)
+	}
+	f := os.NewFile(uintptr(fd), "configuration")
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return cfg, errors.New("configuration could not be inspected")
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 		return cfg, errors.New("config must be a regular file, not a symlink")
@@ -185,12 +207,11 @@ func Load(path string) (Config, error) {
 	if info.Size() > maxConfigSize {
 		return cfg, errors.New("config exceeds 1 MiB limit")
 	}
-	f, err := os.Open(path)
-	if err != nil {
-		return cfg, fmt.Errorf("open config: %w", err)
+	data, err := io.ReadAll(io.LimitReader(f, maxConfigSize+1))
+	if err != nil || len(data) > maxConfigSize {
+		return cfg, errors.New("configuration read failed or exceeded the 1 MiB limit")
 	}
-	defer f.Close()
-	decoder := json.NewDecoder(io.LimitReader(f, maxConfigSize+1))
+	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&cfg); err != nil {
 		return cfg, fmt.Errorf("decode config: %w", err)
@@ -206,6 +227,9 @@ func Load(path string) (Config, error) {
 }
 
 func (c Config) Validate() error {
+	if err := c.validateOutbound(); err != nil {
+		return err
+	}
 	if err := c.validateAlerts(); err != nil {
 		return err
 	}
@@ -307,12 +331,19 @@ func (c Config) Validate() error {
 		} else if strings.IndexFunc(c.Notifications.Telegram.ChatID, func(r rune) bool { return r < 0x20 || r == 0x7f }) >= 0 {
 			problems = append(problems, "telegram.chat_id must not contain control characters")
 		}
+		chat, err := strconv.ParseInt(c.Notifications.Telegram.ChatID, 10, 64)
+		if err != nil || chat == 0 || strings.TrimSpace(c.Notifications.Telegram.ChatID) != c.Notifications.Telegram.ChatID {
+			problems = append(problems, "telegram.chat_id must be a nonzero numeric chat ID; mutable usernames cannot establish receiver identity")
+		}
 		if c.Notifications.Telegram.Timeout.Duration < time.Second || c.Notifications.Telegram.Timeout.Duration > time.Minute {
 			problems = append(problems, "telegram.timeout must be 1s..1m")
 		}
 	}
 	if c.Reports.TopN < 1 || c.Reports.TopN > 50 {
 		problems = append(problems, "reports.top_n must be 1..50")
+	}
+	if c.Billing.CycleStartDay < 1 || c.Billing.CycleStartDay > 28 {
+		problems = append(problems, "billing.cycle_start_day must be 1..28")
 	}
 	if c.Reports.BackfillDays < 0 || c.Reports.BackfillDays > 31 {
 		return errors.New("reports.backfill_days must be 0..31")

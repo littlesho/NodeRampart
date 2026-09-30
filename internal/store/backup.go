@@ -87,7 +87,10 @@ func RestoreBackup(ctx context.Context, source, target string) (BackupInfo, erro
 }
 
 func openReadOnlySnapshot(path string) (*sql.DB, error) {
-	uri := (&url.URL{Scheme: "file", Path: path}).String() + "?mode=ro"
+	// mode=ro protects the source. query_only is applied by verifySnapshot,
+	// because RestoreBackup legitimately VACUUMs into a different new file.
+	parameters := url.Values{"mode": {"ro"}, "_pragma": {"busy_timeout=100", "trusted_schema=OFF", "foreign_keys=ON"}}
+	uri := (&url.URL{Scheme: "file", Path: path, RawQuery: parameters.Encode()}).String()
 	db, err := sql.Open("sqlite", uri)
 	if err != nil {
 		return nil, err
@@ -144,6 +147,13 @@ func verifySnapshot(ctx context.Context, path string) (BackupInfo, error) {
 	}
 	if !valid {
 		return BackupInfo{}, errors.New("backup integrity check produced no result")
+	}
+	foreignKeys, err := checkForeignKeys(ctx, db)
+	if err != nil {
+		return BackupInfo{}, fmt.Errorf("check backup foreign keys: %w", err)
+	}
+	if len(foreignKeys.Violations) != 0 {
+		return BackupInfo{}, errors.New("backup contains foreign-key violations; preserve original and investigate before restore")
 	}
 	if version >= 7 {
 		if _, err := (&Store{db: db}).JournalCheckpoint(ctx); err != nil {
@@ -248,6 +258,23 @@ func verifySnapshotSchema(ctx context.Context, db *sql.DB) (int, error) {
 	}
 	if version >= 7 {
 		tables["journal_recovery"] = "id pending"
+	}
+	if version >= 8 {
+		tables["notification_outbox"] += " channel isolated_at"
+		tables["notification_targets"] = "channel destination privacy_mode enabled"
+	}
+	if version >= 9 {
+		tables["report_snapshots"] += " document_json"
+	}
+	if version >= 11 {
+		tables["event_notifications"] += " channel"
+	}
+	if version >= 10 {
+		tables["sensor_watermarks"] = "session_id interface sequence sent_at_us committed_at events_complete notifications_complete complete reason sequence_gaps duplicates health_json"
+		tables["sensor_commit_state"] = "id retired_before_us"
+		if err := verifySensorCommitState(ctx, db); err != nil {
+			return 0, err
+		}
 	}
 	rows, err = db.QueryContext(ctx, `SELECT name FROM sqlite_schema WHERE type='table'`)
 	if err != nil {

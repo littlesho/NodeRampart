@@ -50,6 +50,7 @@ func (u *ui) configuration() {
 	}
 	items = append(items,
 		menuItem{"Validate draft", "检查配置草稿", "Check all settings together before saving.", "保存前联合检查所有设置。", func() { u.validateDraft() }},
+		menuItem{"Try thresholds on offline data", "使用离线数据试运行阈值", "Compare current and draft rules before the existing review and save step.", "比较当前规则与草稿，再按原有流程检查并保存。", u.previewThresholdDraft},
 		menuItem{"Review and save", "确认并保存", "Save validated settings; applying may briefly restart services.", "保存有效配置；生效时可能短暂重启服务。", u.saveConfiguration},
 		menuItem{"Discard edits and reload", "放弃修改并重新加载", "Reload the latest file without saving this draft.", "重新读取最新文件，不保存当前草稿。", func() {
 			u.confirm(u.tr("Discard this draft and reload the current configuration?", "放弃当前草稿并重新加载配置？"), func() { u.dirty = false; u.changed = map[string]bool{}; u.loaded = false; u.configuration() }, u.configuration)
@@ -150,6 +151,9 @@ func (u *ui) saveConfiguration() {
 		u.changed = map[string]bool{}
 		u.output(u.tr("Configuration", "功能配置"), u.tr("There are no effective changes.", "没有实际修改。"), u.configuration)
 		return
+	}
+	if u.baseline.Notifications != u.snapshot.Config.Notifications || u.baseline.Privacy.NotificationIP != u.snapshot.Config.Privacy.NotificationIP {
+		diff += "\n\n" + u.tr("Receiver or uncertain credential changes keep older messages isolated; stricter privacy isolates older bodies. Retention is the default. Use Notifications to inspect or explicitly discard isolated bodies for a selected channel; active and sent history are preserved.", "更换收件人或无法确认身份的凭据会保留隔离旧消息；收紧通知隐私也会隔离旧正文。默认保留，可在通知菜单检查或显式丢弃所选通道的隔离正文；保留活动队列与已发送历史。")
 	}
 	pages, truncated := outputPages(diff)
 	u.outputPageAction(u.tr("Review configuration changes", "检查配置修改"), pages, 0, truncated, u.tr("Save and apply", "保存并应用"), func() {

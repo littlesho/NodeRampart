@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Version          = 3
+	Version          = 5
 	MaxFrameSize     = 1 << 20
 	MaxFlowsPerBatch = 4096
 	MaxInterfaces    = 8
@@ -28,7 +28,17 @@ const (
 	MaxRemoteIPText = 45
 	maxFlowPackets  = 1 << 36
 	maxFlowBytes    = 1 << 40
+	// The nominal maximum remains one minute. Version 4 permits bounded real
+	// elapsed jitter without changing the observation's rate denominator.
+	MaxBatchIntervalMillis = 65_000
 )
+
+// MaxElapsedInterval allows one sender blocking budget at short periods and
+// 10% scheduling jitter at longer periods, capped at five seconds. Longer
+// windows must be discarded as loss and establish a new capture baseline.
+func MaxElapsedInterval(nominal time.Duration) time.Duration {
+	return nominal + min(max(250*time.Millisecond, nominal/10), 5*time.Second)
+}
 
 func ValidInterfaceName(name string) bool {
 	return name != "" && len(name) <= 15 && !strings.Contains(name, "/") && strings.IndexFunc(name, func(r rune) bool { return r <= 0x20 || r == 0x7f }) < 0
@@ -48,25 +58,28 @@ type Flow struct {
 type Batch struct {
 	// ConnectionID is assigned by the daemon after authenticated decoding.
 	// It is not a wire field and cannot be supplied by a sensor JSON frame.
-	ConnectionID      uint64    `json:"-"`
-	ProtocolVersion   int       `json:"protocol_version"`
-	SentAt            time.Time `json:"sent_at_utc"`
-	IntervalMillis    int64     `json:"interval_millis"`
-	Interface         string    `json:"interface"`
-	Flows             []Flow    `json:"flows"`
-	RXBytes           uint64    `json:"rx_bytes"`
-	TXBytes           uint64    `json:"tx_bytes"`
-	RXPackets         uint64    `json:"rx_packets"`
-	TXPackets         uint64    `json:"tx_packets"`
-	InboundSYN        uint64    `json:"inbound_syn_packets"`
-	InboundUDP        uint64    `json:"inbound_udp_packets"`
-	InboundICMP       uint64    `json:"inbound_icmp_packets"`
-	KernelPackets     uint64    `json:"kernel_packets"`
-	KernelDrops       uint64    `json:"kernel_drops"`
-	KernelStatsErrors uint64    `json:"kernel_stats_errors"`
-	OverflowBytes     uint64    `json:"overflow_bytes"`
-	OverflowPackets   uint64    `json:"overflow_packets"`
-	ParseErrors       uint64    `json:"parse_errors"`
+	ConnectionID      uint64                `json:"-"`
+	Acknowledge       func(CommitACK) error `json:"-"`
+	ProtocolVersion   int                   `json:"protocol_version"`
+	SessionID         string                `json:"session_id,omitempty"`
+	Sequence          uint64                `json:"sequence,omitempty"`
+	SentAt            time.Time             `json:"sent_at_utc"`
+	IntervalMillis    int64                 `json:"interval_millis"`
+	Interface         string                `json:"interface"`
+	Flows             []Flow                `json:"flows"`
+	RXBytes           uint64                `json:"rx_bytes"`
+	TXBytes           uint64                `json:"tx_bytes"`
+	RXPackets         uint64                `json:"rx_packets"`
+	TXPackets         uint64                `json:"tx_packets"`
+	InboundSYN        uint64                `json:"inbound_syn_packets"`
+	InboundUDP        uint64                `json:"inbound_udp_packets"`
+	InboundICMP       uint64                `json:"inbound_icmp_packets"`
+	KernelPackets     uint64                `json:"kernel_packets"`
+	KernelDrops       uint64                `json:"kernel_drops"`
+	KernelStatsErrors uint64                `json:"kernel_stats_errors"`
+	OverflowBytes     uint64                `json:"overflow_bytes"`
+	OverflowPackets   uint64                `json:"overflow_packets"`
+	ParseErrors       uint64                `json:"parse_errors"`
 	// IPC loss is an estimate: a failed write does not prove that the peer
 	// received no bytes. These counters never contribute to traffic rates.
 	IPCDroppedBatches       uint64 `json:"ipc_dropped_batches,omitempty"`
@@ -84,9 +97,17 @@ func (b *Batch) Validate() error {
 func (b *Batch) ValidateAt(reference time.Time) error {
 	// New daemons accept the previous sensor during a daemon-first upgrade.
 	// Version 3 adds remote ports for bounded UDP request/reply correlation.
+	// Version 4 retains the real elapsed interval up to 65 seconds. Versions
+	// 1-3 retain their original 60-second structural bound.
+	// Version 5 adds bounded session/sequence identity, cumulative collector
+	// health and durable acknowledgments. Unsequenced offline batches remain
+	// valid but cannot receive persistence confirmation.
 	// Older daemons reject new fields, so upgrade the daemon before the sensor.
 	if b.ProtocolVersion < 1 || b.ProtocolVersion > Version {
 		return fmt.Errorf("unsupported sensor protocol version %d", b.ProtocolVersion)
+	}
+	if b.ProtocolVersion < 5 && (b.SessionID != "" || b.Sequence != 0) || b.ProtocolVersion >= 5 && (b.SessionID != "" || b.Sequence != 0) && (!ValidSessionID(b.SessionID) || b.Sequence == 0 || b.Sequence > 1<<63-1) {
+		return errors.New("invalid sensor session or sequence")
 	}
 	if b.SentAt.IsZero() || b.SentAt.Year() < 1970 || b.SentAt.Year() > 9999 || reference.IsZero() {
 		return errors.New("missing sent_at_utc")
@@ -94,7 +115,11 @@ func (b *Batch) ValidateAt(reference time.Time) error {
 	if delta := reference.Sub(b.SentAt); delta > 10*time.Minute || delta < -10*time.Minute {
 		return errors.New("sent_at_utc outside clock-skew bounds")
 	}
-	if b.IntervalMillis < 100 || b.IntervalMillis > 60_000 {
+	maximumInterval := int64(MaxBatchIntervalMillis)
+	if b.ProtocolVersion < 4 {
+		maximumInterval = 60_000
+	}
+	if b.IntervalMillis < 100 || b.IntervalMillis > maximumInterval {
 		return errors.New("interval_millis outside safe bounds")
 	}
 	if b.Interface == "" || len(b.Interface) > 15 {
@@ -158,6 +183,36 @@ func (b *Batch) ValidateAt(reference time.Time) error {
 		return errors.New("inbound protocol counters exceed received packets")
 	}
 	return nil
+}
+
+func ValidSessionID(value string) bool {
+	if len(value) != 32 {
+		return false
+	}
+	for _, c := range value {
+		if c < '0' || c > '9' && c < 'a' || c > 'f' {
+			return false
+		}
+	}
+	return true
+}
+
+// CommitACK names the two datasets sharing the watermark transaction. Event
+// persistence and notification decisions have independent bounded queues and
+// are explicit; a partial result never claims complete processing.
+type CommitACK struct {
+	ProtocolVersion        int    `json:"protocol_version"`
+	SessionID              string `json:"session_id"`
+	Interface              string `json:"interface"`
+	Sequence               uint64 `json:"sequence"`
+	CommittedSequence      uint64 `json:"committed_sequence"`
+	HealthCommitted        bool   `json:"collector_health_committed"`
+	TrafficCommitted       bool   `json:"traffic_committed"`
+	EventsCommitted        bool   `json:"events_committed"`
+	NotificationsCommitted bool   `json:"notification_decisions_committed"`
+	Complete               bool   `json:"complete"`
+	Duplicate              bool   `json:"duplicate"`
+	Reason                 string `json:"reason"`
 }
 
 func WriteFrame(w io.Writer, value any) error {

@@ -243,7 +243,7 @@ type monitorObservation struct {
 func evaluateMonitor(previous monitorData, in monitorObservation, cfg config.AlertsConfig, started time.Time) (monitorData, []model.Event) {
 	next := previous
 	next.SchemaVersion = 2
-	if in.Now.Before(previous.ObservedAt) || in.Status.Period != "" && previous.Period != "" && in.Status.Period < previous.Period {
+	if monitorRollback(previous, in) {
 		return previous, nil
 	}
 	next.ObservedAt = in.Now
@@ -378,7 +378,16 @@ func evaluateBudget(next, previous monitorData, in monitorObservation) (monitorD
 		next.Status = previous.Status
 		return next, nil
 	}
-	if previous.Period != s.Period {
+	cycleChanged := billingCycleChanged(previous, in)
+	if previous.Period != s.Period || cycleChanged {
+		if cycleChanged {
+			coverage := previous.Status.Coverage
+			if coverage != "adequate_recorded" && coverage != "incomplete" {
+				coverage = "unknown"
+			}
+			next.PreviousPeriod = MonitorPeriodResult{Period: previous.Period, Start: previous.PeriodStart, End: previous.PeriodEnd, Reason: "billing_cycle_changed", Milestone: previous.Milestone, Coverage: coverage}
+			next.Status.PreviousPeriod = next.PreviousPeriod
+		}
 		next.Period = s.Period
 		next.PeriodStart = s.PeriodStart
 		next.PeriodEnd = s.PeriodEnd

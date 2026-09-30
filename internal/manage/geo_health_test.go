@@ -132,8 +132,7 @@ func TestGeoSchedulingRecoveryPreservesUpdateOutcomeAcrossManagerRestart(t *test
 	}
 	// A new Manager has no health cache; only the sanitized persisted file
 	// carries both outcomes across invocations/restarts.
-	copy := *m
-	m = &copy
+	m = copyManagerFixture(m)
 	failed = false
 	if _, err := m.Action(ctx, "geo_schedule", map[string]string{"enabled": "yes"}); err != nil {
 		t.Fatal(err)

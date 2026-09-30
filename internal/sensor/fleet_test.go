@@ -22,7 +22,7 @@ import (
 func TestDeliveryLossIsIsolatedAndRetirementBoundsChurn(t *testing.T) {
 	connection := &recordingConnection{}
 	fail := true
-	s := &BatchSender{connect: func() (batchConnection, error) {
+	s := &BatchSender{connect: func(time.Duration) (batchConnection, error) {
 		if fail {
 			return nil, errors.New("offline")
 		}
@@ -88,7 +88,7 @@ func TestCaptureFleetPartitionsBudgetsAndRetiresBeforeReplacement(t *testing.T) 
 	opened := []*fakeCapture{}
 	connection := &recordingConnection{}
 	f := &Fleet{Limit: 2, MaxFlows: 4096, ReceiveBuffer: 1 << 20, BatchInterval: time.Second,
-		Sender: &BatchSender{connect: func() (batchConnection, error) { return connection, nil }}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), slots: map[string]*captureSlot{}}
+		Sender: &BatchSender{connect: func(time.Duration) (batchConnection, error) { return connection, nil }}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), slots: map[string]*captureSlot{}}
 	f.resolve = func(context.Context, []string) ([]collector.InterfaceRef, error) { return refs, nil }
 	f.open = func(_ string, buffer int) (captureSource, error) {
 		if buffer != 1<<19 {

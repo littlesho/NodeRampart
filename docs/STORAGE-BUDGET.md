@@ -100,11 +100,65 @@ Online control restricts output to the state's direct `backups` directory.
 
 Verification opens a standalone snapshot read-only. It rejects live SQLite
 sidecars, corruption, unsupported/missing migration steps, missing required
-columns or tables, and executable schema objects. Restore verifies the source
+columns or tables, executable schema objects, and foreign-key violations. Restore verifies the source
 and uses SQLite to build another consistent database at a **new** output path.
 It never overwrites the original database. Stop the daemon, restore to the new
 path, review the result, and select that path in configuration. Keep the original
 until the restored daemon and data have been checked.
+
+Historical orphan detection is read-only. Enabling foreign keys on every new
+connection prevents new violations but cannot repair retained old rows. A
+violation is a confirmed history inconsistency, not an instruction to erase
+it. A normal backup containing a violation fails verification.
+
+For an operator-reviewed repair, first stop all users of this database and
+retain a private forensic copy of the closed database and any remaining SQLite
+sidecars. Do not discard an unresolved journal or call this copy a verified
+backup. Inspect `PRAGMA foreign_key_check` on a separate copy, identify the
+exact affected relationship and reviewed row IDs, and repair only those rows
+inside a transaction. Retain the original and an audit of the selected IDs;
+never delete all unlinked history. Re-run integrity, foreign-key, schema and
+backup verification before considering a recovered copy for use. This release
+does not provide an automatic database repair command.
+
+When historical orphans prevent a migration (including schema 11), live daemon
+diagnostics may be unavailable. After stopping **all** database users, preserve
+the original database and every remaining `-wal`, `-shm` and `-journal` in a
+private forensic evidence directory before doing anything else. Preserve that
+complete evidence unchanged. Do not delete or rename an unresolved journal to
+make a command accept the database. On a separate copy that has independently
+been established as a standalone SQLite database, use:
+
+~~~bash
+noderampart doctor --foreign-keys-snapshot /private/standalone-copy.db --config /private/config.json
+~~~
+
+The supplied snapshot must be a bounded regular file owned by the invoking user
+or root, without hardlinks, writable sharing, symlink traversal or any SQLite
+sidecar. This check opens it read-only, accepts verified supported historical
+schemas, and reports at most 100 table/parent relationships with a truncation
+flag. It prints no event IDs or bodies, performs no migration or repair, and
+never deletes evidence. Unknown/future schemas, active sidecars, unsafe inputs
+and cancellation mean the check could not reliably determine foreign-key
+status; they are not healthy results. This check is not full backup verification.
+
+历史孤儿检测只读；每条新连接启用外键不会自动修复旧历史。发现外键违规后，正常
+备份验证会失败。人工修复必须先停止所有数据库使用者，私密保留已关闭数据库及剩余
+SQLite sidecar 的取证副本，不丢弃未恢复的 journal，也不把取证副本称为已验证备份。
+只在另一份隔离副本上查看 `PRAGMA foreign_key_check`，逐项审查关系及行标识，事务内
+仅修复明确选定的行，保留原库及审计记录。完成完整性、外键、schema 和备份验证后再
+决定是否启用恢复副本；本版本没有自动数据库修复器。
+
+历史孤儿导致迁移（包括 schema 11）拒绝时，daemon 无法启动，在线诊断也可能不可用。
+必须先停止所有数据库使用者，私密完整保留原库及剩余的 `-wal`、`-shm`、`-journal`
+作为取证证据，保持该完整副本不变；绝不能为让命令通过而删除或改名未决 journal。
+只有另一份已独立确认是 standalone SQLite 的副本才可运行上述
+`doctor --foreign-keys-snapshot /private/standalone-copy.db --config /private/config.json`。
+输入须为当前调用用户或 root 所有、有界且不可共享写入的普通文件，不允许硬链接、
+符号链接遍历或任何 SQLite sidecar。检查只读打开、接受已核验的历史支持 schema，
+最多报告 100 个表/父表关系并标明截断，不打印事件 ID/正文，不迁移、修复或删除证据。
+未来/未知 schema、活动 sidecar、不安全输入及取消均表示无法可靠判断，不代表健康；
+此专项检测也不等于完整备份验证。
 
 Unit tests exercise committed-WAL backup/restore, strong-mode backup, exclusive
 ownership, corruption/schema rejection, path/symlink checks, cancellation, page

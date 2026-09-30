@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -31,7 +32,10 @@ func legacyV4Report(t *testing.T) (string, ReportSnapshot) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	for _, statement := range []string{`DROP TABLE journal_recovery`, `DROP TABLE monitor_state`, `DROP TABLE retention_meta`, `DROP TABLE retention_ledger`, `DROP TABLE retention_totals`, `ALTER TABLE report_snapshots DROP COLUMN billing_json`, `DELETE FROM schema_migrations WHERE version>=5`, `PRAGMA journal_mode=DELETE`} {
+	if err := downgradeSnapshotSchemaReference(context.Background(), db, 4); err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{`DELETE FROM schema_migrations WHERE version>4`, `PRAGMA journal_mode=DELETE`} {
 		if _, err := db.Exec(statement); err != nil {
 			t.Fatal(err)
 		}
@@ -52,7 +56,7 @@ func TestMigrationV5PreservesOldReportsAndBoundsPricing(t *testing.T) {
 	}
 	defer s.Close()
 	r, err := s.Report(ctx, original.Date)
-	if err != nil || r.Billing != nil || r != original {
+	if err != nil || r.Billing != nil || !reflect.DeepEqual(r, original) {
 		t.Fatal("migration altered archive", err)
 	}
 	if _, err := s.db.Exec(`UPDATE report_snapshots SET billing_json=?`, strings.Repeat("x", 16385)); err == nil {

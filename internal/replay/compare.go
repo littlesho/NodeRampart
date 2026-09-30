@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -36,9 +37,57 @@ func LoadRules(path string) (Rules, error) {
 	if err != nil || strictJSON(data, &cfg) != nil || cfg.Validate() != nil {
 		return Rules{}, errors.New("invalid replay threshold configuration")
 	}
-	// Journalctl is a fixed validated config path, but replay never uses it.
+	return RulesFromConfig(cfg)
+}
+
+// RulesFromConfig extracts only the settings used by the offline detectors.
+// It does not read configuration dependencies or contact the daemon.
+func RulesFromConfig(cfg config.Config) (Rules, error) {
+	if err := cfg.Validate(); err != nil {
+		return Rules{}, errors.New("invalid replay threshold configuration")
+	}
 	cfg.Auth.Journalctl = ""
 	return Rules{NetworkEnabled: cfg.Sensor.Enabled, Detection: cfg.Detection, Auth: cfg.Auth}, nil
+}
+
+func RulesFingerprint(rules Rules) string {
+	data, _ := json.Marshal(rules)
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+// LoadComparison reads a bounded local comparison. Feedback never copies its
+// source addresses; event identifiers are scoped by input, side and rule hash.
+func LoadComparison(path string) (Comparison, error) {
+	file, err := openInput(path, 4<<20)
+	if err != nil {
+		return Comparison{}, err
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, (4<<20)+1))
+	var result Comparison
+	if err != nil || len(data) > 4<<20 {
+		return Comparison{}, errors.New("comparison exceeds its input budget")
+	}
+	if strictJSONLimit(data, &result, 4<<20) != nil {
+		var preview struct {
+			Current    string     `json:"current_config_sha256"`
+			Draft      string     `json:"draft_config_sha256"`
+			Comparison Comparison `json:"comparison"`
+			Limits     []string   `json:"limitations"`
+		}
+		if strictJSONLimit(data, &preview, 4<<20) != nil {
+			return Comparison{}, errors.New("invalid local threshold comparison")
+		}
+		result = preview.Comparison
+	}
+	if result.FormatVersion != Version || len(result.InputSHA256) != 64 || len(result.Baseline.Events) > MaxEvents || len(result.Candidate.Events) > MaxEvents {
+		return Comparison{}, errors.New("invalid or unsupported local threshold comparison")
+	}
+	if _, err := hex.DecodeString(result.InputSHA256); err != nil {
+		return Comparison{}, errors.New("invalid comparison input fingerprint")
+	}
+	return result, nil
 }
 
 type EventSummary struct {

@@ -113,19 +113,30 @@ func TestHumanResultsKeepExactCountersAndUnknownFields(t *testing.T) {
 	}
 }
 
+func TestOutputTruncationPreservesCompleteRunePrefix(t *testing.T) {
+	for _, remaining := range []int{1, 2, 3} {
+		prefix := strings.Repeat("a", maxOutputBytes-remaining)
+		pages, truncated := outputPages(prefix + "🧪")
+		if !truncated || strings.Join(pages, "") != prefix {
+			t.Fatalf("partial four-byte rune altered retained prefix with %d bytes remaining", remaining)
+		}
+	}
+}
+
 type backendCall struct {
 	id   string
 	args map[string]string
 }
 type fakeBackend struct {
-	cfg    config.Config
-	calls  chan backendCall
-	saves  chan Snapshot
-	action func(context.Context, string, map[string]string) (string, error)
+	cfg     config.Config
+	loadErr error
+	calls   chan backendCall
+	saves   chan Snapshot
+	action  func(context.Context, string, map[string]string) (string, error)
 }
 
 func (b *fakeBackend) Load(context.Context) (Snapshot, error) {
-	return Snapshot{Config: b.cfg, Fingerprint: "synthetic-fingerprint"}, nil
+	return Snapshot{Config: b.cfg, Fingerprint: "synthetic-fingerprint"}, b.loadErr
 }
 func (b *fakeBackend) Save(_ context.Context, s Snapshot) (string, error) {
 	b.saves <- s
@@ -370,7 +381,7 @@ func TestSimulationConfigSavePreservesAdvancedSettingsAndRequiresConfirmation(t 
 	awaitFrame(t, s, "Host identity")
 	key(s, tcell.KeyEscape)
 	awaitFrame(t, s, "unsaved edits")
-	selectIndex(s, len(groups)+1)
+	selectIndex(s, len(groups)+2)
 	frame := awaitFrame(t, s, "Review configuration changes")
 	if !strings.Contains(frame, `"fixture" → "new-host"`) {
 		t.Fatal("missing old/new configuration diff")
@@ -385,7 +396,7 @@ func TestSimulationConfigSavePreservesAdvancedSettingsAndRequiresConfirmation(t 
 		t.Fatal("save happened before confirmation")
 	default:
 	}
-	selectIndex(s, len(groups)+1)
+	selectIndex(s, len(groups)+2)
 	awaitFrame(t, s, "Review configuration changes")
 	key(s, tcell.KeyTab)
 	key(s, tcell.KeyEnter)
@@ -579,6 +590,19 @@ func TestGeoTermsAndDestructiveWordsGateBackendCalls(t *testing.T) {
 	}
 }
 
+func TestChineseTextAtOutputLimit(t *testing.T) {
+	text := strings.Repeat("中", maxOutputBytes/3+1)
+	pages, cut := outputPages(text)
+	if !cut || strings.Join(pages, "") != strings.Repeat("中", maxOutputBytes/3) {
+		t.Fatal("valid Chinese was replaced at the byte limit")
+	}
+	if cleanText("中文说明 → SSH") != "中文说明 → SSH" {
+		t.Fatal("text sanitization changed legitimate Chinese or symbols")
+	}
+	// Malformed input consisting only of continuation bytes must remain bounded.
+	_, _ = outputPages(strings.Repeat("\x80", maxOutputBytes+1))
+}
+
 func TestTerminalLocalePolicy(t *testing.T) {
 	for _, tc := range []struct {
 		name, all, ctype, lang string
@@ -610,17 +634,4 @@ func TestTerminalLocalePolicy(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestChineseTextAtOutputLimit(t *testing.T) {
-	text := strings.Repeat("中", maxOutputBytes/3+1)
-	pages, cut := outputPages(text)
-	if !cut || strings.Join(pages, "") != strings.Repeat("中", maxOutputBytes/3) {
-		t.Fatal("valid Chinese was replaced at the byte limit")
-	}
-	if cleanText("中文说明 → SSH") != "中文说明 → SSH" {
-		t.Fatal("text sanitization changed legitimate Chinese or symbols")
-	}
-	// Malformed input consisting only of continuation bytes must remain bounded.
-	_, _ = outputPages(strings.Repeat("\x80", maxOutputBytes+1))
 }

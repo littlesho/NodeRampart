@@ -14,33 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  secrets:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check out complete public history
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Scan with a fixed, checksum-verified Gitleaks build
-        shell: bash
-        run: |
-          set -euo pipefail
-          SCAN_DIR=$(mktemp -d)
-          trap 'rm -rf -- "$SCAN_DIR"' EXIT
-          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
-            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
-            --output "$SCAN_DIR/gitleaks.tar.gz"
-          printf '%s  %s\n' 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb "$SCAN_DIR/gitleaks.tar.gz" | sha256sum --check --status
-          tar -xzf "$SCAN_DIR/gitleaks.tar.gz" -C "$SCAN_DIR" gitleaks
-          : > "$SCAN_DIR/empty-ignore"
-          "$SCAN_DIR/gitleaks" git . --log-opts='--all --full-history' \
-            --config .gitleaks.toml --gitleaks-ignore-path "$SCAN_DIR/empty-ignore" \
-            --ignore-gitleaks-allow --redact=100 --no-banner
-          "$SCAN_DIR/gitleaks" dir . --config .gitleaks.toml \
-            --gitleaks-ignore-path "$SCAN_DIR/empty-ignore" \
-            --ignore-gitleaks-allow --redact=100 --no-banner
+  safety:
+    uses: ./.github/workflows/safety.yml
 
   test:
     outputs:
@@ -52,9 +27,10 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Read verified source metadata
+      - name: Read verified source metadata once
         id: metadata
         env:
           EXPECTED_COMMIT: ${{ github.sha }}
@@ -66,33 +42,11 @@ jobs:
           go-version: 1.26.8
           cache: true
 
-      - name: Verify dependencies
-        run: go mod verify
-
-      - name: Check formatting
-        run: test -z "$(gofmt -l .)"
-
-      - name: Packaging safety regression tests
-        run: |
-          python3 scripts/test-packaging.py
-          python3 scripts/test-bootstrap.py
-          python3 scripts/test-release-sbom.py
-          python3 scripts/test-lab-check.py
-          python3 scripts/test-netns.py --self-test
-
-      - name: Vet
-        run: go vet ./...
-
-      - name: Unit tests with race detector
-        run: go test -race -count=1 ./...
-
-      - name: Unit tests with coverage
-        run: go test -count=1 -coverprofile=coverage.out ./...
-
-      - name: Vulnerability scan
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
+      - name: Required candidate validation
+        run: ./scripts/validate.sh
 
   build:
+    needs: [test, safety]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -103,6 +57,7 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Set up Go
@@ -116,10 +71,12 @@ jobs:
           GOOS: linux
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: "0"
+          COMMIT: ${{ needs.test.outputs.commit }}
+          BUILD_DATE: ${{ needs.test.outputs.build_date }}
         run: |
           mkdir -p "dist/linux-${GOARCH}"
           VERSION=$(tr -d '\n' < VERSION)
-          LDFLAGS="-s -w -X github.com/littlesho/NodeRampart/internal/version.Version=${VERSION} -X github.com/littlesho/NodeRampart/internal/version.Commit=${GITHUB_SHA}"
+          LDFLAGS="-s -w -X github.com/littlesho/NodeRampart/internal/version.Version=${VERSION} -X github.com/littlesho/NodeRampart/internal/version.Commit=${COMMIT} -X github.com/littlesho/NodeRampart/internal/version.BuildDate=${BUILD_DATE}"
           go build -buildvcs=false -trimpath -ldflags "$LDFLAGS" -o "dist/linux-${GOARCH}/noderampart" ./cmd/noderampart
           go build -buildvcs=false -trimpath -ldflags "$LDFLAGS" -o "dist/linux-${GOARCH}/noderampartd" ./cmd/noderampartd
           go build -buildvcs=false -trimpath -ldflags "$LDFLAGS" -o "dist/linux-${GOARCH}/noderampart-sensor" ./cmd/noderampart-sensor
@@ -133,12 +90,14 @@ jobs:
           if-no-files-found: error
 
   deb-package:
+    needs: [test, safety]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Set up Go
@@ -148,6 +107,9 @@ jobs:
           cache: true
 
       - name: Build Debian package
+        env:
+          COMMIT: ${{ needs.test.outputs.commit }}
+          BUILD_DATE: ${{ needs.test.outputs.build_date }}
         run: |
           make build
           ./scripts/build-deb.sh
@@ -160,47 +122,8 @@ jobs:
           path: dist/*.deb
           if-no-files-found: error
 
-  fuzz:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - package: ./internal/collector
-            target: FuzzParseSSH
-          - package: ./internal/collector
-            target: FuzzJournalRecord
-          - package: ./internal/protocol
-            target: FuzzReadFrame
-          - package: ./internal/config
-            target: FuzzLoadConfig
-          - package: ./internal/sensor
-            target: FuzzDecodeEthernet
-          - package: ./internal/collector
-            target: FuzzDefaultRoute
-          - package: ./internal/replay
-            target: FuzzReplayMetadata
-    steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: 1.26.8
-          cache: true
-      - name: Mutate bounded unprivileged inputs
-        env:
-          GOMAXPROCS: "2"
-          GOMEMLIMIT: 768MiB
-          FUZZ_PACKAGE: ${{ matrix.package }}
-          FUZZ_TARGET: ${{ matrix.target }}
-        run: go test "$FUZZ_PACKAGE" -run='^$' -fuzz="^${FUZZ_TARGET}$" -fuzztime=30s -parallel=2 -timeout=2m
-
   rpm-package:
-    needs: test
+    needs: [test, safety]
     strategy:
       fail-fast: false
       matrix:
@@ -215,8 +138,9 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Build through the actual Release RPM entry point
+      - name: Build through the actual release RPM entry point
         env:
           GOTOOLCHAIN: local
           COMMIT: ${{ needs.test.outputs.commit }}

@@ -25,6 +25,14 @@ type fakeServices struct {
 	restartFailures int
 }
 
+// Recreate a restarted/staged manager without copying live lock ownership.
+func copyManagerFixture(m *Manager) *Manager {
+	return &Manager{ConfigPath: m.ConfigPath, Request: m.Request, Assets: m.Assets,
+		daemonUID: m.daemonUID, daemonGID: m.daemonGID, lockPath: m.lockPath,
+		unitDir: m.unitDir, tmpfilesDir: m.tmpfilesDir, stateDir: m.stateDir,
+		runtimeDir: m.runtimeDir, binary: m.binary, sandbox: m.sandbox, runner: m.runner}
+}
+
 func fixtureManager(t *testing.T) (*Manager, *fakeServices) {
 	t.Helper()
 	base := t.TempDir()
@@ -72,7 +80,16 @@ func fixtureManager(t *testing.T) (*Manager, *fakeServices) {
 		}
 		return "", nil
 	}
-	m.Request = func(context.Context, string, any) (json.RawMessage, error) { return json.RawMessage(`{}`), nil }
+	m.Request = func(context.Context, string, any) (json.RawMessage, error) {
+		cfg, err := config.Load(m.ConfigPath)
+		if err != nil {
+			return nil, err
+		}
+		encoded, err := json.Marshal(map[string]any{"readiness": map[string]any{"configuration_loaded": true,
+			"config_fingerprint": config.Fingerprint(cfg), "storage_ready": true, "interface_ready": true,
+			"sensor_ready": true, "basic_ready": true}})
+		return json.RawMessage(encoded), err
+	}
 	cfg := config.Defaults()
 	cfg.Paths.Database = filepath.Join(m.stateDir, "data.db")
 	cfg.Paths.ControlSocket, cfg.Paths.SensorSocket = filepath.Join(m.runtimeDir, "control.sock"), filepath.Join(m.runtimeDir, "sensor.sock")
@@ -166,6 +183,12 @@ func TestRollbackRetriesServicesWhenConfigAlreadyRestored(t *testing.T) {
 	}
 	if _, err := os.Stat(m.journalPath()); err != nil {
 		t.Fatal("recovery journal missing")
+	}
+	journal, err := os.ReadFile(m.journalPath())
+	var record applyRecord
+	if err != nil || json.Unmarshal(journal, &record) != nil || record.Version != 2 || record.Stage != "failed" ||
+		record.FailureCode != "service_restore_failed" || record.BeforeSHA != digest(before) || record.StartedAt.IsZero() || record.UpdatedAt.Before(record.StartedAt) {
+		t.Fatalf("recovery failure metadata is incomplete: %v", err)
 	}
 	if _, err := m.Action(context.Background(), "recover_config", map[string]string{"confirm": "RESTORE"}); err != nil {
 		t.Fatal(err)

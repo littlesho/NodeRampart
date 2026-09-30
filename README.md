@@ -14,6 +14,8 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 > **GeoIP fix scope:** alpha.4 fixes repeated parsing of shared MMDB data that could exhaust the validation budget, and adds safe MMDB validation/resource-budget errors. Matching candidate City/ASN samples passed complete offline validation; user download, activation and daily updates remain unverified. See [validation scope and resource limits](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) and [upgrade and GeoIP acceptance](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance).
 
+> **alpha.6 candidate, not published:** this branch prepares `0.4.0-alpha.6` with schema 11 and protocol v5. The normal installer still selects public alpha.5. Candidate validation is scoped in the [acceptance summary](docs/ALPHA6_ACCEPTANCE.md); use a verified backup before any isolated upgrade.
+
 ## What can it do?
 
 | You want to know… | NodeRampart shows… |
@@ -53,7 +55,7 @@ For manual package and provenance checks, see [release verification](docs/RELEAS
 
 This downloads the package for your distribution and CPU, checks its SHA256 and package identity, installs it with your package manager, then opens setup. Existing configuration and service enable/disable choices are preserved. If the release is unavailable, installation stops with an explanation.
 
-To install a downloaded and verified package manually, follow [the local package instructions](docs/V0.4_OPERATIONS.md#local-package-installation). Build targets do not imply that every distribution and ARM64 runtime has been tested; see [validation scope](docs/ALPHA_LIMITATIONS.md).
+This example selects the reviewed public `v0.4.0-alpha.5` baseline; it does not install this working tree's unreleased changes. For those changes, use a reviewed local build/package following [the local installation instructions](docs/V0.4_OPERATIONS.md#local-installation-before-publication). Build targets do not imply that every distribution and ARM64 runtime has been tested; see [validation scope](docs/ALPHA_LIMITATIONS.md).
 
 For unattended installation, append **--no-setup** and open setup later. No terminal answers or credentials are read from the script pipe. A fresh Debian package enables and starts observation with safe defaults, subject to system service policy; Fedora follows its service presets.
 
@@ -138,9 +140,49 @@ The menu manages **/etc/noderampart/config.json**; a full example is [included h
 
 Experienced users can edit the file and validate it with **sudo noderampart config test**. See [configuration and recovery](docs/V0.4_OPERATIONS.md#configuration-and-recovery) before restarting services manually.
 
+### Sampling and component upgrades
+
+The configured sampling period remains 100 ms–1 minute. Protocol 5 preserves
+the actual elapsed time, allowing bounded scheduling jitter: 10% of the period,
+at least 250 ms and at most 5 seconds. Thus a 60001 ms observation at a one-minute
+period is valid; longer pauses discard detail, retain loss counters and establish
+a new baseline. Missing observations are not replayed into a later rate window.
+
+The daemon permits one bounded round of up to eight interface frames together,
+then retains its sustained read limit. All interface writes in a round share a
+250 ms transport deadline. Upgrade the daemon before the sensor, or stop and
+replace both: this daemon accepts versions 1–5, while older daemons reject version
+5. Versions 1–4 and unsequenced offline captures have no persistence confirmation.
+
+The sensor assigns each interface a bounded session and batch sequence. Status
+shows the actual committed watermark; socket writes alone do not advance it.
+Collector health, traffic aggregation and that watermark commit in one SQLite
+transaction. The acknowledgment separately identifies whether derived events
+and notification admission decisions were persisted; a full queue or pending
+event remains partial. It never confirms delivery to an external receiver.
+Duplicate sequences do not add traffic or health again. Sequence and observation
+gaps remain visible. This version has no disk spool or historical batch replay;
+sensor restart and uncommitted flow details can still leave coverage gaps.
+
+### Optional SSH history hints
+
+The Auth menu's **SSH history hints** option (`auth.history_hints_enabled`) is off
+by default. After seven continuously covered days in the current daemon process,
+it compares successful logins with up to 1,000 retained successes, requiring at
+least 20 observations on three local dates. It can mark a first observed source
+(a first observed prefix in prefix privacy mode) or an unseen local hour.
+These are deviations from retained observations, not evidence of intrusion.
+Missing, pruned or overloaded history suppresses hints. Restarting after a
+configuration or privacy-key change starts a new observation period. Existing
+privacy settings apply; no additional raw addresses or baseline are stored.
+
+HTTPS heartbeat and a single generic JSON Webhook are also available, disabled by default. Configure fixed targets and protected bearer files in Notifications; no port is opened. Heartbeat separates process liveness from functional degradation, while Webhook shares the isolated outbox. [Configuration, identity changes and retry bounds](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook).
+
 ## Telegram and local GeoIP
 
 Create your Telegram bot using [BotFather](https://t.me/BotFather), start a conversation with it or add it to the target group, then enter the token and target chat ID in the menu. NodeRampart stores the token in a restricted local file; it does not require it in command-line arguments. [Telegram setup details](docs/V0.4_OPERATIONS.md#telegram).
+
+Use a numeric chat ID. Messages are bound to the bot/chat identity without storing the token in the database. Changing bot/chat or tightening notification privacy retains older unsent messages in isolation; switching back does not adopt them. Same-target token rotation keeps retry/cooldown state, and disabling delivery pauses a known same-target queue. Inspect **Notification messages** and explicitly choose **Discard isolated notification bodies** if those bodies are no longer needed. An in-flight request may finish at its original receiver. Isolated unsent messages retain the existing seven-day expiry.
 
 Identical verified GeoIP updates keep the active databases and services running without a configuration restart.
 
@@ -156,9 +198,61 @@ The menu shows official tariff sources, retrieval/effective dates, calculation u
 
 Guest TX is not identical to billable Internet egress. Free allowances and pricing tiers may be shared with other services or hosts. Assign only this host's monthly share; the default is **zero**. The selectable bytes-per-GB assumption is displayed rather than treated as a verified provider meter. [Calculation details](docs/V0.4_OPERATIONS.md#egress-estimates).
 
-## Upgrades and uninstall
+## Full local reports, trends and cycle forecasts
 
-NodeRampart does not update its own executable. Before an explicit package upgrade, create and verify a database backup, separately protect required configuration and credentials, and retain the previous package. Use the package manager or the bootstrap from the intended release. Schema 7 migration is automatic; older binaries cannot open the migrated database. Configuration recovery does not downgrade data. Source installations require the documented [source-to-package transition](docs/V0.4_OPERATIONS.md#upgrades-and-removal), not installation over the source-owned files.
+These commands read the local daemon. New daily snapshots preserve an independent
+full document; Telegram and Webhook receive a short numeric summary with source
+identifiers omitted. Original snapshots stay immutable. Older snapshots retain
+their short body and explicitly report that original full content is unavailable.
+
+~~~bash
+sudo noderampart report export --date 2026-09-29 --format html
+sudo noderampart report show --date 2026-09-29 --format json
+sudo noderampart report trend --days 7
+sudo noderampart report trend --days 30
+sudo noderampart report forecast
+~~~
+
+HTML goes to stdout and is static, self-contained and escaped, with no external
+scripts or assets. Full bodies are limited to 128 KiB, structured documents to
+256 KiB, displayed attribution to at most 50 entries and construction to 20
+seconds. The TUI displays full bodies up to 32 KiB and explicitly uses its short
+preview for larger documents; CLI export retains the saved full content.
+
+Trends distinguish complete, partial, missing and pruned days. Missing totals
+are null. Complete days need full recorded counter coverage and every overlapping
+UTC-hour row; this does not prove a provider bill or lossless capture. Forecasts
+require complete current-cycle data and 7 or 30 complete historical days. They
+show simple rate scenarios, projected usage/cost ranges and possible threshold
+dates, not statistical confidence intervals. `billing.cycle_start_day` accepts
+1–28, defaults to 1 and uses the report timezone for usage, free allowance,
+budget thresholds, pricing previews and forecasts. A cycle change records the
+previous cycle as changed rather than reusing its alert milestone. Guest TX and
+the configured tariff retain the existing estimate limitations.
+
+## Local diagnostics and textfile monitoring
+
+~~~bash
+sudo noderampart doctor --strict --config /etc/noderampart/config.json
+DIAG_DIR=$(sudo mktemp -d)
+sudo noderampart metrics export --output "$DIAG_DIR/noderampart.prom"
+~~~
+
+Strict doctor emits JSON with stable reasons, impact and next steps: exit 0 means
+required checks are normal, 1 confirms a problem/degradation and 2 means the
+diagnosis is unknown or failed. Disabled checks are not failures; unknown is not
+healthy. The existing non-strict doctor's exit behavior is preserved. `status`
+also includes the diagnosis. No command performs automatic repairs.
+
+Textfile export opens no port and installs no service or timer. It atomically
+publishes fixed component labels, generation time, five-minute validity and
+collection success. A failed collection replaces old healthy output with a
+failure marker. Consumers must reject expired output even if its old success
+flag is 1. New files are 0600; existing safe 0640 permissions are preserved.
+Grant an existing collector read access deliberately. No IP, event ID, secret
+URL or arbitrary error becomes a label.
+
+## Uninstall
 
 Open **Services and uninstall** in the menu:
 
@@ -175,21 +269,7 @@ sudo /usr/libexec/noderampart/manage-remove --purge
 
 It uses apt/dnf without removing system dependencies. RPM may save edited configuration as config.json.rpmsave; reinstalling does not restore this file automatically. Review and restore needed settings yourself. Retaining files does not guarantee that old settings will be active. [Removal and upgrades](docs/V0.4_OPERATIONS.md#upgrades-and-removal).
 
-## Troubleshooting
-
-**Chinese appears as question marks:** alpha.3 fixes the installer/menu locale
-handling and UTF-8 output-boundary truncation. The following workaround is for
-unchanged **alpha.2** packages; it is not required for C/POSIX in alpha.3.
-
-`--language zh` selects the UI language,
-not the terminal encoding. The published alpha.2 installer can pass `LC_ALL=C`
-to setup. For a UTF-8 SSH client, check `LC_ALL=C.UTF-8 locale charmap`, then run
-`sudo env LC_ALL=C.UTF-8 noderampart setup --language zh` (or replace `setup` with
-`tui`). If that locale is unavailable, select a UTF-8 name from `locale -a`.
-No Chinese language pack is required. sudo may reset locale variables; set the
-locale for this command instead of using `sudo -E` or changing system defaults.
-See [terminal encoding troubleshooting](docs/V0.4_OPERATIONS.md#terminal-encoding--终端编码)
-for client/font checks and the fix included in alpha.3.
+## Troubleshooting and development
 
 ~~~bash
 sudo noderampart doctor
@@ -199,17 +279,11 @@ sudo journalctl -u noderampartd -u noderampart-sensor --since today
 
 For an SSH session without a terminal, allocate one with ssh -t, or use the existing noninteractive commands. Installation failures, missing GeoIP data and report coverage are explained in [operations](docs/V0.4_OPERATIONS.md). Event, backup and replay command references remain in [v0.3 operations](docs/V0.3_OPERATIONS.md).
 
-New daily archives retain the full tariff, source, free allowance, byte unit and observed bytes used for their estimate. Backfilled reports use the tariff configured when generated; old archives are not re-priced. Database schema 7 migrates automatically; back up before upgrading because older binaries cannot open the migrated database.
+`upgrade preflight` checks an explicit backup, configuration, keys, disk and local package metadata without upgrading; `upgrade rehearse` validates a temporary restored copy and cleans it afterward. Target schema compatibility remains unknown without verified target information. `threshold preview` compares current/candidate rules offline; the TUI connects draft preview to its existing confirmed save. Bounded local `threshold feedback` labels do not train or tune rules. See [operation examples and limits](docs/V0.4_OPERATIONS.md#upgrade-preflight-and-restore-rehearsal).
 
-Published packages include a Go dependency SBOM and GitHub attestations; see [verify a release](docs/RELEASE_VERIFICATION.md).
+New daily archives retain the full tariff, source, free allowance, byte unit and observed bytes used for their estimate. Backfilled reports use the tariff configured when generated; old archives are not re-priced. This unreleased working tree migrates to database schema 11, preserving public schema 7 journal recovery while adding target isolation, full report documents, sensor commit watermarks and separate per-channel delivery decisions. Back up before upgrading because older binaries cannot open the migrated database. Legacy channel-only Telegram messages remain isolated rather than being assigned to the current receiver.
 
-## Security and alpha limits
-
-The sensor uses AF_PACKET with `CAP_NET_RAW`; the daemon runs as a separate service identity. Setup and service/package management require root. No eBPF collector or automatic program updater is implemented. Keep your firewall and SSH access controls independently configured.
-
-The build targets are Debian 12/13 and Fedora 43/44 on amd64/arm64. Cross-compiling or inspecting a package is not a runtime test. alpha.5 passed Debian 12/13 and Fedora 43/44 amd64/x86_64 native/package lifecycle acceptance and Debian 12/Fedora 43 public bootstrap installation. Real ARM64 runtime remains unvalidated and required before beta. See [remaining validation and functional limits](docs/ALPHA_LIMITATIONS.md) and [security reporting](SECURITY.md). Successful scans or valid attestations do not prove absence of vulnerabilities.
-
-## Development and license
+Published alpha.5 packages include a Go dependency SBOM and GitHub attestations; alpha.6 must verify its own candidate proofs; see [verify a release](docs/RELEASE_VERIFICATION.md).
 
 Contributors: [development guide](docs/DEVELOPMENT.md), [architecture](docs/ARCHITECTURE.md), [threat model](docs/THREAT_MODEL.md), [contributing](CONTRIBUTING.md). Ordinary tests do not need packet-capture privileges; privileged checks belong in disposable lab VMs.
 

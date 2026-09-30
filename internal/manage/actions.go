@@ -53,7 +53,7 @@ func (m *Manager) Action(ctx context.Context, action string, input map[string]st
 		if action == "purge" {
 			args = append(args, "--purge")
 		}
-		result, err := m.command(ctx, helper, args...)
+		result, err := m.removalCommand(ctx, helper, args...)
 		if err != nil {
 			return "", err
 		}
@@ -122,6 +122,14 @@ func (m *Manager) Action(ctx context.Context, action string, input map[string]st
 			return "", errors.New("backup verification failed; select an owned regular backup file")
 		}
 		return pretty(value), nil
+	case "upgrade_preflight", "upgrade_rehearse":
+		options := UpgradeOptions{ConfigPath: m.ConfigPath, BackupPath: input["backup"], Directory: input["directory"], TargetPackage: input["target_package"]}
+		if action == "upgrade_preflight" {
+			result, err := UpgradePreflight(ctx, options)
+			return pretty(result), err
+		}
+		result, err := RehearseRestore(ctx, options)
+		return pretty(result), err
 	case "replay_anonymize":
 		result, err := replay.Anonymize(ctx, input["input"], input["output"])
 		if err != nil {
@@ -138,6 +146,26 @@ func (m *Manager) Action(ctx context.Context, action string, input map[string]st
 			return "", errors.New("candidate rules are invalid or unreadable")
 		}
 		result, err := replay.Compare(ctx, input["input"], a, b)
+		if err != nil {
+			return "", err
+		}
+		return pretty(result), nil
+	case "threshold_preview_draft":
+		current, err := decodeConfig([]byte(input["current_json"]))
+		if err != nil {
+			return "", errors.New("current draft baseline is invalid")
+		}
+		draft, err := decodeConfig([]byte(input["draft_json"]))
+		if err != nil {
+			return "", errors.New("candidate draft is invalid")
+		}
+		result, err := PreviewThresholds(ctx, input["input"], current, draft)
+		if err != nil {
+			return "", err
+		}
+		return pretty(result), nil
+	case "threshold_feedback":
+		result, err := RecordThresholdFeedback(ctx, input["comparison"], input["file"], input["side"], input["event"], input["label"])
 		if err != nil {
 			return "", err
 		}
@@ -186,7 +214,16 @@ func (m *Manager) query(ctx context.Context, action string, input map[string]str
 		return "", err
 	}
 	switch action {
-	case "status", "doctor", "report_now", "notify_status", "notify_test", "alerts_status":
+	case "notify_test", "notify_discard_isolated":
+		channel := input["channel"]
+		if channel == "" {
+			channel = "telegram"
+		}
+		if channel != "telegram" && channel != "webhook" {
+			return "", errors.New("select telegram or webhook")
+		}
+		args = api.NotifyChannelArgs{Channel: channel}
+	case "status", "doctor", "report_now", "notify_status", "alerts_status":
 	case "retention":
 		var before int64
 		if input["before_id"] != "" {
@@ -348,6 +385,10 @@ func (m *Manager) telegram(ctx context.Context, input map[string]string) (string
 		if cleanupErr := m.cleanManagedFiles(filepath.Dir(created), "telegram-", ".secret", created, snapshot.Config.Privacy.HashKeyFile); cleanupErr != nil {
 			return result, errors.New("Telegram configured, but old managed token cleanup failed")
 		}
+	}
+	if err == nil {
+		result += "\nTelegram queue policy: changing bot/chat or tightening notification privacy retains older pending bodies in isolation. Disabled same-target delivery is paused. Review Notification messages; explicitly discard isolated bodies if no longer needed. An already in-flight request may finish at its original recipient."
+		result += "\nTelegram 队列策略：更换 Bot/Chat 或收紧通知隐私会保留隔离旧正文；停用同一目标只暂停投递。可在通知列表检查并显式丢弃隔离正文。已在发送中的请求可能在原收件方完成。"
 	}
 	return result, err
 }

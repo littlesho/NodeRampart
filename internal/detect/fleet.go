@@ -30,11 +30,12 @@ type Fleet struct {
 	limit      int
 	interfaces map[string]*interfaceDetector
 	evicted    uint64
+	portBudget *scanPortBudget
 }
 
 func NewFleet(cfg config.DetectionConfig, limit int) *Fleet {
 	limit = max(1, min(limit, protocol.MaxInterfaces))
-	return &Fleet{config: cfg, limit: limit, interfaces: make(map[string]*interfaceDetector)}
+	return &Fleet{config: cfg, limit: limit, interfaces: make(map[string]*interfaceDetector), portBudget: &scanPortBudget{limit: maxScanPortEntries}}
 }
 
 func (f *Fleet) Observe(batch protocol.Batch) []model.Event {
@@ -52,12 +53,14 @@ func (f *Fleet) Observe(batch protocol.Batch) []model.Event {
 					oldest = name
 				}
 			}
+			f.interfaces[oldest].detector.releaseScanState()
 			delete(f.interfaces, oldest)
 			if f.evicted < ^uint64(0) {
 				f.evicted++
 			}
 		}
 		entry = &interfaceDetector{detector: newNetworkLimits(f.config, maxScanSources/f.limit, maxUDPRequestTuples/f.limit), connection: batch.ConnectionID}
+		entry.detector.portBudget = f.portBudget
 		f.interfaces[batch.Interface] = entry
 	} else if entry.connection != batch.ConnectionID {
 		entry.detector.ResetContinuity()
@@ -80,7 +83,7 @@ func (f *Fleet) Observe(batch protocol.Batch) []model.Event {
 func (f *Fleet) Stats() NetworkStats {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	result := NetworkStats{Scope: "per_interface", InterfaceLimit: f.limit, EvictedInterfaces: f.evicted, Interfaces: []InterfaceNetworkStats{}, ScanSourceLimit: maxScanSources / f.limit * f.limit, UDPRequestLimit: maxUDPRequestTuples / f.limit * f.limit, UDPScanCoverageComplete: len(f.interfaces) > 0}
+	result := NetworkStats{Scope: "per_interface", InterfaceLimit: f.limit, EvictedInterfaces: f.evicted, Interfaces: []InterfaceNetworkStats{}, ScanSourceLimit: maxScanSources / f.limit * f.limit, ScanPortLimit: f.portBudget.limit, UDPRequestLimit: maxUDPRequestTuples / f.limit * f.limit, ScanCoverageComplete: len(f.interfaces) > 0, UDPScanCoverageComplete: len(f.interfaces) > 0}
 	names := make([]string, 0, len(f.interfaces))
 	for name := range f.interfaces {
 		names = append(names, name)
@@ -91,6 +94,12 @@ func (f *Fleet) Stats() NetworkStats {
 		stats := entry.detector.Stats()
 		result.Interfaces = append(result.Interfaces, InterfaceNetworkStats{Name: name, LastSeen: entry.lastSeen, Stats: stats})
 		result.ScanSources += stats.ScanSources
+		result.ScanPortEntries += stats.ScanPortEntries
+		result.ScanPortStateSaturated = result.ScanPortStateSaturated || stats.ScanPortStateSaturated
+		result.ScanCoverageComplete = result.ScanCoverageComplete && stats.ScanCoverageComplete
+		if stats.ScanCoverageIncompleteUntil.After(result.ScanCoverageIncompleteUntil) {
+			result.ScanCoverageIncompleteUntil = stats.ScanCoverageIncompleteUntil
+		}
 		result.UDPRequestTuples += stats.UDPRequestTuples
 		result.ScanStateSaturated = result.ScanStateSaturated || stats.ScanStateSaturated
 		result.UDPStateSaturated = result.UDPStateSaturated || stats.UDPStateSaturated
