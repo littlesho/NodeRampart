@@ -1,9 +1,9 @@
 # Verify a NodeRampart release
 
-This document describes the asset format produced for the current workspace's
-`VERSION`, `0.4.0-alpha.6`. This is an unreleased candidate; the bootstrap
-default remains published `v0.4.0-alpha.5`. Select the intended published tag and verify that its
-matching assets and attestations exist before using the download examples.
+This document describes published `v0.4.0-alpha.6` and retains earlier release
+records. The examples explicitly select alpha.6; its frozen bootstrap default
+remains `v0.4.0-alpha.5`. Review the intended source/tag and verify the matching
+assets and attestations before installation.
 The release workflow creates a draft for a maintainer to inspect; local workflow
 edits and tests neither publish a release nor prove that hosted checks ran.
 
@@ -47,8 +47,9 @@ For alpha.6, public DEB names are
 `0.4.0~alpha.6`. RPM names contain `0.4.0-0.alpha.7.fc43` or
 `0.4.0-0.alpha.7.fc44`; the source RPM uses Fedora 44. SBOM/buildinfo names,
 checksums and attestations bind the final public filename and actual bytes.
-No alpha.6 hosted run, upload or native runtime acceptance is implied by this
-format description. Consult the candidate's recorded acceptance before use.
+The [alpha.6 distribution record](#alpha6-publication-and-distribution-verification)
+identifies the actual hosted run, source and measured native acceptance; the
+format description alone is not runtime proof.
 
 The SBOM covers only the three packaged Go programs. It does **not** inventory
 runtime system dependencies, inspect your installed host, provide a complete
@@ -90,27 +91,25 @@ with artifact attestation support. Select the full commit SHA from the release
 source you have reviewed; do not treat a value downloaded beside the package as
 independent evidence of the expected source.
 
-The example selects the reviewed public `v0.4.0-alpha.5` baseline, not the
-unreleased working tree. Whether that historical release contains an SBOM and
-matching attestations must be checked against its actual published assets.
-Missing statements cannot pass the corresponding verification commands; do not
-substitute another release's statements or infer that this local work published
-them.
+The example selects published `v0.4.0-alpha.6`, whose reviewed source is
+`4d204b43499ca2f41c15b92334537d57bfc8b20c`. Confirm that identity against the
+public source before using it as an expected value. Missing statements cannot
+pass verification; do not substitute another release's attestations.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.5 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.6 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.5_amd64.deb
-EXPECTED_COMMIT='REPLACE_WITH_REVIEWED_FULL_COMMIT_SHA'
+PACKAGE=noderampart_0.4.0-alpha.6_amd64.deb
+EXPECTED_COMMIT='4d204b43499ca2f41c15b92334537d57bfc8b20c'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.5 \
+  --source-ref refs/tags/v0.4.0-alpha.6 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -119,7 +118,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.5 \
+  --source-ref refs/tags/v0.4.0-alpha.6 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document/v2.3 \
   --deny-self-hosted-runners
@@ -128,7 +127,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.5 \
+  --source-ref refs/tags/v0.4.0-alpha.6 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -146,7 +145,7 @@ it does not perform these GitHub attestation checks automatically.
 ## Maintainer draft verification
 
 The following procedure applies before publication of a future candidate;
-alpha.5 is already published. Select that candidate’s independently reviewed
+alpha.6 is already published. Select that candidate’s independently reviewed
 version and source identity. A local candidate can be built without a tag using
 `EXPECTED_COMMIT=<full-main-SHA> ./scripts/release-metadata.sh` and passing its
 `commit` and source-commit `build_date` to `build-release.sh`. Do not substitute
@@ -158,15 +157,15 @@ that can read the draft. Record its numeric Release ID, tag, full source commit,
 workflow run ID and attempt before verification. The tag must resolve to the
 reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 
-For the frozen alpha.5 release, the exact asset set is 22 files:
+For frozen alpha.6, the exact asset set is 22 files:
 
-- `noderampart_0.4.0-alpha.5_amd64.deb` and `noderampart_0.4.0-alpha.5_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.6.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.6.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.6.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.6.fc44.aarch64.rpm`.
+- `noderampart_0.4.0-alpha.6_amd64.deb` and `noderampart_0.4.0-alpha.6_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.7.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.7.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.7.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.7.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.6.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.7.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
 
 Check names and identities, not only the count. GitHub's generated source ZIP/TAR
@@ -424,3 +423,91 @@ cannot reconstruct previously lost pending state; no-known-pending is not
 historical confirmed health. Historical gaps are not described as backfilled.
 Transaction/process-crash checks do not guarantee arbitrary host-power-loss
 durability. This remains an alpha prerelease, not production readiness.
+
+
+## alpha.6 publication and distribution verification
+
+[v0.4.0-alpha.6](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6)
+(Release ID `400047056`) was published at `2026-09-30T18:54:24Z`
+(`2026-10-01T03:54:24+09:00`, Asia/Tokyo). It remains an alpha prerelease,
+`draft=false`, `prerelease=true`, and was not marked latest. Tag/source is
+`4d204b43499ca2f41c15b92334537d57bfc8b20c`; embedded BUILD_DATE is the source
+commit timestamp `2026-09-30T20:19:52+08:00`, not publication time.
+[Main CI](https://github.com/littlesho/NodeRampart/actions/runs/36714019589)
+passed on that exact source, and the
+[release workflow](https://github.com/littlesho/NodeRampart/actions/runs/36716260742)
+passed on attempt 1. Later documentation commits do not move this tag or change
+its package identity.
+
+All 22 assets passed fresh anonymous downloads, exact size/SHA256 checks and
+`SHA256SUMS` (which lists the other 21 assets). Native identities, all six
+runtime packages' 18 actual ELF/Go/buildinfo digests, `release.json`, bootstrap
+and the source RPM were rechecked. Those identical bytes reuse the earlier
+independently authenticated verification of all 22 provenance statements and
+six package-specific SPDX attestations, bound to this source/tag/workflow/run.
+Anonymous file download and the authenticated attestation queries are separate
+checks. Sidecar provenance is not a substitute for the runtime package's SPDX
+statement; the Fedora 44 SRPM is source, not a runtime SPDX subject. The SPDX
+scope is the three packaged Go programs, not operating-system dependencies.
+
+The amd64/x86_64 packages used by native acceptance have these exact SHA256s:
+
+| Runtime package | SHA256 |
+| --- | --- |
+| `noderampart_0.4.0-alpha.6_amd64.deb` | `959d5beb5c537dcce0f809f9bcd5d59302c087758e7011c27ca1fb9f65854ef6` |
+| `noderampart-0.4.0-0.alpha.7.fc43.x86_64.rpm` | `4e1de47b1f43d08c9b3bfafd0ee346693fb9e922e1045ce9b068840d40215576` |
+| `noderampart-0.4.0-0.alpha.7.fc44.x86_64.rpm` | `dc2333662dcebfa132d5fca115caca83a0141a6211c77ffc19d22af667217d5d` |
+
+Actual published alpha.5 → these final packages, schema 7 → 11, and package
+lifecycle checks passed on Debian 12/13 and matching Fedora 43/44 x86_64.
+Fixtures, test-merge packages and final installed products remain separate
+claims; detailed preserved first failures and rollback limits are summarized in
+the [acceptance record](ALPHA6_ACCEPTANCE.md#publication-and-distribution-2026-10-01).
+The published packages' README, project/license notices and bundled license
+files match the frozen [public source](https://github.com/littlesho/NodeRampart/tree/4d204b43499ca2f41c15b92334537d57bfc8b20c).
+Their documentation links resolve there; the runtime packages do not install a
+complete offline `docs/` manual. Later documentation does not replace these
+frozen package bytes.
+
+Public bootstrap separately passed on Debian 13 and Fedora 44: download and
+inspect the public alpha.6 script, run `--version v0.4.0-alpha.6 --no-setup`,
+then open actual `sudo noderampart setup`. Normal APT/DNF dependencies, package
+identity, installed programs, basic collection, advancing committed watermarks
+and consistent online backups passed. Debian default-auto/enabled observation
+passed. Fedora's RPM follows host presets by source mechanism; actual setup /
+Services Start, basic readiness and process-executable identity passed.
+Independent native preset/unit-flag samples before and after Start, and
+boot-time enable state, were **NOT RUN**.
+Both strict doctor snapshots remained **unknown / exit 2**; Fedora retained
+`auth_window_warmup` and transient `sensor_commit_unavailable`. Later status and
+backup snapshots show actual progress, not a rewrite of the strict result.
+The curl-pipe interactive installation path was **NOT RUN** in this check.
+The frozen bootstrap default remains alpha.5 unless `--version` is explicit.
+
+The first anonymous `release.json` inspection caller hit SIGXFSZ because its
+response-header limit was too small; the original FAIL was preserved. Only that
+caller's header allowance was corrected to 64 KiB, with the exact bounded body
+limit retained; the single missing download then passed. Both bootstrap guests'
+initial direct GitHub connection failures were retained; scoped standard proxy
+variables allowed the same public URLs with normal TLS validation, without
+changing guest network/global configuration. Fedora's post-Save inspection
+assumed an omitted `interfaces` field was present and failed; continuation did
+not replay the completed Save. These are caller/environment results, not
+confirmed product defects.
+
+Publication bootstrap cleanup: **PASS**. Both actual removal helpers purged
+successfully; separately retained evidence/backups were checked, owned processes
+exited and task leases/locks were released with lock inodes preserved. Fixed
+soft-stop and independent status queries confirmed both guests **STOPPED**.
+Known-pending SSH recovery on independent copies passed in two tested VMs;
+natural record-quality pending onset was not proved, so the natural chain is
+**BLOCKED** and dependent validation **NOT RUN**. Fedora first-control timing,
+native ARM64, VM race, sustained pressure, 72-hour soak, real credentialed MMDB
+and actual Telegram/Webhook/heartbeat receivers remain **NOT RUN**.
+
+alpha.6 已公开为预发布版，22 个资产匿名下载与校验通过；字节与之前认证查询的
+22 项 provenance、6 项包级 SPDX 一致，文件匿名下载不冒称匿名完成认证查询。
+Debian 13/Fedora 44 的固定版本 `--no-setup` 与单独 setup、基本采集/一致备份通过；
+两台 strict 快照仍 unknown/2，保留 Fedora 的预热/瞬时提交不可用原因。
+自然 SSH 恢复链 BLOCKED，真实 ARM64、VM race、72 小时、持续压力、真实 MMDB
+及外发 NOT RUN。包文档保持冻结源码快照，不因后续文档 PR 修改 tag 或包字节。

@@ -1,21 +1,44 @@
-# `v0.4.0-alpha.6` candidate limitations
+# `v0.4.0-alpha.6` limitations
 
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
 
 ## Validation scope
 
-This source is the **unpublished alpha.6 candidate**. Its local checks, exact
-candidate packages, cross-version upgrades and hosted proofs must be evaluated
-separately; see the [candidate acceptance summary](ALPHA6_ACCEPTANCE.md).
-Earlier locally stamped `0.4.0-alpha` / `unknown` packages are not alpha.6
-release or upgrade evidence. Neither source integration nor a draft means the
-Release has been published. Native ARM64, sustained load, 72-hour soak and real
-optional external receivers remain NOT RUN for this candidate.
+[alpha.6](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6)
+was published as an alpha prerelease at `2026-09-30T18:54:24Z` from
+`4d204b43499ca2f41c15b92334537d57bfc8b20c`. All 22 assets passed fresh anonymous
+download/checksum checks and matched the authenticated 22 provenance / six
+runtime SPDX proofs. Exact final-package upgrades and lifecycle checks passed
+on Debian 12/13 and Fedora 43/44 x86_64; public bootstrap with separate setup
+passed on Debian 13 and Fedora 44. See the [current acceptance](ALPHA6_ACCEPTANCE.md#publication-and-distribution-2026-10-01)
+and [distribution record](RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification).
+Earlier locally stamped `0.4.0-alpha` / `unknown` packages and test-merge packages
+are separate evidence, not proof of the final release bytes.
 
-本源码为尚未公开发布的 alpha.6 候选。具体本地检查、准确包、跨版本升级和 hosted
-证明以[候选验收摘要](ALPHA6_ACCEPTANCE.md)及其注明的时点为准；旧本地包不代表
-本候选已验收，草稿也不代表公开发布。真实 ARM64、持续负载、72 小时和真实外发仍未跑。
+Basic collection and consistent online backups passed, but strict doctor
+snapshots on both bootstrap guests remained **unknown / exit 2**. Fedora's
+`auth_window_warmup` and transient `sensor_commit_unavailable` reasons remain
+recorded; later advancing watermarks do not turn the earlier snapshot healthy.
+Fedora's actual Services Start/basic readiness/process identity passed, but
+independent native preset/unit flags before and after Start and boot-time
+enable state were **NOT RUN**; the RPM's host-preset behavior is a source
+mechanism, not measured native flags.
+Known-pending SSH recovery closed on independent copies in two tested VMs.
+Natural record-quality pending onset was not proved: that natural chain is
+**BLOCKED**, and dependent acceptance is **NOT RUN**. Fedora's first-control
+availability timing is **NOT RUN**. Native ARM64, VM race, sustained pressure,
+72-hour soak, real credentialed MMDB and real optional outbound receivers remain
+**NOT RUN**. No beta, stable/latest or production-readiness claim is made.
+
+alpha.6 已公开为预发布版；22 个资产匿名下载/校验通过，与已认证的 provenance/
+SPDX 证明字节一致；准确最终包的四系统跨版本及生命周期、Debian 13/Fedora 44
+公开 bootstrap 与单独 setup 通过。两台 strict 快照仍 unknown/2，Fedora 保留
+窗口预热与瞬时提交不可用原因。Fedora 实际运行启动/基础就绪/进程身份通过，
+原生 preset/unit flags 前后及开机启用状态 NOT RUN。known-pending 独立副本恢复闭环仅在两台实测通过；
+自然 record-quality pending 置位未证明，自然链 BLOCKED、依赖验收 NOT RUN。
+Fedora 首次控制可用计时、真实 ARM64、VM race、持续压力、72 小时、真实 MMDB
+和真实外发均 NOT RUN；不表示 beta、稳定版/latest 或生产就绪。
 
 ### Historical public acceptance
 
@@ -87,8 +110,9 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
 
 ## Still unvalidated
 
-- Candidate-specific different-version upgrade and separate fc43 package acceptance
-  until exact-package results are recorded; prior acceptance is scoped to its bytes.
+- Natural SSH record-quality pending onset and its recovery chain; injected or
+  known-pending independent-copy results do not prove that natural chain.
+- Fedora first-control availability timing and native VM race checks.
 - Real `arm64` runtime; cross-builds do not execute the sensor.
 - Authenticated MaxMind downloads with real customer credentials and live
   Telegram/Webhook delivery and HTTPS heartbeat to actual receivers. Tests use synthetic

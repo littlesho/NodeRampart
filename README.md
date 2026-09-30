@@ -8,13 +8,13 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.5 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.5) fix SSH journal session-scope compatibility and recovery across subprocess and whole-daemon restarts. The database upgrades to schema 7; retain a verified compatible pre-upgrade backup.
+> **v0.4.0-alpha.6 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6) add isolated notification targets, full local reports, diagnosis and committed sensor watermarks. The database upgrades to schema 11 and the sensor protocol to v5; retain a verified compatible pre-upgrade backup.
 
-> **Validation:** All 22 anonymous asset downloads/checksums, 22 provenance and six SPDX attestations passed, alongside Debian 12/13 and Fedora 43/44 amd64/x86_64 native/package lifecycle acceptance. Public bootstrap installation passed on Debian 12 and Fedora 43. Real ARM64 remains unvalidated and required before beta; this does not establish production readiness. See [release verification](docs/RELEASE_VERIFICATION.md#alpha5-publication-and-distribution-verification).
+> **Validation:** All 22 assets passed fresh anonymous download/checksum checks; their bytes match the authenticated 22 provenance and six SPDX checks. Exact final-package upgrades and lifecycle checks passed on Debian 12/13 and Fedora 43/44 amd64/x86_64. Public bootstrap with separate setup passed on Debian 13 and Fedora 44. Native ARM64 and the natural SSH recovery chain remain unvalidated; this does not establish production readiness. See [release verification](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification).
 
 > **GeoIP fix scope:** alpha.4 fixes repeated parsing of shared MMDB data that could exhaust the validation budget, and adds safe MMDB validation/resource-budget errors. Matching candidate City/ASN samples passed complete offline validation; user download, activation and daily updates remain unverified. See [validation scope and resource limits](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) and [upgrade and GeoIP acceptance](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance).
 
-> **alpha.6 candidate, not published:** this branch prepares `0.4.0-alpha.6` with schema 11 and protocol v5. The normal installer still selects public alpha.5. Candidate validation is scoped in the [acceptance summary](docs/ALPHA6_ACCEPTANCE.md); use a verified backup before any isolated upgrade.
+> **Pinned installation:** explicitly select `v0.4.0-alpha.6` in the commands below. The frozen bootstrap still defaults to alpha.5 when `--version` is omitted. The [acceptance summary](docs/ALPHA6_ACCEPTANCE.md#publication-and-distribution-2026-10-01) separates measured results from remaining limits.
 
 ## What can it do?
 
@@ -31,33 +31,30 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 You can also merge repeated alerts, set silences that expire automatically, fill missing daily reports, create database backups and compare detection thresholds using offline anonymized metadata.
 
-## Install in one command
+## Install a pinned release
 
-The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. This download command needs curl and working HTTPS certificates; the installer and apt/dnf handle the remaining installation dependencies. Go is not needed.
+The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. The download command needs curl and working HTTPS certificates; the installer and apt/dnf handle the remaining installation dependencies. Go is not needed. ARM64 packages are available but native ARM64 execution is not yet validated.
 
-~~~bash
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/bootstrap.sh | sudo sh -s -- --version v0.4.0-alpha.5
-~~~
-
-Alternatively, download into a separate directory and inspect the script before deciding to execute it:
+Download into a separate directory and inspect the script before deciding to execute it:
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.6/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # Run separately, after reviewing and accepting the script:
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.5
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.6 --no-setup
+sudo noderampart setup
 ~~~
 
 For manual package and provenance checks, see [release verification](docs/RELEASE_VERIFICATION.md#download-and-verify). HTTPS download, same-release SHA256 and GitHub attestation are distinct checks: bootstrap checks package checksums and identity but **does not automatically verify attestations**.
 
-This downloads the package for your distribution and CPU, checks its SHA256 and package identity, installs it with your package manager, then opens setup. Existing configuration and service enable/disable choices are preserved. If the release is unavailable, installation stops with an explanation.
+The installer downloads the package for your distribution and CPU, checks its SHA256 and package identity, and installs it with your package manager. `--no-setup` leaves the menu to the separate setup command. Existing configuration and service enable/disable choices are preserved. If the release is unavailable, installation stops with an explanation.
 
-This example selects the reviewed public `v0.4.0-alpha.5` baseline; it does not install this working tree's unreleased changes. For those changes, use a reviewed local build/package following [the local installation instructions](docs/V0.4_OPERATIONS.md#local-installation-before-publication). Build targets do not imply that every distribution and ARM64 runtime has been tested; see [validation scope](docs/ALPHA_LIMITATIONS.md).
+The explicit alpha.6 download, `--no-setup` installation and separate setup were exercised on Debian 13 and Fedora 44. The supported curl-pipe interactive path was not exercised in this publication check. Omitting `--version` still selects alpha.5. Build targets do not imply that every distribution and ARM64 runtime has been tested; see [validation scope](docs/ALPHA_LIMITATIONS.md).
 
-For unattended installation, append **--no-setup** and open setup later. No terminal answers or credentials are read from the script pipe. A fresh Debian package enables and starts observation with safe defaults, subject to system service policy; Fedora follows its service presets.
+**--no-setup** permits unattended installation; open setup separately afterward. No terminal answers or credentials are read from the script pipe. A fresh Debian package enables and starts observation with safe defaults, subject to system service policy; Fedora follows its service presets.
 
 ## First setup
 
@@ -281,9 +278,9 @@ For an SSH session without a terminal, allocate one with ssh -t, or use the exis
 
 `upgrade preflight` checks an explicit backup, configuration, keys, disk and local package metadata without upgrading; `upgrade rehearse` validates a temporary restored copy and cleans it afterward. Target schema compatibility remains unknown without verified target information. `threshold preview` compares current/candidate rules offline; the TUI connects draft preview to its existing confirmed save. Bounded local `threshold feedback` labels do not train or tune rules. See [operation examples and limits](docs/V0.4_OPERATIONS.md#upgrade-preflight-and-restore-rehearsal).
 
-New daily archives retain the full tariff, source, free allowance, byte unit and observed bytes used for their estimate. Backfilled reports use the tariff configured when generated; old archives are not re-priced. This unreleased working tree migrates to database schema 11, preserving public schema 7 journal recovery while adding target isolation, full report documents, sensor commit watermarks and separate per-channel delivery decisions. Back up before upgrading because older binaries cannot open the migrated database. Legacy channel-only Telegram messages remain isolated rather than being assigned to the current receiver.
+New daily archives retain the full tariff, source, free allowance, byte unit and observed bytes used for their estimate. Backfilled reports use the tariff configured when generated; old archives are not re-priced. Alpha.6 migrates to database schema 11, preserving public schema 7 journal recovery while adding target isolation, full report documents, sensor commit watermarks and separate per-channel delivery decisions. Back up before upgrading because older binaries cannot open the migrated database. Legacy channel-only Telegram messages remain isolated rather than being assigned to the current receiver.
 
-Published alpha.5 packages include a Go dependency SBOM and GitHub attestations; alpha.6 must verify its own candidate proofs; see [verify a release](docs/RELEASE_VERIFICATION.md).
+Published alpha.6 packages include a Go dependency SBOM and matching GitHub attestations; see [verify a release](docs/RELEASE_VERIFICATION.md). Packaged README/license files remain the frozen release-source snapshot; later documentation updates do not replace package bytes or install a complete offline manual.
 
 Contributors: [development guide](docs/DEVELOPMENT.md), [architecture](docs/ARCHITECTURE.md), [threat model](docs/THREAT_MODEL.md), [contributing](CONTRIBUTING.md). Ordinary tests do not need packet-capture privileges; privileged checks belong in disposable lab VMs.
 
