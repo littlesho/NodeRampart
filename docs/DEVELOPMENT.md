@@ -293,3 +293,17 @@ The golden event matrix covers every notifyable kind and start/update/recovery
 in en/zh; daily tests preserve archived timezone/DST and language. Keep MMDB
 validator cancellation/descendant-exit regressions unchanged. Candidate builds
 are not official release provenance, even when clean and exactly commit-stamped.
+
+## alpha.8 no-tag release preflight
+
+Follow [the scoped preflight](ALPHA8_RELEASE_PREFLIGHT.md). Candidate source now
+supports explicit alpha.8, while default alpha.5 and public alpha.7 instructions
+remain. Obtain source metadata once as data; retain empty-value rejection, clean
+source and matching COMMIT/BUILD_DATE across all six packages and pairs. Collect
+exactly22 files locally; the external manifest includes SHA256SUMS itself, whose
+contents cover only the other21 files. Do not run release.yml or create any tag
+to test local tools. Ordinary actual-Fedora43/44 CI package builds may supply
+matched-source local candidate inputs, without release provenance/attestations.
+
+公开安装默认不变。文档/sourceRPM 内容变化必须核对新包字节；source53 的旧包不能
+证明新包身份。最终冻结 main 和真实差量 VM 证据保存在仓库外，不为文档自 SHA 反复提交。
