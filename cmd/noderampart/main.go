@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/littlesho/NodeRampart/internal/assets"
 	"github.com/littlesho/NodeRampart/internal/config"
 	"github.com/littlesho/NodeRampart/internal/ipc"
+	"github.com/littlesho/NodeRampart/internal/notify"
 	"github.com/littlesho/NodeRampart/internal/protocol"
 	"github.com/littlesho/NodeRampart/internal/store"
 	"github.com/littlesho/NodeRampart/internal/version"
@@ -71,6 +73,9 @@ func run(arguments []string) error {
 		cfg, err := config.Load(*path)
 		if err != nil {
 			return errors.New("configuration could not be loaded or is invalid")
+		}
+		if err := validateNativeReferences(cfg, *path); err != nil {
+			return err
 		}
 		fmt.Printf("configuration is valid (schema %d)\n", cfg.SchemaVersion)
 		return nil
@@ -231,7 +236,7 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 	case "backup_create":
 		flags.StringVar(&output, "output", "", "new backup path under the daemon state backups directory")
 	case "notify_test", "notify_discard_isolated":
-		flags.StringVar(&channel, "channel", "telegram", "telegram or webhook; default telegram")
+		flags.StringVar(&channel, "channel", "telegram", "telegram, webhook, feishu, wecom, discord, slack, teams or google_chat; default telegram")
 	case "status", "alerts_status", "notify_status", "notify_silence_list":
 	default:
 		return options, usageError()
@@ -243,7 +248,7 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 	invalid := errors.New("invalid or missing command argument")
 	switch name {
 	case "notify_test", "notify_discard_isolated":
-		if channel != "telegram" && channel != "webhook" {
+		if !config.IsNotificationChannel(channel) {
 			return options, invalid
 		}
 		args = api.NotifyChannelArgs{Channel: channel}
@@ -444,4 +449,27 @@ func printJSON(output io.Writer, value any) error {
 
 func usageError() error {
 	return errors.New("usage: noderampart {tui|setup|assets update|version|config test|doctor|status|health|alerts status|retention|metrics export|upgrade preflight/rehearse|threshold preview/feedback|evidence export|events list/show/timeline|incident list/show|report now/list/show/backfill|replay anonymize/compare|notify test/status/list/retry/quarantine/discard-isolated/resume|notify silence add/list/remove|backup create/verify/restore} [flags]")
+}
+
+// Explicit validation may inspect enabled credentials, but never resolves DNS
+// or transmits a request. Daemon startup degrades these optional resources.
+func validateNativeReferences(cfg config.Config, path string) error {
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		return errors.New("native configuration directory is unavailable")
+	}
+	dir := filepath.Dir(absolute)
+	for _, channel := range config.NativeChannelNames() {
+		native := cfg.Notifications.NativeChannels()[channel]
+		if !native.Enabled {
+			continue
+		}
+		if filepath.Dir(native.CredentialFile) != dir && filepath.Dir(native.CredentialFile) != filepath.Join(dir, "secrets") {
+			return errors.New("native credential reference is outside the configuration directory")
+		}
+		if err := notify.ValidateNativeCredential(channel, native.CredentialFile); err != nil {
+			return errors.New(channel + " protected credentials are unavailable, unsafe or invalid")
+		}
+	}
+	return nil
 }

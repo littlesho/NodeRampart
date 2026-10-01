@@ -79,7 +79,7 @@ func TestPresentationMigrationPreservesBodiesAndBackup(t *testing.T) {
 		t.Fatal(ok, err)
 	}
 	backup := filepath.Join(t.TempDir(), "twelve.db")
-	if info, err := s.Backup(ctx, backup); err != nil || info.SchemaVersion != 12 {
+	if info, err := s.Backup(ctx, backup); err != nil || info.SchemaVersion != schemaVersion {
 		t.Fatal(info, err)
 	}
 	restored := filepath.Join(t.TempDir(), "restored.db")
@@ -95,7 +95,7 @@ func TestPresentationMigrationPreservesBodiesAndBackup(t *testing.T) {
 	if err != nil || !ok || claimed.Body != message.Body || claimed.Language != "zh" || claimed.Timezone != message.Timezone {
 		t.Fatal("backup lost presentation", claimed, ok, err)
 	}
-	if _, err := copy.db.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES (13,0)`); err != nil {
+	if _, err := copy.db.Exec(`INSERT INTO schema_migrations(version,applied_at) VALUES (?,0)`, schemaVersion+1); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := VerifyBackup(ctx, restored); err == nil {

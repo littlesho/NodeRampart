@@ -36,10 +36,10 @@ var actions = []action{
 	{id: "status", en: "Current status", zh: "当前状态"},
 	{id: "health", en: "Last 24 hours: coverage and traffic", zh: "最近 24 小时：完整性与流量"},
 	{id: "doctor", en: "Local diagnosis", zh: "本机诊断"},
-	{id: "alerts_status", en: "Budget and health alerts", zh: "预算与健康告警", helpEN: "Current checks, durable milestones and pending transitions. Configure alerts in Configuration; Telegram delivery needs notifications enabled.", helpZH: "查看当前检查、已记录阈值和待保存状态；在功能配置中启用告警，推送需启用 Telegram。"},
+	{id: "alerts_status", en: "Budget and health alerts", zh: "预算与健康告警", helpEN: "Current checks, durable milestones and pending transitions. Configure alerts in Configuration; delivery needs an enabled notification channel.", helpZH: "查看当前检查、已记录阈值和待保存状态；在功能配置中启用告警，推送需启用通知渠道。"},
 	{id: "retention", en: "Data retention and pruning", zh: "数据保留与裁剪", helpEN: "See affected periods, removal reasons and remaining data. Earlier history before tracking began remains unknown.", helpZH: "查看受影响时间、裁剪原因及剩余数据；台账启用前的裁剪历史仍为未知。"},
 	{id: "evidence_export", en: "Export local diagnostic evidence", zh: "导出本地诊断证据", helpEN: "Creates a new file in a private directory. ZIP includes offline HTML and JSON. No upload or message is sent; UTC timing and counts can remain linkable. Blank incident exports diagnostic history.", helpZH: "在私有目录创建新文件；ZIP 包含离线 HTML 和 JSON。不会上传或发消息，UTC 时间和数量仍可能被关联。Incident 留空导出诊断记录。", params: []parameter{p("output", "New output file", "新输出文件"), choice("format", "File format", "文件格式", "zip", "html", "json"), p("incident", "Incident ID (optional)", "Incident ID（可选）"), p("since", "From RFC3339 time (optional)", "开始时间 RFC3339（可选）"), p("until", "Until RFC3339 time (optional)", "结束时间 RFC3339（可选）")}},
-	{id: "report_now", en: "Current report", zh: "当前报告", helpEN: "A local report for the last 24 hours. Does not send Telegram.", helpZH: "生成最近 24 小时的本地报告；不发送 Telegram。"},
+	{id: "report_now", en: "Current report", zh: "当前报告", helpEN: "A local report for the last 24 hours. Does not send notifications.", helpZH: "生成最近 24 小时的本地报告；不发送通知。"},
 	{id: "report_list", en: "Saved daily reports", zh: "已保存的日报"},
 	{id: "report_show", en: "Read a saved report", zh: "查看指定日报", helpEN: "Use a completed date in YYYY-MM-DD format.", helpZH: "使用 YYYY-MM-DD 格式的日期。", params: []parameter{p("date", "Report date (YYYY-MM-DD)", "报告日期（YYYY-MM-DD）")}},
 	{id: "report_backfill", en: "Fill missing daily reports", zh: "补齐缺失日报", helpEN: "At most 31 completed dates. Historical reports stay local. Existing archives are not overwritten.", helpZH: "最多 31 个已结束日期；补报保存在本地，不覆盖已有存档。", params: []parameter{p("from", "First date (YYYY-MM-DD)", "开始日期（YYYY-MM-DD）"), p("through", "Last date (YYYY-MM-DD)", "结束日期（YYYY-MM-DD）")}, confirmEN: "Create the missing local reports for these dates?", confirmZH: "为这些日期生成缺失的本地日报？", mutation: true},
@@ -48,10 +48,10 @@ var actions = []action{
 	{id: "timeline", en: "Event timeline", zh: "事件时间线"},
 	{id: "notify_status", en: "Notification delivery status", zh: "通知投递状态"},
 	{id: "notify_list", en: "Notification messages", zh: "通知消息列表"},
-	{id: "notify_test", params: []parameter{choice("channel", "Channel", "通道", "telegram", "webhook")}, en: "Send a test notification", zh: "发送测试通知", confirmEN: "Queue a real test message to the selected configured target?", confirmZH: "向所选已配置目标发送一条真实测试通知？", mutation: true},
+	{id: "notify_test", params: []parameter{choice("channel", "Channel", "通道", "telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat")}, en: "Send a test notification", zh: "发送测试通知", confirmEN: "Queue a real test message to the selected configured target?", confirmZH: "向所选已配置目标发送一条真实测试通知？", mutation: true},
 	{id: "notify_retry", en: "Retry a notification", zh: "重试通知", params: []parameter{p("id", "Message ID", "消息 ID")}, confirmEN: "Retry this notification? It may be delivered again.", confirmZH: "重试这条通知？可能再次投递。", mutation: true},
 	{id: "notify_quarantine", en: "Quarantine a notification", zh: "隔离通知", params: []parameter{p("id", "Message ID", "消息 ID")}, confirmEN: "Stop retries for this notification?", confirmZH: "停止这条通知的重试？", mutation: true},
-	{id: "notify_discard_isolated", params: []parameter{choice("channel", "Channel", "通道", "telegram", "webhook")}, en: "Discard isolated notification bodies", zh: "丢弃隔离通知正文", helpEN: "Only bodies isolated after a target or privacy change are discarded. Current delivery and sent history are preserved.", helpZH: "仅丢弃更换目标或收紧隐私后隔离的正文；保留当前投递与已发送历史。", confirmEN: "Permanently discard all isolated bodies for the selected channel? Already in-flight requests may finish at their original target.", confirmZH: "永久丢弃所选通道的全部隔离正文？已在发送中的请求可能在原目标完成。", mutation: true},
+	{id: "notify_discard_isolated", params: []parameter{choice("channel", "Channel", "通道", "telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat")}, en: "Discard isolated notification bodies", zh: "丢弃隔离通知正文", helpEN: "Only bodies isolated after a target or privacy change are discarded. Current delivery and sent history are preserved.", helpZH: "仅丢弃更换目标或收紧隐私后隔离的正文；保留当前投递与已发送历史。", confirmEN: "Permanently discard all isolated bodies for the selected channel? Already in-flight requests may finish at their original target.", confirmZH: "永久丢弃所选通道的全部隔离正文？已在发送中的请求可能在原目标完成。", mutation: true},
 	{id: "notify_resume", en: "Resume a destination", zh: "恢复通知目标", params: []parameter{{key: "destination", en: "Destination", zh: "通知目标", value: "telegram"}}, confirmEN: "Resume delivery attempts to this destination?", confirmZH: "恢复向此目标投递通知？", mutation: true},
 	{id: "silence_list", en: "Active and retained silences", zh: "当前与保留的静默规则"},
 	{id: "silence_add", en: "Add an expiring silence", zh: "添加到期静默", helpEN: "Choose an incident, event kind, or both. Expiry must be within 7 days; use RFC3339, for example 2026-09-13T12:00:00+08:00.", helpZH: "选择 Incident、事件类型或两者；到期须在 7 天内，使用 RFC3339 格式，例如 2026-09-13T12:00:00+08:00。", params: []parameter{p("incident", "Incident ID (optional)", "Incident ID（可选）"), p("kind", "Event kind (optional)", "事件类型（可选）"), p("until", "Expiry with timezone", "到期时间（含时区）"), p("reason", "Reason (optional)", "原因（可选）")}, confirmEN: "Silence matching event notifications until this expiry? Stored events remain available.", confirmZH: "在到期前静默匹配的事件通知？事件记录仍会保留。", mutation: true},
@@ -142,7 +142,7 @@ func (u *ui) incidents() {
 	u.actionMenu("Events and incidents", "事件与 Incident", []string{"incident_list", "incident_show", "timeline"}, u.home)
 }
 func (u *ui) notifications() {
-	u.actionMenu("Telegram and notifications", "Telegram 与通知", []string{"telegram_setup", "notify_status", "notify_list", "notify_test", "notify_retry", "notify_quarantine", "notify_discard_isolated", "notify_resume", "silence_list", "silence_add", "silence_remove"}, u.home)
+	u.actionMenu("Notification channels", "通知渠道", []string{"telegram_setup", "notify_status", "notify_list", "notify_test", "notify_retry", "notify_quarantine", "notify_discard_isolated", "notify_resume", "silence_list", "silence_add", "silence_remove", "feishu_setup", "wecom_setup", "discord_setup", "slack_setup", "teams_setup", "google_chat_setup", "notification_help"}, u.home)
 }
 func (u *ui) geo() {
 	u.actionMenu("Local GeoIP", "本地 GeoIP", []string{"geo_status", "geo_download", "geo_refresh", "geo_schedule"}, u.home)
@@ -165,6 +165,10 @@ func (u *ui) services() {
 }
 
 func (u *ui) openAction(id string, back func()) {
+	if id == "notification_help" {
+		u.notificationHelp(back)
+		return
+	}
 	a, ok := findAction(id)
 	if !ok {
 		return
@@ -177,12 +181,12 @@ func (u *ui) openAction(id string, back func()) {
 		u.priceProvider(back)
 		return
 	}
-	if id == "telegram_setup" && !u.loaded {
-		u.background(u.tr("Load Telegram settings", "加载 Telegram 设置"), func(ctx context.Context) func() {
+	if (id == "telegram_setup" || nativeSetupChannel(id) != "") && !u.loaded {
+		u.background(u.tr("Load notification settings", "加载通知设置"), func(ctx context.Context) func() {
 			snapshot, err := u.backend.Load(ctx)
 			return func() {
 				if err != nil {
-					u.output(u.tr("Telegram configuration unavailable", "Telegram 配置不可用"), u.tr("Load or recover a valid configuration before changing notification settings.", "请先加载或恢复有效配置，再修改通知设置。"), back)
+					u.output(u.tr("Notification configuration unavailable", "通知配置不可用"), u.tr("Load or recover a valid configuration before changing notification settings.", "请先加载或恢复有效配置，再修改通知设置。"), back)
 					return
 				}
 				u.snapshot, u.baseline, u.loaded = snapshot, cloneConfig(snapshot.Config), true
@@ -204,6 +208,18 @@ func (u *ui) actionForm(a action, back func()) {
 	clearers := []func(){}
 	for _, definition := range a.params {
 		param := definition
+		if channel := nativeSetupChannel(a.id); channel != "" {
+			n := u.snapshot.Config.Notifications.NativeChannels()[channel]
+			switch param.key {
+			case "language":
+				param.value = config.NativeChannelLanguage(n)
+			case "enabled":
+				param.value = "no"
+				if n.Enabled {
+					param.value = "yes"
+				}
+			}
+		}
 		if a.id == "telegram_setup" {
 			switch param.key {
 			case "language":
@@ -227,8 +243,21 @@ func (u *ui) actionForm(a action, back func()) {
 				}
 			}
 			labels := append([]string(nil), param.choices...)
-			if a.id == "telegram_setup" && param.key == "language" {
+			if (a.id == "telegram_setup" || nativeSetupChannel(a.id) != "") && param.key == "language" {
 				labels = []string{"English", "简体中文"}
+			}
+			if nativeSetupChannel(a.id) != "" && (param.key == "credential_action" || param.key == "secret_action") {
+				labels = []string{u.tr("Keep unchanged", "保留不变"), u.tr("Replace", "替换"), u.tr("Clear", "清空")}
+			}
+			if nativeSetupChannel(a.id) != "" && param.key == "enabled" {
+				labels = []string{u.tr("Disabled", "停用"), u.tr("Enabled", "启用")}
+			}
+			if param.key == "channel" {
+				for i, name := range param.choices {
+					if brand, ok := nativeBrands[name]; ok {
+						labels[i] = brand
+					}
+				}
 			}
 			if a.id == "retention" {
 				for i, value := range labels {
@@ -251,7 +280,7 @@ func (u *ui) actionForm(a action, back func()) {
 				input.SetText(param.value)
 			}
 			limit := 4096
-			if param.secret {
+			if param.secret && param.key != "url" {
 				limit = 512
 			}
 			input.SetAcceptanceFunc(func(text string, _ rune) bool { return len(text) <= limit })
@@ -298,6 +327,10 @@ func clearArguments(args map[string]string) {
 }
 
 func (u *ui) prepareAction(a action, args map[string]string, back func()) {
+	if nativeSetupChannel(a.id) != "" {
+		u.reviewNativeAction(a, args, back)
+		return
+	}
 	if a.id == "geo_download" && args["accepted_terms"] != "yes" {
 		clearArguments(args)
 		u.output(u.tr(a.en, a.zh), u.tr("Accept the official GeoLite terms yourself before downloading, or skip this optional feature.", "下载前请自行接受官方 GeoLite 条款，或跳过此可选功能。"), back)
@@ -338,7 +371,8 @@ func (u *ui) executeAction(a action, args map[string]string, back func()) {
 			secrets = append(secrets, args[p.key])
 		}
 	}
-	protectedFailure := sensitive || a.id == "geo_download" || a.id == "geo_refresh"
+	nativeOperation := (a.id == "notify_test" || a.id == "notify_discard_isolated") && config.IsNativeChannel(args["channel"])
+	protectedFailure := sensitive || nativeOperation || a.id == "geo_download" || a.id == "geo_refresh"
 	language := u.lang
 	secretFailure := u.tr("The operation failed or was cancelled. Check the entered credentials, connectivity and local permissions. Secret values are not shown.", "操作失败或已取消。请检查凭据、网络连接与本机权限；不会显示凭据内容。")
 	secretSuccess := u.tr("Settings were applied successfully. Use the status menu to inspect the result. No secret values are displayed.", "设置已成功应用。可在状态菜单查看结果；不会显示凭据内容。")
@@ -348,6 +382,9 @@ func (u *ui) executeAction(a action, args map[string]string, back func()) {
 		if err != nil {
 			if protectedFailure {
 				text = secretFailure
+			}
+			if nativeOperation {
+				text = nativeActionFailure(err, language)
 			}
 			if diagnostic, ok := geoValidationFailure(a.id, err, language); ok {
 				text = diagnostic

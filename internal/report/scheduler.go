@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/littlesho/NodeRampart/internal/config"
 	"github.com/littlesho/NodeRampart/internal/model"
 	"github.com/littlesho/NodeRampart/internal/store"
 )
@@ -22,6 +23,7 @@ type Scheduler struct {
 	Destination         string
 	Destinations        []string
 	NotificationPrivacy string
+	NativeLanguages     map[string]string
 	TelegramLanguage    string
 	Logger              *slog.Logger
 	BackfillDays        int
@@ -85,10 +87,11 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 	if s.Destination != "" {
 		destinations = append(destinations, s.Destination)
 	}
-	if len(destinations) > 2 {
+	if len(destinations) > 8 {
 		return fmt.Errorf("too many report notification targets")
 	}
 	generated := map[string]bool{}
+	ordered := make([]string, 0, len(destinations))
 	for _, destination := range destinations {
 		if destination == "" {
 			continue
@@ -96,6 +99,9 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 		exists, err := s.Store.ReportGenerated(ctx, date, destination)
 		if err != nil {
 			return err
+		}
+		if _, seen := generated[destination]; !seen {
+			ordered = append(ordered, destination)
 		}
 		generated[destination] = exists
 	}
@@ -141,8 +147,9 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 			break
 		}
 	}
-	for destination, exists := range generated {
-		if exists {
+	var targetErrors []error
+	for _, destination := range ordered {
+		if generated[destination] {
 			continue
 		}
 		channel := ""
@@ -153,8 +160,26 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 		} else if strings.HasPrefix(destination, "webhook:") {
 			channel = "webhook"
 		}
+		if candidate := strings.SplitN(destination, ":", 2)[0]; config.IsNativeChannel(candidate) {
+			channel = candidate
+			language, err = notificationLanguage(s.NativeLanguages[channel])
+			if err != nil {
+				return err
+			}
+		}
+		if config.IsNativeChannel(channel) {
+			activated, err := s.Store.NotificationTargetActivatedAt(ctx, channel, destination)
+			if err != nil {
+				return err
+			}
+			if activated.IsZero() || !end.After(activated) {
+				continue
+			}
+		}
 		var notificationBody string
-		if channel == "telegram" {
+		if config.IsNativeChannel(channel) {
+			notificationBody, err = NativeNotificationBody(snapshot, language)
+		} else if channel == "telegram" {
 			notificationBody, err = NotificationBodyLocalized(snapshot, language)
 		} else {
 			notificationBody, err = NotificationBody(snapshot)
@@ -164,14 +189,15 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 		}
 		inserted, err := s.Store.Enqueue(ctx, store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "daily:" + date + ":" + destination, Channel: channel, PrivacyMode: s.NotificationPrivacy, Destination: destination, Body: notificationBody, Language: language, Timezone: timezone})
 		if err != nil {
-			return err
+			targetErrors = append(targetErrors, fmt.Errorf("%s daily notification admission failed: %w", channel, err))
+			continue
 		}
 		if inserted && s.Logger != nil {
 			s.Logger.Info("daily report queued", "date", date)
 		}
 		if err := s.Store.MarkReportGenerated(ctx, date, destination, now.UTC()); err != nil {
-			return err
+			targetErrors = append(targetErrors, fmt.Errorf("%s daily notification decision failed: %w", channel, err))
 		}
 	}
-	return nil
+	return errors.Join(targetErrors...)
 }

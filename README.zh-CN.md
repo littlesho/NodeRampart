@@ -8,6 +8,8 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
+> **源码开发版本：0.4.0-alpha.8（Unreleased）。** 新六渠道默认关闭，参见[设置与平台权限](docs/NOTIFICATION_CHANNELS.zh-CN.md)、[实际验收](docs/ALPHA8_ACCEPTANCE.md)、[隐私政策](docs/PRIVACY.md)和[用户协议](docs/USER_AGREEMENT.md)。以下公开安装仍使用已发布 alpha.7，不提供未发布 alpha.8 下载。
+
 > **v0.4.0-alpha.7：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) 新增可搜索的报告时区及独立中英 Telegram 正文。数据库升级为 schema 12；升级前验证匹配备份并分别保护旧配置/密钥，先安装三个匹配程序再保存新配置。
 
 > **本次分发验收：** 22 项匿名下载及校验和通过，与已认证的 22 项 provenance、6 项 runtime SPDX 完全同字节。Debian 13/Fedora 44 公开 bootstrap、setup、基础采集、在线备份和清理：**PASS**。两台 strict 诊断快照仍为 **unknown / 退出码 2**。当前 alpha.7 的 Debian 12/Fedora 43 运行、真实 ARM64 和自然 SSH 恢复链仍未验收，不代表生产就绪。见[本次发布核验](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)。
@@ -265,3 +267,7 @@ SSH 会话没有终端时，可用 ssh -t 分配终端，或使用原有的非�
 升级前请备份，旧版程序不能直接打开已迁移的数据库；只有通道名、没有可靠收件归属的历史 Telegram 消息会保留隔离，不绑定当前收件方。
 
 已发布 alpha.6 产物附有 Go 依赖 SBOM 与匹配的 GitHub 来源证明，验证步骤见[发布验证](docs/RELEASE_VERIFICATION.md)。包内 README 与许可证保持冻结发布源码的快照；之后的文档更新不替换安装包字节，也不代表包中安装了完整离线手册。
+
+## alpha.8 源码候选的原生通知
+
+飞书、企业微信、Discord、Slack、Teams Workflows 与 Google Chat 各支持一个独立目标和中英文消息语言。在**通知渠道**隐藏输入凭据，经预览应用后，另行选择明确渠道发送测试。既有可通知事件、恢复及短日报复用持久 outbox，没有入站命令、监听端口或厂商 SDK 运行依赖。管理员前提、Teams 接受边界、Slack 分发条款、轮换、队列隔离和回退见[完整中文操作说明](docs/NOTIFICATION_CHANNELS.zh-CN.md)。真实外发需用户自行创建并明确授权测试 Webhook；本段不是 alpha.8 发布包安装说明。

@@ -272,6 +272,9 @@ func verifySnapshotSchema(ctx context.Context, db *sql.DB) (int, error) {
 	if version >= 12 {
 		tables["notification_outbox"] += " language presentation_timezone"
 	}
+	if version >= 13 {
+		tables["notification_targets"] += " activated_at"
+	}
 	if version >= 10 {
 		tables["sensor_watermarks"] = "session_id interface sequence sent_at_us committed_at events_complete notifications_complete complete reason sequence_gaps duplicates health_json"
 		tables["sensor_commit_state"] = "id retired_before_us"

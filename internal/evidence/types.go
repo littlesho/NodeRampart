@@ -74,10 +74,12 @@ type Event struct {
 	Phase         string              `json:"phase"`
 	Severity      string              `json:"severity"`
 	Count         uint64              `json:"count"`
+	Deliveries    []Delivery          `json:"deliveries,omitempty"`
 	Delivery      Delivery            `json:"delivery"`
 }
 
 type Delivery struct {
+	Channel           string    `json:"channel,omitempty"`
 	Decision          string    `json:"decision"`
 	NotificationAlias string    `json:"notification_alias,omitempty"`
 	State             string    `json:"state"`

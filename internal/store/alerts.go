@@ -31,16 +31,29 @@ func recordEventNotification(ctx context.Context, tx *sql.Tx, event model.Event,
 	if message == nil {
 		return recordOneEventNotification(ctx, tx, event, nil, now, window)
 	}
-	primary := *message
-	primary.Secondary = nil
-	if message.Secondary != nil && (message.Secondary.Secondary != nil || !notificationChannel(message.Channel) || !notificationChannel(message.Secondary.Channel) || message.Channel == message.Secondary.Channel) {
-		return errors.New("event supports at most one message per configured notification channel")
+	// Validate before admission; this also bounds malformed cyclic chains.
+	seen := make(map[string]bool, MaxNotificationChannels)
+	seenDedupe := make(map[string]bool, MaxNotificationChannels)
+	seenID := make(map[string]bool, MaxNotificationChannels)
+	messages := make([]OutboxMessage, 0, MaxNotificationChannels)
+	for current := message; current != nil; current = current.Secondary {
+		if len(messages) >= MaxNotificationChannels || seen[current.Channel] || seenDedupe[current.DedupeKey] ||
+			(current.ID != "" && seenID[current.ID]) ||
+			(current.Channel != "" && !notificationChannel(current.Channel)) ||
+			(message.Secondary != nil && current.Channel == "") {
+			return errors.New("event supports at most one message per configured notification channel")
+		}
+		seen[current.Channel] = true
+		seenDedupe[current.DedupeKey] = true
+		seenID[current.ID] = true
+		copy := *current
+		copy.Secondary = nil
+		messages = append(messages, copy)
 	}
-	if err := recordOneEventNotification(ctx, tx, event, &primary, now, window); err != nil {
-		return err
-	}
-	if message.Secondary != nil {
-		return recordOneEventNotification(ctx, tx, event, message.Secondary, now, window)
+	for index := range messages {
+		if err := recordOneEventNotification(ctx, tx, event, &messages[index], now, window); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -97,7 +110,9 @@ func recordOneEventNotification(ctx context.Context, tx *sql.Tx, event model.Eve
 	if err != nil {
 		return err
 	}
-	mergeable := bound && mergeablePresentation(*message) && window > 0 && event.Phase == "update" && event.IncidentID != "" && len(message.Body) <= 4096-mergeBodyReserve
+	// Native bodies have already been bounded and encoded for their platform.
+	// Preserve them byte-for-byte rather than applying Telegram HTML merging.
+	mergeable := (message.Channel == "" || message.Channel == "telegram" || message.Channel == "webhook") && bound && mergeablePresentation(*message) && window > 0 && event.Phase == "update" && event.IncidentID != "" && len(message.Body) <= 4096-mergeBodyReserve
 	if mergeable {
 		var count, previousBytes int64
 		err := tx.QueryRowContext(ctx, `SELECT id,merged_count,LENGTH(CAST(body AS BLOB)) FROM notification_outbox
@@ -109,13 +124,16 @@ func recordOneEventNotification(ctx context.Context, tx *sql.Tx, event model.Eve
 				return errors.New("notification merge count exhausted")
 			}
 			body := mergedBodyLocalized(count+1, message.Body, message.Language)
-			var pendingBytes int64
-			if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0) FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL`).Scan(&pendingBytes); err != nil {
+			var pendingBytes, channelBytes int64
+			if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0),
+ COALESCE(SUM(CASE WHEN channel=? THEN LENGTH(CAST(body AS BLOB)) ELSE 0 END),0)
+ FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL`, message.Channel).Scan(&pendingBytes, &channelBytes); err != nil {
 				return err
 			}
-			if pendingBytes-previousBytes+int64(len(body)) > maxPendingOutboxBytes {
+			if pendingBytes-previousBytes+int64(len(body)) > maxPendingOutboxBytes ||
+				message.Channel != "" && channelBytes-previousBytes+int64(len(body)) > maxChannelOutboxBytes {
 				decision, notificationID = "rejected", ""
-				if _, err := tx.ExecContext(ctx, `UPDATE notification_counters SET rejected=rejected+1 WHERE id=1`); err != nil {
+				if _, err := tx.ExecContext(ctx, `UPDATE notification_counters SET rejected=MIN(rejected,9223372036854775806)+1 WHERE id=1`); err != nil {
 					return err
 				}
 				return record()

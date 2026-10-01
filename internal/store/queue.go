@@ -6,12 +6,57 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/littlesho/NodeRampart/internal/api"
 )
 
 const (
 	MaxDeliveryAttempts = 10
 	OutboxTTL           = 7 * 24 * time.Hour
 )
+
+// ReserveNotificationAttempt persists a paced receiver's consumed interval
+// before any external request. Failed requests and process interruption still
+// spend that interval. A reservation changes neither attempts nor the saved
+// body, and is never permission to redirect an old claim to another target.
+func (s *Store) ReserveNotificationAttempt(ctx context.Context, id, destination string, now time.Time, minimumInterval time.Duration) (bool, error) {
+	if !api.ValidID(id) || destination == "" || len(destination) > 128 || now.IsZero() || minimumInterval < time.Second || minimumInterval > 30*time.Second {
+		return false, errors.New("invalid notification attempt reservation")
+	}
+	release, err := s.beginWrite(ctx, writeCritical)
+	if err != nil {
+		return false, err
+	}
+	defer release()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	var eligible bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM notification_outbox o WHERE id=? AND destination=?
+ AND sent_at IS NULL AND quarantined_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL
+ AND lease_until>? AND expires_at>?
+ AND (channel='' OR EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=1))
+ AND NOT EXISTS(SELECT 1 FROM notification_cooldowns c WHERE c.destination=o.destination AND c.until_at>?))`, id, destination, now.UnixMilli(), now.UnixMilli(), now.UnixMilli()).Scan(&eligible); err != nil {
+		return false, err
+	}
+	if !eligible {
+		return false, nil
+	}
+	until := now.Add(minimumInterval)
+	if !until.Equal(until.Truncate(time.Millisecond)) {
+		until = until.Truncate(time.Millisecond).Add(time.Millisecond)
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO notification_cooldowns(destination,until_at) VALUES (?,?)
+ ON CONFLICT(destination) DO UPDATE SET until_at=MAX(until_at,excluded.until_at)`, destination, until.UnixMilli()); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
 
 // MarkRateLimited durably pauses every message sharing a destination, including
 // messages enqueued after this transaction and messages loaded after a restart.
@@ -131,7 +176,21 @@ type QueueStatus struct {
 	Expired       uint64                `json:"expired"`
 	MaxMessages   int                   `json:"max_messages"`
 	MaxBytes      int                   `json:"max_bytes"`
+	Channels      []ChannelQueueStatus  `json:"channels"`
 	Cooldowns     []DestinationCooldown `json:"cooldowns"`
+}
+
+// Channel shares include isolated and quarantined bodies across all previous
+// identities. Existing larger queues are retained, with new admission paused
+// until usage falls below the share; migration never discards their bodies.
+type ChannelQueueStatus struct {
+	Channel      string `json:"channel"`
+	Pending      int64  `json:"pending"`
+	PendingBytes int64  `json:"pending_bytes"`
+	Isolated     int64  `json:"isolated"`
+	Quarantined  int64  `json:"quarantined"`
+	MaxMessages  int    `json:"max_messages"`
+	MaxBytes     int    `json:"max_bytes"`
 }
 
 type DestinationCooldown struct {
@@ -160,6 +219,37 @@ func (s *Store) QueueStatus(ctx context.Context, now time.Time) (QueueStatus, er
 	}
 	if sent != 0 {
 		status.LastSent = time.UnixMilli(sent).UTC()
+	}
+	// One bounded aggregate avoids scanning retained bodies once per channel.
+	channelRows, err := s.db.QueryContext(ctx, `SELECT channel,COUNT(*),COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0),
+ COALESCE(SUM(isolated_at IS NOT NULL),0),COALESCE(SUM(quarantined_at IS NOT NULL),0)
+ FROM notification_outbox WHERE channel IN (`+notificationChannelsSQL+`) AND sent_at IS NULL AND suppressed_at IS NULL AND expires_at>?
+ GROUP BY channel LIMIT ?`, now.UnixMilli(), MaxNotificationChannels)
+	if err != nil {
+		return status, err
+	}
+	channels := make(map[string]ChannelQueueStatus, MaxNotificationChannels)
+	for channelRows.Next() {
+		var entry ChannelQueueStatus
+		if err := channelRows.Scan(&entry.Channel, &entry.Pending, &entry.PendingBytes, &entry.Isolated, &entry.Quarantined); err != nil {
+			channelRows.Close()
+			return status, err
+		}
+		channels[entry.Channel] = entry
+	}
+	if err := channelRows.Err(); err != nil {
+		channelRows.Close()
+		return status, err
+	}
+	if err := channelRows.Close(); err != nil {
+		return status, err
+	}
+	// Return the same fixed, credential-free list for disabled/unused channels.
+	status.Channels = make([]ChannelQueueStatus, 0, MaxNotificationChannels)
+	for _, channel := range notificationChannels {
+		entry := channels[channel]
+		entry.Channel, entry.MaxMessages, entry.MaxBytes = channel, maxChannelOutboxMessages, maxChannelOutboxBytes
+		status.Channels = append(status.Channels, entry)
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT destination, until_at FROM notification_cooldowns WHERE until_at>? ORDER BY destination LIMIT 100`, now.UnixMilli())
 	if err != nil {
@@ -207,6 +297,7 @@ func (s *Store) ResumeDestination(ctx context.Context, destination string) error
 
 type NotificationInfo struct {
 	ID          string    `json:"id"`
+	Channel     string    `json:"channel,omitempty"`
 	Destination string    `json:"destination"`
 	State       string    `json:"state"`
 	Attempts    int       `json:"attempts"`
@@ -223,8 +314,8 @@ func (s *Store) Notifications(ctx context.Context, beforeID string, count int) (
 	if count < 1 || count > 100 || len(beforeID) > 128 {
 		return nil, errors.New("invalid notification query")
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id,destination,CASE WHEN sent_at IS NOT NULL THEN 'sent' WHEN suppressed_at IS NOT NULL THEN CASE WHEN isolated_at IS NOT NULL THEN 'discarded' ELSE 'silenced' END WHEN expires_at<=? THEN 'expired' WHEN isolated_at IS NOT NULL THEN 'isolated' WHEN quarantined_at IS NOT NULL THEN 'quarantined' ELSE 'pending' END,
- attempts,LENGTH(CAST(body AS BLOB)),created_at,next_attempt,expires_at,last_error FROM notification_outbox WHERE (?='' OR id<?) ORDER BY id DESC LIMIT ?`, time.Now().UTC().UnixMilli(), beforeID, beforeID, count)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,channel,destination,CASE WHEN sent_at IS NOT NULL THEN CASE WHEN channel='teams' THEN 'accepted' ELSE 'sent' END WHEN suppressed_at IS NOT NULL THEN CASE WHEN isolated_at IS NOT NULL THEN 'discarded' ELSE 'silenced' END WHEN expires_at<=? THEN 'expired' WHEN isolated_at IS NOT NULL THEN 'isolated' WHEN quarantined_at IS NOT NULL THEN 'quarantined' WHEN EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=0) THEN 'paused' ELSE 'pending' END,
+ attempts,LENGTH(CAST(body AS BLOB)),created_at,next_attempt,expires_at,last_error FROM notification_outbox o WHERE (?='' OR id<?) ORDER BY id DESC LIMIT ?`, time.Now().UTC().UnixMilli(), beforeID, beforeID, count)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +324,7 @@ func (s *Store) Notifications(ctx context.Context, beforeID string, count int) (
 	for rows.Next() {
 		var n NotificationInfo
 		var created, next, expires int64
-		if err := rows.Scan(&n.ID, &n.Destination, &n.State, &n.Attempts, &n.Bytes, &created, &next, &expires, &n.LastError); err != nil {
+		if err := rows.Scan(&n.ID, &n.Channel, &n.Destination, &n.State, &n.Attempts, &n.Bytes, &created, &next, &expires, &n.LastError); err != nil {
 			return nil, err
 		}
 		n.CreatedAt = time.UnixMilli(created).UTC()

@@ -8,8 +8,6 @@ import (
 	"fmt"
 )
 
-const schemaVersion = 12
-
 func migrateV3(ctx context.Context, tx *sql.Tx) error {
 	for _, statement := range []string{
 		`ALTER TABLE notification_outbox ADD COLUMN quarantined_at INTEGER`,

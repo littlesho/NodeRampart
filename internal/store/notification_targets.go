@@ -24,7 +24,21 @@ func validNotificationTarget(channel, destination string) bool {
 	return err == nil
 }
 
-func notificationChannel(channel string) bool { return channel == "telegram" || channel == "webhook" }
+// MaxNotificationChannels is a fixed product limit, not a plugin registry.
+const MaxNotificationChannels = 8
+
+const notificationChannelsSQL = "'telegram','webhook','feishu','wecom','discord','slack','teams','google_chat'"
+
+var notificationChannels = [...]string{"telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat"}
+
+func notificationChannel(channel string) bool {
+	switch channel {
+	case "telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat":
+		return true
+	default:
+		return false
+	}
+}
 
 func notificationTargetMatches(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, error) {
 	if message.Channel == "" {
@@ -54,23 +68,46 @@ func (s *Store) ConfigureNotificationTarget(ctx context.Context, channel, destin
 		return err
 	}
 	defer tx.Rollback()
-	var privacyChanged bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM notification_targets WHERE channel=? AND privacy_mode<>?)`, channel, privacyMode).Scan(&privacyChanged); err != nil {
+	var previousDestination, previousPrivacy string
+	var previousEnabled bool
+	var activated int64
+	err = tx.QueryRowContext(ctx, `SELECT destination,privacy_mode,enabled,activated_at FROM notification_targets WHERE channel=?`, channel).Scan(&previousDestination, &previousPrivacy, &previousEnabled, &activated)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
-	isolatePrivacy := privacyChanged && privacyMode != "full"
+	isolatePrivacy := previousPrivacy != "" && previousPrivacy != privacyMode && privacyMode != "full"
 	if _, err := tx.ExecContext(ctx, `UPDATE notification_outbox SET isolated_at=?,lease_until=NULL,last_error='notification target or privacy policy changed; retained in isolation'
- WHERE channel=? AND sent_at IS NULL AND isolated_at IS NULL AND (destination<>? OR ?)`, now.UnixMilli(), channel, destination, isolatePrivacy); err != nil {
+ WHERE channel=? AND sent_at IS NULL AND suppressed_at IS NULL AND isolated_at IS NULL AND (destination<>? OR ?)`, now.UnixMilli(), channel, destination, isolatePrivacy); err != nil {
 		return err
 	}
 	if destination == channel+":unknown" {
 		enabled = false
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO notification_targets(channel,destination,privacy_mode,enabled) VALUES (?,?,?,?)
- ON CONFLICT(channel) DO UPDATE SET destination=excluded.destination,privacy_mode=excluded.privacy_mode,enabled=excluded.enabled`, channel, destination, privacyMode, boolInt(enabled)); err != nil {
+	if channel != "telegram" && channel != "webhook" && (previousDestination != destination || enabled && (!previousEnabled || activated == 0)) {
+		activated = now.UnixMilli()
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO notification_targets(channel,destination,privacy_mode,enabled,activated_at) VALUES (?,?,?,?,?)
+ ON CONFLICT(channel) DO UPDATE SET destination=excluded.destination,privacy_mode=excluded.privacy_mode,enabled=excluded.enabled,activated_at=excluded.activated_at`, channel, destination, privacyMode, boolInt(enabled), activated); err != nil {
 		return err
 	}
 	return tx.Commit()
+}
+
+// NotificationTargetActivatedAt is the persisted boundary for automatic native
+// daily summaries. It does not revoke old queued bodies or change report dates.
+// An absent/mismatched target is an error, never permission to send history.
+func (s *Store) NotificationTargetActivatedAt(ctx context.Context, channel, destination string) (time.Time, error) {
+	if !notificationChannel(channel) || !validNotificationTarget(channel, destination) {
+		return time.Time{}, errors.New("invalid notification target")
+	}
+	var activated int64
+	if err := s.db.QueryRowContext(ctx, `SELECT activated_at FROM notification_targets WHERE channel=? AND destination=?`, channel, destination).Scan(&activated); err != nil {
+		return time.Time{}, err
+	}
+	if activated == 0 {
+		return time.Time{}, nil
+	}
+	return time.UnixMilli(activated).UTC(), nil
 }
 
 // NotificationDeliveryAllowed rechecks an already claimed row immediately before

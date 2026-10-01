@@ -19,6 +19,7 @@ import (
 
 	"github.com/littlesho/NodeRampart/internal/api"
 	"github.com/littlesho/NodeRampart/internal/billing"
+	"github.com/littlesho/NodeRampart/internal/config"
 	"github.com/littlesho/NodeRampart/internal/replay"
 	"github.com/littlesho/NodeRampart/internal/store"
 )
@@ -62,6 +63,9 @@ func (m *Manager) Action(ctx context.Context, action string, input map[string]st
 	mutates := map[string]bool{"service_start": true, "service_stop": true, "service_restart": true, "telegram_setup": true,
 		"privacy_key_generate": true, "geo_download": true, "geo_refresh": true, "geo_schedule": true,
 		"prices_fetch": true, "billing_profile_save": true, "recover_config": true}
+	if config.IsNativeChannel(strings.TrimSuffix(action, "_setup")) && strings.HasSuffix(action, "_setup") || action == "native_setup" {
+		mutates[action] = true
+	}
 	if mutates[action] {
 		release, err := m.lock()
 		if err != nil {
@@ -86,6 +90,12 @@ func (m *Manager) Action(ctx context.Context, action string, input map[string]st
 		return m.recoverConfig(ctx)
 	case "telegram_setup":
 		return m.telegram(ctx, input)
+	case "native_setup", "feishu_setup", "wecom_setup", "discord_setup", "slack_setup", "teams_setup", "google_chat_setup":
+		channel := strings.TrimSuffix(action, "_setup")
+		if action == "native_setup" {
+			channel = input["channel"]
+		}
+		return m.native(ctx, channel, input)
 	case "privacy_key_generate":
 		return m.generateKey(ctx)
 	case "geo_download", "geo_refresh":
@@ -219,8 +229,8 @@ func (m *Manager) query(ctx context.Context, action string, input map[string]str
 		if channel == "" {
 			channel = "telegram"
 		}
-		if channel != "telegram" && channel != "webhook" {
-			return "", errors.New("select telegram or webhook")
+		if !config.IsNotificationChannel(channel) {
+			return "", errors.New("select a supported notification channel / 请选择支持的通知渠道")
 		}
 		args = api.NotifyChannelArgs{Channel: channel}
 	case "status", "doctor", "report_now", "notify_status", "alerts_status":
@@ -388,7 +398,7 @@ func (m *Manager) telegram(ctx context.Context, input map[string]string) (string
 		m.removeUnreferencedSecret(created)
 	}
 	if err == nil && created != "" {
-		if cleanupErr := m.cleanManagedFiles(filepath.Dir(created), "telegram-", ".secret", created, snapshot.Config.Privacy.HashKeyFile); cleanupErr != nil {
+		if cleanupErr := m.cleanManagedFiles(filepath.Dir(created), "telegram-", ".secret", secretReferences(snapshot.Config)...); cleanupErr != nil {
 			return result, errors.New("Telegram configured, but old managed token cleanup failed")
 		}
 	}
@@ -410,11 +420,11 @@ func (m *Manager) newSecret(kind string, data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := m.cleanManagedFiles(dir, kind+"-", ".secret", current.Config.Notifications.Telegram.TokenFile, current.Config.Privacy.HashKeyFile); err != nil {
+	if err := m.cleanManagedFiles(dir, kind+"-", ".secret", secretReferences(current.Config)...); err != nil {
 		return "", err
 	}
 	path := filepath.Join(dir, kind+"-"+rand.Text()+".secret")
-	if err := writeFile(path, bytes.NewReader(data), 4096, 0o600, m.daemonUID, m.daemonGID, false); err != nil {
+	if err := writeFile(path, bytes.NewReader(data), 8192, 0o600, m.daemonUID, m.daemonGID, false); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -422,8 +432,15 @@ func (m *Manager) newSecret(kind string, data []byte) (string, error) {
 
 func (m *Manager) removeUnreferencedSecret(path string) {
 	current, err := m.Load(context.Background())
-	if err == nil && current.Config.Notifications.Telegram.TokenFile != path && current.Config.Privacy.HashKeyFile != path {
-		_ = removeFile(path)
+	if err == nil {
+		for _, reference := range secretReferences(current.Config) {
+			if reference == path {
+				return
+			}
+		}
+		if filepath.Dir(path) == filepath.Join(filepath.Dir(m.ConfigPath), "secrets") {
+			_ = removeFile(path)
+		}
 	}
 }
 

@@ -53,7 +53,9 @@ make build COMMIT=unknown
 ARCH=amd64 COMMIT=unknown ./scripts/build-rpm.sh
 ```
 
-An official candidate requires a reviewed clean commit and matching version tag.
+A clean local/CI candidate requires a reviewed clean commit and exact metadata.
+An official release separately requires its matching tag and publication workflow;
+alpha.8 is Unreleased and this task does not create either.
 Read and verify its metadata before setting the exact values for every build:
 
 ```bash
@@ -71,12 +73,13 @@ and passes them to all package, SBOM, and collection jobs. Locally verify the
 helper's output before building; the local command does not create a tag.
 
 Ordinary local DEBs retain the filename
-`noderampart_0.4.0~alpha.7_amd64.deb`; the official entry renames its own output to
-`noderampart_0.4.0-alpha.7_amd64.deb`. Both have native Debian version
-`0.4.0~alpha.7`. Portable public names prevent GitHub's asset-name replacement
-from changing checksum references. The alpha.7 native RPM version is
-`0.4.0-0.alpha.8%{?dist}`; suffixes `.1` through `.7` retain the public
-DEB/RPM ordering rules. `VERSION` selects published alpha.7. The frozen tag/source
+`noderampart_0.4.0~alpha.8_amd64.deb`; the clean build entry renames its own output to
+`noderampart_0.4.0-alpha.8_amd64.deb`. Both have native Debian version
+`0.4.0~alpha.8`; these are candidate files, not published download assets. Portable public names prevent GitHub's asset-name replacement
+from changing checksum references. The alpha.8 native RPM version is
+`0.4.0-0.alpha.9%{?dist}`; suffixes `.1` through `.8` retain native
+DEB/RPM ordering rules. `VERSION` selects the alpha.8 development candidate.
+Published alpha.7 remains `0.4.0~alpha.7` / `0.4.0-0.alpha.8%{?dist}`. The frozen tag/source
 and exact release bytes are recorded in [release verification](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
 Ordinary local/CI packages remain experimental artifacts and do not inherit
 release provenance merely by sharing a version or source tree. Bootstrap still
@@ -177,7 +180,7 @@ transition with the checked-out script, then install the reviewed package:
 
 ```bash
 sudo ./scripts/source-to-package.sh --prepare
-sudo apt install ./dist/noderampart_0.4.0~alpha.7_amd64.deb
+sudo apt install ./dist/noderampart_0.4.0~alpha.8_amd64.deb
 sudo /usr/bin/noderampart doctor
 sudo /usr/bin/noderampart status
 ```
@@ -274,9 +277,19 @@ Use an isolated management network and a separate no-NAT traffic network. High-r
 6. Changelog, compatibility matrix, known limitations, checksums, SBOM, and provenance are attached.
 7. No release is marked stable until the privileged VM matrix and soak exit criteria are met.
 
-当前 `VERSION` 为已发布 alpha.7；DEB 原生版本 `0.4.0~alpha.7`，RPM
-`0.4.0-0.alpha.8%{?dist}`，排序高于 alpha.6。普通 local/CI 包仍是独立候选，
+当前 `VERSION` 为未发布 alpha.8 development candidate；DEB 原生版本
+`0.4.0~alpha.8`，RPM `0.4.0-0.alpha.9%{?dist}`，排序高于已发布 alpha.7。普通 local/CI 包仍是独立候选，
 相同版本或源码树不使其继承正式 Release provenance。公开安装明确选择 alpha.7；
 冻结来源、发布日期及验收范围见[发布核验](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)。
-schema 12 仅新增消息呈现元数据；配置/API 1、协议 v5 不变。回退需
+schema 13 扩展固定渠道约束及原生日报启用边界，保留 schema 12 消息呈现元数据；
+配置/API 1、协议 v5 不变。回退需
 匹配旧数据库备份和旧配置/密钥，不能原地降 schema。
+
+
+For alpha.8, use [acceptance](ALPHA8_ACCEPTANCE.md) and the bilingual
+[channel guide](NOTIFICATION_CHANNELS.md). Contract tests use synthetic protected
+files and injected transports/resolvers/certificates, never real vendor endpoints.
+The golden event matrix covers every notifyable kind and start/update/recovery
+in en/zh; daily tests preserve archived timezone/DST and language. Keep MMDB
+validator cancellation/descendant-exit regressions unchanged. Candidate builds
+are not official release provenance, even when clean and exactly commit-stamped.

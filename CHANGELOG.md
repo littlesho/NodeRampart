@@ -2,6 +2,32 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.8 - Unreleased / development candidate
+
+- Add six original outbound-only native senders: Feishu custom group robots,
+  WeCom group robots, Discord incoming webhooks, Slack App Incoming Webhooks,
+  Microsoft Teams Workflows Adaptive Cards and Google Chat Space webhooks.
+  Each has one protected-file target, defaults disabled and runs alongside
+  Telegram and the unchanged generic Webhook/heartbeat contracts.
+- Add independent en/zh setup/test/event/recovery/daily-summary presentation,
+  channel-specific status, errors and isolated-body handling to the reviewed
+  management/TUI flow. Freeze bodies and report timezone at admission.
+- Reuse durable outbox leases, bounded per-channel admission, immutable
+  credential snapshots, target/privacy isolation and restart-safe pacing.
+  Validate official HTTPS URL shapes, DNS and connected peers; native URLs
+  never use an environment proxy, redirects or disabled TLS verification.
+- Database schema 13 expands event decision channels and records native daily
+  activation boundaries. Preserve schema 12 data and backups; rollback requires
+  the matching older database, configuration and credentials, never in-place
+  downgrade. Configuration/API 1 and sensor protocol 5 remain unchanged.
+- Candidate project `0.4.0-alpha.8` maps to DEB `0.4.0~alpha.8` and RPM
+  `0.4.0-0.alpha.9%{?dist}`. Public installation/defaults continue to select
+  existing releases. No tag, Release, latest change or production deployment.
+- See [actual acceptance and limitations](docs/ALPHA8_ACCEPTANCE.md),
+  [channel operations](docs/NOTIFICATION_CHANNELS.md), [privacy](docs/PRIVACY.md)
+  and [user agreement](docs/USER_AGREEMENT.md). Real-platform delivery and
+  receiver confirmation require separately authorized targets.
+
 ## 0.4.0-alpha.7 - 2026-10-01 (UTC)
 
 - Published as an alpha prerelease at `2026-10-01T08:33:06Z`

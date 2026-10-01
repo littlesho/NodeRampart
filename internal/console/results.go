@@ -41,6 +41,17 @@ var resultLabels = map[string][2]string{
 	"next_until_utc": {"Next page: until (UTC)", "下一页：until（UTC）"}, "next_after_id": {"Next page: after ID", "下一页：after_id"},
 	"next_date": {"Resume from date", "继续补齐的日期"}, "status": {"Status", "状态"}, "reason": {"Reason", "原因"}, "error": {"Error", "错误"},
 	"pending": {"Pending", "待处理"}, "sent": {"Sent", "已发送"}, "failed": {"Failed", "失败"}, "suppressed": {"Silenced", "已静默"}, "expired": {"Expired", "已到期"},
+	"accepted": {"Workflow request accepted", "工作流请求已接受"},
+	"channel":  {"Notification channel", "通知渠道"}, "channels": {"Notification channels", "通知渠道"},
+	"native_channels": {"Native notification channels enabled", "原生通知渠道启用情况"}, "optional_failures": {"Optional feature failures", "可选功能故障"},
+	"last_error": {"Latest delivery failure", "最近投递错误"}, "attempts": {"Delivery attempts", "投递尝试次数"}, "bytes": {"Body size (bytes)", "正文大小（字节）"},
+	"pending_bytes": {"Pending body size (bytes)", "待投递正文大小（字节）"}, "max_messages": {"Message limit", "消息条数上限"}, "max_bytes": {"Body size limit (bytes)", "正文大小上限（字节）"},
+	"cooldowns": {"Destination cooldowns", "目标冷却时间"}, "destination": {"Nonsecret target identity", "非秘密目标标识"}, "until_utc": {"Resume no earlier than (UTC)", "最早恢复时间（UTC）"},
+	"created_at_utc": {"Queued at (UTC)", "入队时间（UTC）"}, "next_attempt_utc": {"Next attempt no earlier than (UTC)", "下次最早尝试时间（UTC）"}, "expires_at_utc": {"Expires at (UTC)", "到期时间（UTC）"},
+	"oldest_pending_utc": {"Oldest pending message (UTC)", "最早待投递消息（UTC）"}, "last_sent_utc": {"Latest interface acknowledgment (UTC)", "最近接口确认（UTC）"},
+	"rejected": {"Admission refused", "拒绝入队"}, "quarantined": {"Retries quarantined", "重试已隔离"}, "reason_code": {"Diagnostic reason", "诊断原因"},
+	"impact": {"Impact", "影响"}, "next_step": {"Suggested next step", "建议下一步"}, "diagnosis": {"Diagnosis", "诊断"},
+	"schema_version": {"Schema version", "结构版本"}, "strict_exit_code": {"Strict diagnostic exit code", "严格诊断退出码"},
 	"isolated": {"Isolated target/privacy backlog", "目标或隐私变更后的隔离积压"}, "discarded": {"Discarded isolated bodies", "已丢弃隔离正文"},
 	"monitoring": {"Budget and health alerts", "预算与健康告警"}, "rules": {"Rules", "规则"}, "available": {"Evidence available", "依据可用"},
 	"alert": {"Alert inputs saved with this event", "此事件保存的告警依据"}, "availability": {"Recorded context availability", "事件依据完整程度"},
@@ -74,6 +85,9 @@ func humanResult(text, language string) string {
 	nodes := 0
 	var walk func(any, int)
 	label := func(key string) string {
+		if brand, ok := nativeBrands[key]; ok {
+			return brand
+		}
 		if names, ok := resultLabels[key]; ok {
 			if language == "zh" {
 				return names[1]
@@ -113,7 +127,7 @@ func humanResult(text, language string) string {
 				default:
 					out.WriteString(indent + label(key) + ": ")
 					if text, ok := child.(string); ok {
-						child = monitorExecutionLabel(key, alertContextLabel(key, retentionLabel(key, text, language), language), language)
+						child = notificationResultLabel(key, monitorExecutionLabel(key, alertContextLabel(key, retentionLabel(key, text, language), language), language), language)
 					}
 					walk(child, 0)
 				}
@@ -167,6 +181,22 @@ func monitorExecutionLabel(key, value, language string) string {
 		}
 	} else if key == "state" {
 		switch value {
+		case "accepted":
+			label = [2]string{"Workflow request accepted", "工作流请求已接受"}
+		case "sent":
+			label = [2]string{"Interface acknowledged", "接口已确认"}
+		case "paused":
+			label = [2]string{"Delivery paused", "投递已暂停"}
+		case "isolated":
+			label = [2]string{"Isolated target/privacy backlog", "目标或隐私变更后的隔离积压"}
+		case "quarantined":
+			label = [2]string{"Retries quarantined", "重试已隔离"}
+		case "pending":
+			label = [2]string{"Pending", "待处理"}
+		case "expired":
+			label = [2]string{"Expired", "已到期"}
+		case "discarded":
+			label = [2]string{"Isolated body discarded", "隔离正文已丢弃"}
 		case "completed":
 			label = [2]string{"Completed with known observations", "完成，已获得明确判断"}
 		case "partial":

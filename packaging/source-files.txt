@@ -30,6 +30,7 @@ cmd/noderampart/main_test.go
 cmd/noderampart/management.go
 cmd/noderampart/metrics.go
 cmd/noderampart/metrics_test.go
+cmd/noderampart/native_config_test.go
 cmd/noderampart/notification_cli_test.go
 cmd/noderampart/output.go
 cmd/noderampart/replay.go
@@ -40,6 +41,7 @@ cmd/noderampart/upgrade.go
 cmd/noderampart/upgrade_threshold_test.go
 cmd/noderampart/v3_test.go
 cmd/noderampartd/main.go
+cmd/noderampartd/native_optional_test.go
 cmd/noderampartd/optional.go
 cmd/noderampartd/optional_test.go
 cmd/noderampartd/startup_test.go
@@ -47,13 +49,18 @@ configs/billing.custom.example.json
 configs/noderampart.json
 docs/ALERTS_EVIDENCE.md
 docs/ALPHA6_ACCEPTANCE.md
+docs/ALPHA8_ACCEPTANCE.md
 docs/ALPHA_LIMITATIONS.md
 docs/ARCHITECTURE.md
 docs/DEVELOPMENT.md
+docs/NOTIFICATION_CHANNELS.md
+docs/NOTIFICATION_CHANNELS.zh-CN.md
+docs/PRIVACY.md
 docs/RELEASE_VERIFICATION.md
 docs/ROADMAP.md
 docs/STORAGE-BUDGET.md
 docs/THREAT_MODEL.md
+docs/USER_AGREEMENT.md
 docs/V0.2_OPERATIONS.md
 docs/V0.3_OPERATIONS.md
 docs/V0.4_OPERATIONS.md
@@ -108,6 +115,10 @@ internal/config/config_test.go
 internal/config/file_bounds_test.go
 internal/config/fuzz_test.go
 internal/config/interfaces_test.go
+internal/config/native.go
+internal/config/native_test.go
+internal/config/native_url.go
+internal/config/native_url_test.go
 internal/config/notification_identity_test.go
 internal/config/outbound.go
 internal/config/outbound_test.go
@@ -123,6 +134,8 @@ internal/console/console_test.go
 internal/console/features_test.go
 internal/console/fields.go
 internal/console/geo_validation_test.go
+internal/console/native.go
+internal/console/native_test.go
 internal/console/prices.go
 internal/console/reliability_test.go
 internal/console/results.go
@@ -168,6 +181,8 @@ internal/daemon/monitor_observe.go
 internal/daemon/monitor_rollover_test.go
 internal/daemon/monitor_state.go
 internal/daemon/monitor_test.go
+internal/daemon/native_notifications.go
+internal/daemon/native_notifications_test.go
 internal/daemon/notification_binding_test.go
 internal/daemon/notification_language_test.go
 internal/daemon/outbound_test.go
@@ -205,6 +220,7 @@ internal/evidence/export.go
 internal/evidence/export_test.go
 internal/evidence/files.go
 internal/evidence/files_test.go
+internal/evidence/native_deliveries_test.go
 internal/evidence/producer.go
 internal/evidence/producer_test.go
 internal/evidence/textfile.go
@@ -234,6 +250,9 @@ internal/manage/identity_test.go
 internal/manage/lab_test.go
 internal/manage/manager.go
 internal/manage/manager_test.go
+internal/manage/native.go
+internal/manage/native_recovery_test.go
+internal/manage/native_test.go
 internal/manage/prices.go
 internal/manage/reliability_test.go
 internal/manage/report.go
@@ -253,9 +272,14 @@ internal/notify/eligibility_test.go
 internal/notify/format.go
 internal/notify/format_localized.go
 internal/notify/format_localized_test.go
+internal/notify/format_native.go
+internal/notify/format_native_test.go
 internal/notify/https.go
 internal/notify/https_test.go
 internal/notify/localized_pipeline_test.go
+internal/notify/native.go
+internal/notify/native_outbox_test.go
+internal/notify/native_test.go
 internal/notify/notify_test.go
 internal/notify/target_test.go
 internal/notify/telegram.go
@@ -263,7 +287,10 @@ internal/notify/telegram_test.go
 internal/notify/template_coverage_test.go
 internal/notify/testdata/events_en.golden
 internal/notify/testdata/events_zh.golden
+internal/notify/testdata/native_events_en.golden
+internal/notify/testdata/native_events_zh.golden
 internal/notify/worker.go
+internal/notify/worker_native_pacing_test.go
 internal/notify/worker_test.go
 internal/privacy/boundaries_test.go
 internal/privacy/privacy.go
@@ -299,6 +326,8 @@ internal/report/forecast.go
 internal/report/month_test.go
 internal/report/notification.go
 internal/report/notification_localized_test.go
+internal/report/notification_native.go
+internal/report/notification_native_test.go
 internal/report/notification_summary_test.go
 internal/report/regression_test.go
 internal/report/report.go
@@ -306,6 +335,8 @@ internal/report/report_test.go
 internal/report/retention.go
 internal/report/retention_test.go
 internal/report/scheduler.go
+internal/report/testdata/native_daily_en.golden
+internal/report/testdata/native_daily_zh.golden
 internal/report/testdata/notification_en.golden
 internal/report/testdata/notification_zh.golden
 internal/report/trend.go
@@ -365,6 +396,8 @@ internal/store/migration_v10.go
 internal/store/migration_v11.go
 internal/store/migration_v11_test.go
 internal/store/migration_v12.go
+internal/store/migration_v13.go
+internal/store/migration_v13_test.go
 internal/store/migration_v3.go
 internal/store/migration_v4.go
 internal/store/migration_v4_test.go
@@ -379,6 +412,7 @@ internal/store/monitor_coverage.go
 internal/store/monitor_coverage_test.go
 internal/store/monitor_state.go
 internal/store/monitor_state_test.go
+internal/store/native_channels_test.go
 internal/store/notification_targets.go
 internal/store/notification_targets_test.go
 internal/store/presentation.go

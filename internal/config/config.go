@@ -128,9 +128,15 @@ type GeoConfig struct {
 }
 
 type NotificationsConfig struct {
-	Telegram    TelegramConfig `json:"telegram"`
-	Webhook     WebhookConfig  `json:"webhook"`
-	MergeWindow Duration       `json:"merge_window"`
+	Telegram    TelegramConfig      `json:"telegram"`
+	Webhook     WebhookConfig       `json:"webhook"`
+	Feishu      NativeChannelConfig `json:"feishu"`
+	WeCom       NativeChannelConfig `json:"wecom"`
+	Discord     NativeChannelConfig `json:"discord"`
+	Slack       NativeChannelConfig `json:"slack"`
+	Teams       NativeChannelConfig `json:"teams"`
+	GoogleChat  NativeChannelConfig `json:"google_chat"`
+	MergeWindow Duration            `json:"merge_window"`
 }
 
 type TelegramConfig struct {
@@ -189,7 +195,7 @@ func Defaults() Config {
 			BytesPerSecond: 100 * 1024 * 1024, RecoveryRatio: 0.5, RecoveryWindows: 3,
 			UpdateInterval: Duration{5 * time.Minute}, ScanUniquePorts: 20, ScanWindow: Duration{60 * time.Second},
 		},
-		Notifications: NotificationsConfig{Telegram: TelegramConfig{Language: "en", TokenFile: "/etc/noderampart/telegram.token", Timeout: Duration{10 * time.Second}}, Webhook: WebhookConfig{CredentialFile: "/etc/noderampart/webhook.token", Timeout: Duration{10 * time.Second}}, MergeWindow: Duration{10 * time.Minute}},
+		Notifications: defaultNotifications(),
 		Heartbeat:     HeartbeatConfig{CredentialFile: "/etc/noderampart/heartbeat.token", Interval: Duration{5 * time.Minute}, Timeout: Duration{10 * time.Second}},
 		Reports:       ReportsConfig{Enabled: true, DailyAt: "09:00", Timezone: "Local", TopN: 10, BackfillDays: 7},
 		Privacy:       PrivacyConfig{NotificationIP: "prefix", StoreIP: "prefix"},

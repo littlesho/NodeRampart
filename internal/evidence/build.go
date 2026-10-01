@@ -41,8 +41,15 @@ func Build(raw store.EvidenceSnapshot) (Bundle, error) {
 	b := Bundle{FormatVersion: FormatVersion, Kind: "diagnostic", Start: raw.Start.UTC(), End: raw.End.UTC(), SnapshotAt: raw.AsOf.UTC(), Privacy: PrivacyNotice, Consistency: SnapshotNotice, Events: []Event{}, RelatedSSH: []Event{}, Monitors: []Monitor{}}
 	b.Producer = producer()
 	b.RuleFingerprintScope = RuleFingerprintNotice
+	projectDelivery := func(d store.DeliveryOutcome) Delivery {
+		return Delivery{Channel: category(d.Channel, "telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat"), Decision: category(d.Decision, "legacy", "queued", "merged", "silenced", "ineligible", "rejected"), NotificationAlias: alias("notification", d.NotificationID), State: category(d.State, "sent", "accepted", "silenced", "ineligible", "rejected", "history_unavailable", "expired", "quarantined", "sending", "pending", "isolated", "discarded", "paused"), Attempts: d.Attempts, MergedEvents: d.MergedEvents, SilenceAlias: alias("silence", d.SilenceID), SentAt: d.SentAt.UTC()}
+	}
 	projectEvent := func(e store.TimelineEvent) Event {
-		return Event{Alert: projectAlert(e.Kind, e.Alert), Alias: alias("event", e.ID), IncidentAlias: alias("incident", e.IncidentID), SourceAlias: alias("source", e.SourceRange), ObservedAt: e.ObservedAt.UTC(), Kind: kind(e.Kind), Phase: category(e.Phase, "observed", "start", "update", "recovery"), Severity: category(string(e.Severity), "info", "low", "medium", "high", "critical"), Count: e.Count, Delivery: Delivery{Decision: category(e.Delivery.Decision, "legacy", "queued", "merged", "silenced", "ineligible", "rejected"), NotificationAlias: alias("notification", e.Delivery.NotificationID), State: category(e.Delivery.State, "sent", "silenced", "ineligible", "rejected", "history_unavailable", "expired", "quarantined", "sending", "pending", "isolated", "discarded", "paused"), Attempts: e.Delivery.Attempts, MergedEvents: e.Delivery.MergedEvents, SilenceAlias: alias("silence", e.Delivery.SilenceID), SentAt: e.Delivery.SentAt.UTC()}}
+		result := Event{Alert: projectAlert(e.Kind, e.Alert), Alias: alias("event", e.ID), IncidentAlias: alias("incident", e.IncidentID), SourceAlias: alias("source", e.SourceRange), ObservedAt: e.ObservedAt.UTC(), Kind: kind(e.Kind), Phase: category(e.Phase, "observed", "start", "update", "recovery"), Severity: category(string(e.Severity), "info", "low", "medium", "high", "critical"), Count: e.Count, Delivery: projectDelivery(e.Delivery)}
+		for _, d := range e.Deliveries[:min(len(e.Deliveries), 8)] {
+			result.Deliveries = append(result.Deliveries, projectDelivery(d))
+		}
+		return result
 	}
 	for _, e := range raw.Timeline.Events[:min(len(raw.Timeline.Events), MaxRecords)] {
 		b.Events = append(b.Events, projectEvent(e))
@@ -113,7 +120,7 @@ func kind(v string) string {
 	return category(v, "syn_flood", "udp_flood", "icmp_flood", "bandwidth_spike", "port_scan", "ssh_login_success", "ssh_brute_force", "budget_month_bytes", "budget_month_cost", "budget_day_bytes", "budget_day_growth", "health_sensor", "health_interface_counter", "health_ssh_journal", "health_storage", "health_geoip_update")
 }
 func component(v string) string {
-	return category(v, "sensor_feed", "ssh_journal", "interface_counter", "interface_discovery", "network_events", "storage", "geoip_update", "sensor_socket", "control_socket", "notification_worker", "report_scheduler")
+	return category(v, "sensor_feed", "ssh_journal", "interface_counter", "interface_discovery", "network_events", "storage", "geoip_update", "sensor_socket", "control_socket", "notification_worker", "feishu_worker", "wecom_worker", "discord_worker", "slack_worker", "teams_worker", "google_chat_worker", "report_scheduler")
 }
 func gapReason(v string) string {
 	return category(v, "event_queue_capacity", "event_metadata_rejected", "process_restart_pending_unknown", "shutdown_unpersisted_events", "interface_selection_changed", "invalid_cursor", "backfill_time_limit", "backfill_record_limit", "process_exited", "process_start_failed", "malformed_record", "cursor_unavailable", "record_too_large", "unsupported_record", "invalid_source", "invalid_timestamp", "missing_cursor", "journal_read_failed", "consumer_failed", "persist_failed", "start_failed", "read_failed", "backfill_count_limit", "untrusted_origin", "unrecognized_message")

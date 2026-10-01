@@ -87,3 +87,37 @@ pair with no host uplink. Traffic and execution time are bounded; cleanup owns
 only the namespaces and child processes created by that invocation. This adds
 no production capabilities and does not establish privileged lifecycle, packet
 rate, or complete VM-matrix acceptance.
+
+## alpha.8 native notifications (development candidate)
+
+Complete vendor webhook URLs are credentials. Protected reference-only files
+use descriptor-based, no-link reads, bounded strict JSON, trusted ownership and
+minimal daemon-readable modes. Management uses the existing review/journal and
+atomic replacement; failed optional credentials degrade only their own channel.
+Diagnostics retain fixed error categories and numeric codes, never request URLs,
+response prose or protected query/signature values. Queue destinations are hashes.
+
+Exact vendor HTTPS host/path/query allowlists do not broaden generic Webhook or
+heartbeat validation. Native direct connections reject private, loopback,
+link-local and reserved addresses after DNS and at the actual dial peer, reject
+redirects, and keep TLS verification enabled. Native transports do not consume
+system proxy configuration. Legacy administrator proxies remain a separate trust
+boundary: they can see their routed credentials and perform remote DNS.
+
+Messages neutralize terminal controls and dynamic mentions/formatting, contain
+bounded summaries rather than reports/logs, and use platform-specific response
+checks. A permanent payload/permission failure quarantines that row; rate limits
+and attempt floors survive restart. Rotation/privacy changes isolate older
+bodies; requests already sent can finish at the original receiver. Timeouts and
+local acknowledgment failures may duplicate notifications. Neither acknowledgments
+nor Teams workflow acceptance establish reading or end-to-end delivery.
+
+Source MIT licensing is separate from vendor service terms, administrator approval
+and message permission. Slack commercial distribution may require a separate
+agreement; no platform certification is claimed. See [privacy](PRIVACY.md),
+[user agreement](USER_AGREEMENT.md) and [contracts](NOTIFICATION_CHANNELS.md).
+
+中文：完整 URL/签名为秘密，配置、队列、状态、日志与 evidence 不保存正文凭据；
+每个可选渠道独立 fail closed。原生直连每次校验 DNS/实际地址，不重定向、不跳过
+TLS、不使用系统代理。固定摘要防提及/格式注入，显式成功判据拒绝缺字段。
+目标切换不能撤回在途请求，重试可能重复，Teams 只证明请求接受；许可不等于平台审批。

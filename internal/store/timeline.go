@@ -69,7 +69,7 @@ type TimelinePage struct {
 
 const timelineDeliveryColumns = `COALESCE(d.decision,CASE WHEN old.id IS NOT NULL THEN 'legacy' ELSE 'unknown' END),
  COALESCE(o.id,old.id,NULLIF(d.notification_id,''),''),
- CASE WHEN COALESCE(o.sent_at,old.sent_at) IS NOT NULL THEN 'sent'
+ CASE WHEN COALESCE(o.sent_at,old.sent_at) IS NOT NULL THEN CASE WHEN COALESCE(o.channel,old.channel)='teams' THEN 'accepted' ELSE 'sent' END
  WHEN COALESCE(o.isolated_at,old.isolated_at) IS NOT NULL AND COALESCE(o.suppressed_at,old.suppressed_at) IS NOT NULL
  AND COALESCE(o.body,old.body)='' AND COALESCE(o.last_error,old.last_error)='isolated notification explicitly discarded' THEN 'discarded'
  WHEN COALESCE(o.isolated_at,old.isolated_at) IS NOT NULL THEN 'isolated'
@@ -89,9 +89,9 @@ const timelineColumns = `e.id,e.incident_id,e.observed_at,e.kind,e.phase,e.sever
 
 // The event limit and cursor apply to events, independently of how many
 // channels have retained notification decisions. Preserve the legacy single
-// Delivery field by preferring Telegram, then Webhook.
+// Delivery field by preferring Telegram, then Webhook, then a stable native channel order.
 const timelineJoins = ` FROM events e LEFT JOIN event_notifications d ON d.event_id=e.id
- AND d.channel=(SELECT channel FROM event_notifications WHERE event_id=e.id ORDER BY CASE channel WHEN 'telegram' THEN 0 ELSE 1 END LIMIT 1)
+ AND d.channel=(SELECT channel FROM event_notifications WHERE event_id=e.id ORDER BY CASE channel WHEN 'telegram' THEN 0 WHEN 'webhook' THEN 1 ELSE 2 END,channel LIMIT 1)
  LEFT JOIN notification_outbox o ON o.id=d.notification_id
  LEFT JOIN notification_outbox old ON d.event_id IS NULL AND old.dedupe_key='event:'||e.id||':telegram' `
 
@@ -196,12 +196,12 @@ func readTimelineDeliveries(ctx context.Context, db timelineReader, events []Tim
 		args = append(args, event.ID)
 	}
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(events)), ",")
-	args = append(args, 2*len(events)+1)
+	args = append(args, MaxNotificationChannels*len(events)+1)
 	rows, err := db.QueryContext(ctx, `SELECT e.id,d.channel,`+timelineDeliveryColumns+`
  FROM events e JOIN event_notifications d ON d.event_id=e.id
  LEFT JOIN notification_outbox o ON o.id=d.notification_id
  LEFT JOIN notification_outbox old ON 0
- WHERE e.id IN (`+placeholders+`) ORDER BY e.id,CASE d.channel WHEN 'telegram' THEN 0 ELSE 1 END LIMIT ?`, args...)
+ WHERE e.id IN (`+placeholders+`) ORDER BY e.id,CASE d.channel WHEN 'telegram' THEN 0 WHEN 'webhook' THEN 1 ELSE 2 END,d.channel LIMIT ?`, args...)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func readTimelineDeliveries(ctx context.Context, db timelineReader, events []Tim
 			return err
 		}
 		index, found := positions[id]
-		if !found || !notificationChannel(outcome.Channel) || len(events[index].Deliveries) >= 2 {
+		if !found || !notificationChannel(outcome.Channel) || len(events[index].Deliveries) >= MaxNotificationChannels {
 			return errors.New("timeline delivery associations are invalid or exceed channel limit")
 		}
 		if sent != 0 {

@@ -275,7 +275,7 @@ func (u *ui) home() {
 		{"Configuration", "功能配置", "Edit every setting; review before saving.", "编辑所有设置；确认后再保存。", u.configuration},
 		{"Reports", "报告", "Current report, saved days and bounded backfill.", "当前报告、已保存日报与有界历史补齐。", u.reports},
 		{"Events and incidents", "事件与 Incident", "Timeline and related event details.", "时间线与相关事件详情。", u.incidents},
-		{"Telegram and notifications", "Telegram 与通知", "Bot setup, delivery results and expiring silences.", "Bot 设置、投递结果与到期静默。", u.notifications},
+		{"Notification channels", "通知渠道", "Telegram, generic Webhook and six native platforms; setup sends no message.", "Telegram、通用 Webhook 及六个原生平台；设置不会发送消息。", u.notifications},
 		{"Local GeoIP databases", "本地 GeoIP 数据库", "Download, inspect and schedule optional updates.", "下载、查看和设置可选定时更新。", u.geo},
 		{"Cloud egress cost estimates", "云公网出站费用估算", "AWS, OCI or a custom tariff; not a provider invoice.", "AWS、OCI 或自定义价格；不代表云厂商账单。", u.prices},
 		{"Backup, replay and privacy", "备份、回放与隐私", "Local files and privacy key management.", "本地文件与隐私密钥管理。", u.tools},
