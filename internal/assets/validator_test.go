@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 		n, _ := input.ReadAt(prefix, 0)
 		if bytes.HasPrefix(prefix[:n], []byte("noderampart-validator-block\n")) {
 			base := strings.TrimSpace(string(prefix[len("noderampart-validator-block\n"):n]))
-			child := exec.Command("/bin/sh", "-c", `echo $$ > "$1/descendant"; sleep 1; echo late > "$1/late"`, "fixture", base)
+			child := exec.Command("/bin/sh", "-c", `echo $$ > "$1/descendant"; sleep 1 & grandchild=$!; echo "$grandchild" > "$1/grandchild"; wait "$grandchild"; echo late > "$1/late"`, "fixture", base)
 			child.Stdout, child.Stderr = os.Stdout, os.Stderr
 			if child.Start() != nil || os.WriteFile(filepath.Join(base, "ready"), []byte(strconv.Itoa(os.Getpid())), 0o600) != nil {
 				os.Exit(1)
@@ -147,6 +147,84 @@ func waitValidatorFixture(t *testing.T, path string) []byte {
 	}
 }
 
+type validatorFixtureProcess struct {
+	pid, ppid, pgid int
+	state           string
+	startTime       uint64
+}
+
+func readValidatorFixtureProcess(pid int) (validatorFixtureProcess, error) {
+	process := validatorFixtureProcess{pid: pid}
+	stat, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
+	if err != nil {
+		// procfs can open stat just before exit, then return ESRCH on read.
+		// Require independent ENOENT evidence; ESRCH alone is not success.
+		if errors.Is(err, unix.ESRCH) {
+			if _, gone := os.Stat(filepath.Join("/proc", strconv.Itoa(pid))); errors.Is(gone, os.ErrNotExist) {
+				return process, gone
+			}
+		}
+		return process, err
+	}
+	// The command name can contain spaces and ')'; fields after its final ')'
+	// start at field 3 (state). Field 22 (starttime) identifies this PID's owner.
+	end := bytes.LastIndexByte(stat, ')')
+	fields := strings.Fields(string(stat[end+1:]))
+	if end < 0 || len(fields) < 20 || len(fields[0]) != 1 {
+		return process, errors.New("invalid validator fixture process stat")
+	}
+	process.state = fields[0]
+	if process.ppid, err = strconv.Atoi(fields[1]); err != nil {
+		return process, err
+	}
+	if process.pgid, err = strconv.Atoi(fields[2]); err != nil {
+		return process, err
+	}
+	process.startTime, err = strconv.ParseUint(fields[19], 10, 64)
+	return process, err
+}
+
+func assertValidatorNoLateOutput(t *testing.T, base string) {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(base, "late")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("cancelled validator descendant wrote late output or could not be checked: %v", err)
+	}
+}
+
+func waitValidatorProcessesStopped(t *testing.T, base string, processes []validatorFixtureProcess) {
+	t.Helper()
+	// Cancellation signals the whole group, but Run waits for the direct child
+	// and I/O, not every descendant's /proc state
+	// transition. Allow only a bounded one-second transition (the WaitDelay
+	// scale); never wait for zombies to be reaped or accept other read errors.
+	deadline := time.Now().Add(time.Second)
+	for {
+		assertValidatorNoLateOutput(t, base)
+		stopped := true
+		for _, original := range processes {
+			current, err := readValidatorFixtureProcess(original.pid)
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			if err != nil {
+				t.Fatalf("read owned validator process %d: %v", original.pid, err)
+			}
+			if current.startTime != original.startTime || current.state == "Z" || current.state == "X" {
+				continue // The original stopped; a reused PID is not ours.
+			}
+			stopped = false
+			if !time.Now().Before(deadline) {
+				t.Fatalf("owned validator process %d survived cancellation: %+v", original.pid, current)
+			}
+		}
+		if stopped {
+			assertValidatorNoLateOutput(t, base)
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
 func TestMMDBValidatorCancellationStopsOwnedChildAndDescendant(t *testing.T) {
 	base := t.TempDir()
 	path := filepath.Join(base, "fixture.mmdb")
@@ -164,6 +242,25 @@ func TestMMDBValidatorCancellationStopsOwnedChildAndDescendant(t *testing.T) {
 	go func() { _, err := verifyMMDBFile(ctx, file, "GeoLite2-City"); done <- err }()
 	parentData := waitValidatorFixture(t, filepath.Join(base, "ready"))
 	childData := waitValidatorFixture(t, filepath.Join(base, "descendant"))
+	grandchildData := waitValidatorFixture(t, filepath.Join(base, "grandchild"))
+	var processes []validatorFixtureProcess
+	for _, value := range [][]byte{parentData, childData, grandchildData} {
+		pid, err := strconv.Atoi(strings.TrimSpace(string(value)))
+		if err != nil || pid <= 0 {
+			t.Fatalf("invalid validator fixture PID %q: %v", value, err)
+		}
+		process, err := readValidatorFixtureProcess(pid)
+		if err != nil {
+			t.Fatal("read validator fixture before cancellation:", err)
+		}
+		processes = append(processes, process)
+	}
+	for i, process := range processes {
+		if process.pgid != processes[0].pid || i > 0 && process.ppid != processes[i-1].pid {
+			t.Fatalf("validator fixture escaped its owned process group or parent: %+v", processes)
+		}
+	}
+	defer assertValidatorNoLateOutput(t, base)
 	cancel()
 	select {
 	case err := <-done:
@@ -173,21 +270,7 @@ func TestMMDBValidatorCancellationStopsOwnedChildAndDescendant(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("validator cancellation did not return")
 	}
-	for _, value := range [][]byte{parentData, childData} {
-		pid, _ := strconv.Atoi(strings.TrimSpace(string(value)))
-		stat, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		end := bytes.LastIndexByte(stat, ')')
-		fields := strings.Fields(string(stat[end+1:]))
-		if err != nil || len(fields) == 0 || fields[0] != "Z" && fields[0] != "X" {
-			t.Fatalf("owned validator process %d survived cancellation", pid)
-		}
-	}
-	if _, err := os.Stat(filepath.Join(base, "late")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatal("cancelled validator descendant wrote late output")
-	}
+	waitValidatorProcessesStopped(t, base, processes)
 }
 
 func expandedEmptyMMDB(t *testing.T, count int) []byte {
