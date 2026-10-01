@@ -4,6 +4,8 @@
 
 ## Common operation
 
+All official interface and terms references in this guide were checked on 2026-10-01.
+
 One independent target is supported for each of Feishu, WeCom, Discord, Slack, Teams and Google Chat. All default disabled, can run together with Telegram and the unchanged generic JSON Webhook, and receive eligible SSH/network/budget/health events, start/update/recovery notices and the shared daily report schedule. Existing severity/silence rules still apply. This is outbound HTTPS only: no inbound bot, command handler, private-message discovery, file upload, OAuth installation, listener or extra runtime.
 
 Run `sudo noderampart tui` and open **Notification channels**. Select the channel's setup, enter the complete vendor URL in the hidden input, choose `en` or `zh` independently of the terminal language, and review/apply. Blank unchanged inputs retain secrets; use the explicit URL/signing actions to replace or clear. Saving, opening settings and status never sends a test. Enable only after your organization permits this target. Use **Send a test notification**, select exactly one channel, and inspect the receiver and the local queue. The CLI equivalent queues only a synthetic test:
@@ -31,7 +33,8 @@ Ordinary configuration contains references, never full URLs or signing secrets. 
 }
 ```
 
-The manager creates versioned owned files in its protected secrets directory. Each file is strict JSON with `url` and optional Feishu `secret`; do not put it in Git, CLI flags, screenshots or support evidence. Managed files use the daemon's existing service ownership and minimal read permissions. Manual references must be regular, single-link files in trusted real directories; no symlinks, shared-writable parents or world access. Supported modes are `0600` for the owning daemon/root and `0640` only for the verified service group. A root-only unreadable file makes that channel unavailable. Configuration dump/API and review show references, not contents. Keep credentials separately from the database backup.
+The manager creates versioned owned files in its protected secrets directory. Each file is strict JSON with `url` and optional Feishu `secret`; do not put it in Git, CLI flags, screenshots or support evidence. Managed files use the daemon's existing service ownership and minimal read permissions. Manual references are allowed only alongside the actual configuration file or
+its `secrets` subdirectory, and must be regular, single-link files in trusted real directories; no symlinks, shared-writable parents or world access. Supported modes are `0600` for the owning daemon/root and `0640` only for the verified service group. A root-only unreadable file makes that channel unavailable. Configuration dump/API and review show references, not contents. Keep credentials separately from the database backup.
 
 The native transports use direct validated DNS/IP connections, verified TLS on port 443, no redirects and no system proxy. Correct DNS/routing is required; TLS interception is not enabled. Legacy generic Webhook/heartbeat retain their existing administrator/system proxy contract: that proxy must be trusted with bearer credentials; local IP checks do not constrain proxy-side DNS. Vendor query credentials remain in the protected request URL only.
 
