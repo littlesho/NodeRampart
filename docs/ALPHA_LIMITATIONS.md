@@ -280,7 +280,16 @@ in backup archives remain protected by operator storage permissions, not databas
 encryption. Slack commercial distribution requirements are separate from MIT;
 this source makes no Marketplace or vendor approval claim.
 
+Native package purge is not an atomic installation transaction. Managed removal
+checks unknown credentials before package removal, while direct `dpkg --purge`
+may remove package-owned conffiles before postrm refuses a manual credential.
+Keep the matching backup; refused unknown credentials are preserved.
+
 中文：六个新渠道默认停用，每渠道一目标，仅出站 HTTPS。mock 不是平台/租户/人工
 接收验收；Teams 只有工作流接受回执，网络与写回故障仍可能重复。无真实授权目标的
 联调为 NOT RUN，交叉编译不等于 ARM64 运行。手工凭据应原子替换并重启，推荐管理
 界面轮换；不得绕过租户策略、TLS 或第三方分发条款。
+
+原生包 purge 不是完整安装事务；管理卸载先检查未知凭据，直接 `dpkg --purge`
+可能先删除包拥有的 conffile。拒绝未知凭据会保留该文件，但不保证配置完整回滚，
+应提前备份。
