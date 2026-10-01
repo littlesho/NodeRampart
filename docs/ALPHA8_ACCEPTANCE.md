@@ -229,3 +229,28 @@ Remaining unverified scope: all six real APIs and receiver confirmation, native
 ARM64 runtime, unsupported tenant authentication/URL variants and production
 operation. Default-disabled alpha features may merge once actual repository
 checks/review conditions hold; the remaining scope is not silently marked PASS.
+
+## Subsequent release-entry preflight / 后续发布入口阶段
+
+This new stage begins at merged main `de801c3b4472bc7ab48c1515d1de0cfd13a93553`;
+it does not rewrite the source53 feature/package evidence above. The actual
+bootstrap at that commit rejects explicit alpha.8 before downloading. The minimal
+repair, controlled negative regressions, precise new source freeze, fresh 22-file
+local asset set and differential four-guest acceptance are specified in
+[release preflight](ALPHA8_RELEASE_PREFLIGHT.md). Proposed bilingual notes remain
+unpublished text. Final exact-source/build/VM evidence is external to avoid
+document self-SHA loops; current PR/main checks are separate from PR #27.
+
+Earlier backup verification is not a complete matching-backup service rollback
+proof: Debian checked backup copies and old-version refusal, and Fedora did not
+restore backups. The subsequent stage must supply actual scoped rollback evidence
+rather than extend those earlier PASS claims. Fresh package identity/installation
+cannot be substituted with old behavior tests.
+
+本阶段禁止创建任何本地/远端 tag、draft/Release、正式资产或 attestation，不运行会创建
+发布对象的 workflow，不改 latest/公开安装默认/仓库治理策略，不部署生产。
+真实六平台、人工接收、原生 ARM64、公开 bootstrap 和正式 hosted provenance 仍未执行。
+
+执行记录补充：继承的元数据测试曾在临时 fixture 仓库创建 annotated tag，违反上述
+本地 tag 边界；fixture 已清理，产品/远端发布 tag 未新增。测试现仅模拟 tag peel，
+保留真实 commit 日期及错误 HEAD 验收，并断言无 tag ref/object。

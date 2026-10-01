@@ -10,6 +10,8 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 > **源码开发版本：0.4.0-alpha.8（Unreleased）。** 新六渠道默认关闭，参见[设置与平台权限](docs/NOTIFICATION_CHANNELS.zh-CN.md)、[实际验收](docs/ALPHA8_ACCEPTANCE.md)、[隐私政策](docs/PRIVACY.md)和[用户协议](docs/USER_AGREEMENT.md)。以下公开安装仍使用已发布 alpha.7，不提供未发布 alpha.8 下载。
 
+> **发布入口预验收：** 候选源码支持显式 alpha.8，资产公开后方可下载安装；无参数默认仍 alpha.5。见[三阶段预验收](docs/ALPHA8_RELEASE_PREFLIGHT.md)与[拟用说明](docs/RELEASE_NOTES_ALPHA8.zh-CN.md)，不代表公开发行或 hosted provenance。
+
 > **v0.4.0-alpha.7：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) 新增可搜索的报告时区及独立中英 Telegram 正文。数据库升级为 schema 12；升级前验证匹配备份并分别保护旧配置/密钥，先安装三个匹配程序再保存新配置。
 
 > **本次分发验收：** 22 项匿名下载及校验和通过，与已认证的 22 项 provenance、6 项 runtime SPDX 完全同字节。Debian 13/Fedora 44 公开 bootstrap、setup、基础采集、在线备份和清理：**PASS**。两台 strict 诊断快照仍为 **unknown / 退出码 2**。当前 alpha.7 的 Debian 12/Fedora 43 运行、真实 ARM64 和自然 SSH 恢复链仍未验收，不代表生产就绪。见[本次发布核验](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)。

@@ -10,6 +10,8 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 > **Source development: 0.4.0-alpha.8 (Unreleased).** Six native channels are disabled by default; [setup and platform permissions](docs/NOTIFICATION_CHANNELS.md), [actual acceptance](docs/ALPHA8_ACCEPTANCE.md), [privacy](docs/PRIVACY.md) and [user agreement](docs/USER_AGREEMENT.md). The published installation instructions below remain alpha.7.
 
+> **Release-entry preflight:** candidate source supports explicit alpha.8 only for assets after publication; no-argument default remains alpha.5. The [three-stage preflight](docs/ALPHA8_RELEASE_PREFLIGHT.md) and [proposed notes](docs/RELEASE_NOTES_ALPHA8.en.md) are not a public release or hosted provenance.
+
 > **v0.4.0-alpha.7 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) add a searchable report timezone and independent English/Chinese Telegram text. The database upgrades to schema 12; verify a matching backup, preserve earlier configuration/keys separately and install all three matching programs before saving new settings.
 
 > **This distribution:** All 22 anonymous downloads and checksums match the authenticated 22 provenance and six runtime SPDX subjects byte-for-byte. Debian 13/Fedora 44 public bootstrap, setup, basic collection, online backup and cleanup: **PASS**. Both strict doctor snapshots remained **unknown / exit 2**. Current alpha.7 Debian 12/Fedora 43 runtime, native ARM64 and natural SSH recovery remain unvalidated; this is not production readiness. See [this release verification](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).

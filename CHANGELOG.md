@@ -4,6 +4,12 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 
 ## 0.4.0-alpha.8 - Unreleased / development candidate
 
+- Repair bootstrap explicit alpha.8 selection (DEB ~alpha.8 / RPM 0.alpha.9),
+  retaining the alpha.5 default and all older mappings. Missing/unpublished assets
+  fail closed. Add controlled regressions and an independent three-stage release
+  preflight; proposed notes and local candidates are not a public release.
+- Keep metadata regressions free of real fixture tags while checking source
+  commit dates, annotated-tag peeling and mismatched/empty source rejection.
 - Add six original outbound-only native senders: Feishu custom group robots,
   WeCom group robots, Discord incoming webhooks, Slack App Incoming Webhooks,
   Microsoft Teams Workflows Adaptive Cards and Google Chat Space webhooks.
