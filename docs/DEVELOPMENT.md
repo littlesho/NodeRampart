@@ -76,11 +76,11 @@ Ordinary local DEBs retain the filename
 `0.4.0~alpha.7`. Portable public names prevent GitHub's asset-name replacement
 from changing checksum references. The alpha.7 native RPM version is
 `0.4.0-0.alpha.8%{?dist}`; suffixes `.1` through `.7` retain the public
-DEB/RPM ordering rules. `VERSION` selects the unreleased alpha.7 candidate; local
-builds do not publish it. The bootstrap default remains published alpha.5,
-with published alpha.6 available through an explicit fixed-version opt-in.
-Alpha.7 is a candidate without a release/tag; its CI packages are experimental
-preacceptance artifacts, not release-provenance assets. SBOMs use each package's native version, inspect its final bytes,
+DEB/RPM ordering rules. `VERSION` selects published alpha.7. The frozen tag/source
+and exact release bytes are recorded in [release verification](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
+Ordinary local/CI packages remain experimental artifacts and do not inherit
+release provenance merely by sharing a version or source tree. Bootstrap still
+defaults to alpha.5; select published alpha.7 explicitly. SBOMs use each package's native version, inspect its final bytes,
 and bind the three program digests to those bytes. `--collect` requires the
 complete package/SBOM/buildinfo set; the separate hosted draft step checks the
 actual uploaded names and states after upload. Local checks do not establish
@@ -274,8 +274,9 @@ Use an isolated management network and a separate no-NAT traffic network. High-r
 6. Changelog, compatibility matrix, known limitations, checksums, SBOM, and provenance are attached.
 7. No release is marked stable until the privileged VM matrix and soak exit criteria are met.
 
-当前 `VERSION` 为未发布 alpha.7 候选；DEB 原生版本 `0.4.0~alpha.7`，RPM
-`0.4.0-0.alpha.8%{?dist}`，排序高于 alpha.6。普通 CI 包用于隔离预验收，
-不具有正式 Release provenance。公开安装仍明确选择已发布 alpha.6。
-候选 schema 12 仅新增消息呈现元数据；配置/API 1、协议 v5 不变。回退需
+当前 `VERSION` 为已发布 alpha.7；DEB 原生版本 `0.4.0~alpha.7`，RPM
+`0.4.0-0.alpha.8%{?dist}`，排序高于 alpha.6。普通 local/CI 包仍是独立候选，
+相同版本或源码树不使其继承正式 Release provenance。公开安装明确选择 alpha.7；
+冻结来源、发布日期及验收范围见[发布核验](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)。
+schema 12 仅新增消息呈现元数据；配置/API 1、协议 v5 不变。回退需
 匹配旧数据库备份和旧配置/密钥，不能原地降 schema。

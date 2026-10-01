@@ -1,17 +1,13 @@
 # Verify a NodeRampart release
 
-This document describes published `v0.4.0-alpha.6` and retains earlier release
-records. The examples explicitly select alpha.6; its frozen bootstrap default
-remains `v0.4.0-alpha.5`. Review the intended source/tag and verify the matching
-assets and attestations before installation.
-The current source/build tools target unreleased alpha.7 (DEB `0.4.0~alpha.7`,
-RPM `0.4.0-0.alpha.8`). Use the frozen alpha.6 source/tools for its historical
-asset collection assertions. Alpha.7 CI artifacts are experimental candidates,
-without a tag, Release or release-provenance claim. The published examples below
-remain alpha.6.
+This document describes published `v0.4.0-alpha.7` and retains alpha.6 and
+earlier release records. Examples pin alpha.7; frozen bootstrap still defaults
+to alpha.5. The published tag resolves to `d164978433b5e49d68d310cf8d6f5819b855e2e0`;
+source/build tools target DEB `0.4.0~alpha.7` and RPM `0.4.0-0.alpha.8`.
+Historical releases require their own frozen source/tools and byte identities.
 
-当前源码/构建工具面向未发布 alpha.7 候选；核对 alpha.6 历史发行集合应使用其冻结
-源码工具。候选 CI 包不等于正式发行包或发行证明，下方公开安装例仍是 alpha.6。
+本指南面向已发布 alpha.7，保留 alpha.6 及更早版本记录。示例明确指定 alpha.7，
+bootstrap 默认仍为 alpha.5。候选 CI 包和旧版本证明不能替代本次冻结发行字节。
 
 The release workflow creates a draft for a maintainer to inspect; local workflow
 edits and tests neither publish a release nor prove that hosted checks ran.
@@ -51,12 +47,12 @@ The runtime matrix is Debian `amd64`/`arm64` and Fedora 43/44
 asset and has no runtime SBOM. `bootstrap.sh`, `release.json` and `SHA256SUMS`
 complete the download set.
 
-For alpha.6, public DEB names are
-`noderampart_0.4.0-alpha.6_ARCH.deb`, with native Debian version
-`0.4.0~alpha.6`. RPM names contain `0.4.0-0.alpha.7.fc43` or
-`0.4.0-0.alpha.7.fc44`; the source RPM uses Fedora 44. SBOM/buildinfo names,
+For alpha.7, public DEB names are
+`noderampart_0.4.0-alpha.7_ARCH.deb`, with native Debian version
+`0.4.0~alpha.7`. RPM names contain `0.4.0-0.alpha.8.fc43` or
+`0.4.0-0.alpha.8.fc44`; the source RPM uses Fedora 44. SBOM/buildinfo names,
 checksums and attestations bind the final public filename and actual bytes.
-The [alpha.6 distribution record](#alpha6-publication-and-distribution-verification)
+The [alpha.7 distribution record](#alpha7-publication-and-distribution-verification)
 identifies the actual hosted run, source and measured native acceptance; the
 format description alone is not runtime proof.
 
@@ -100,25 +96,25 @@ with artifact attestation support. Select the full commit SHA from the release
 source you have reviewed; do not treat a value downloaded beside the package as
 independent evidence of the expected source.
 
-The example selects published `v0.4.0-alpha.6`, whose reviewed source is
-`4d204b43499ca2f41c15b92334537d57bfc8b20c`. Confirm that identity against the
+The example selects published `v0.4.0-alpha.7`, whose reviewed source is
+`d164978433b5e49d68d310cf8d6f5819b855e2e0`. Confirm that identity against the
 public source before using it as an expected value. Missing statements cannot
 pass verification; do not substitute another release's attestations.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.6 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.7 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.6_amd64.deb
-EXPECTED_COMMIT='4d204b43499ca2f41c15b92334537d57bfc8b20c'
+PACKAGE=noderampart_0.4.0-alpha.7_amd64.deb
+EXPECTED_COMMIT='d164978433b5e49d68d310cf8d6f5819b855e2e0'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.6 \
+  --source-ref refs/tags/v0.4.0-alpha.7 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -127,7 +123,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.6 \
+  --source-ref refs/tags/v0.4.0-alpha.7 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document/v2.3 \
   --deny-self-hosted-runners
@@ -136,7 +132,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.6 \
+  --source-ref refs/tags/v0.4.0-alpha.7 \
   --source-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
@@ -154,7 +150,7 @@ it does not perform these GitHub attestation checks automatically.
 ## Maintainer draft verification
 
 The following procedure applies before publication of a future candidate;
-alpha.6 is already published. Select that candidate’s independently reviewed
+alpha.7 is already published. Select that candidate’s independently reviewed
 version and source identity. A local candidate can be built without a tag using
 `EXPECTED_COMMIT=<full-main-SHA> ./scripts/release-metadata.sh` and passing its
 `commit` and source-commit `build_date` to `build-release.sh`. Do not substitute
@@ -166,15 +162,15 @@ that can read the draft. Record its numeric Release ID, tag, full source commit,
 workflow run ID and attempt before verification. The tag must resolve to the
 reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 
-For frozen alpha.6, the exact asset set is 22 files:
+For frozen alpha.7, the exact asset set is 22 files:
 
-- `noderampart_0.4.0-alpha.6_amd64.deb` and `noderampart_0.4.0-alpha.6_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.7.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.7.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.7.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.7.fc44.aarch64.rpm`.
+- `noderampart_0.4.0-alpha.7_amd64.deb` and `noderampart_0.4.0-alpha.7_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.8.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.8.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.8.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.8.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.7.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.8.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
 
 Check names and identities, not only the count. GitHub's generated source ZIP/TAR
@@ -203,7 +199,7 @@ architecture metadata before running Syft. No target program is executed.
 The collector requires all six package/SBOM/inspection triples and compares
 package and program digests before it creates `dist/release`.
 
-For a reviewed unreleased alpha.7 local package, with Go 1.26.8 and the appropriate read-only
+For a reviewed local alpha.7 candidate package, with Go 1.26.8 and the appropriate read-only
 `dpkg-deb` or `rpm`/`rpm2cpio` inspection tools available:
 
 ```sh
@@ -520,3 +516,93 @@ Debian 13/Fedora 44 的固定版本 `--no-setup` 与单独 setup、基本采集/
 两台 strict 快照仍 unknown/2，保留 Fedora 的预热/瞬时提交不可用原因。
 自然 SSH 恢复链 BLOCKED，真实 ARM64、VM race、72 小时、持续压力、真实 MMDB
 及外发 NOT RUN。包文档保持冻结源码快照，不因后续文档 PR 修改 tag 或包字节。
+
+## alpha.7 publication and distribution verification
+
+[v0.4.0-alpha.7](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7)
+was published at **2026-10-01T08:33:06Z UTC**
+(**2026-10-01T17:33:06+09:00 Asia/Tokyo**), Release `400735539`, from
+`d164978433b5e49d68d310cf8d6f5819b855e2e0`; BUILD_DATE remains `2026-10-01T14:28:45+08:00`.
+[Main CI 36824986470](https://github.com/littlesho/NodeRampart/actions/runs/36824986470)
+passed 16 jobs on attempt 1; the
+[tag-triggered release 36829587721](https://github.com/littlesho/NodeRampart/actions/runs/36829587721)
+passed all 17 jobs on attempt 1. It remains an alpha prerelease,
+not beta/stable/latest. Older tags, releases and asset bytes remain unchanged.
+
+
+The two public-bootstrap VM packages are identified by these exact hashes;
+ordinary CI/local packages sharing the version are separate artifacts.
+
+| This publication's runtime package | SHA-256 |
+| --- | --- |
+| `noderampart_0.4.0-alpha.7_amd64.deb` | `d8ff0ca0ca5a9741ca31b698a41efd32f756783cacc9c7b80ba4f530436a71fb` |
+| `noderampart-0.4.0-0.alpha.8.fc44.x86_64.rpm` | `13ef12011d3f49cd9edb0c02abea9dfe331632f28b2350cac21f896f4d0d13c2` |
+
+All 22 assets were freshly downloaded without GitHub auth, cookies/netrc or curl
+configuration from fixed tag URLs. API IDs/sizes/digests and SHA256SUMS matched
+exactly. Authenticated 22 provenance and six signed package-SPDX results apply
+only because every anonymous file matches the certified subject bytes. Proof
+queries were authenticated; these file downloads were anonymous. Six native
+package/18 program inventories and helper/unit/document bytes also matched.
+Sidecar provenance is distinct from package-SPDX, whose scope excludes runtime
+system dependencies. The SRPM is source-only. Packaged README/licenses/notices
+remain the C snapshot; later documentation cannot change installed bytes or
+supply a complete offline manual.
+
+
+First caller/connection failures remain retained: four early Debian readiness
+probes returned exit 255; stderr was not preserved, so their cause is unknown.
+Later readiness succeeded. Fedora's first TCP connection timed out at eight
+seconds; one bounded continuation succeeded without repeating start/install.
+Additional read-only field/format assertions needed caller corrections; their
+first failures remain retained, and successful install, Save and Start actions
+were not replayed.
+
+保留首轮调用/连接失败：Debian 前四次启动就绪探测退出 255，未保存 stderr，原因
+不能判断；后续就绪通过。Fedora 首次 TCP 连接八秒超时，一次有界续作成功，不重放
+启动或安装。另有只读字段/格式断言需要修正调用方，首轮失败保留，未重放已成功
+的安装、Save 或 Start 动作。
+
+| Current alpha.7 acceptance | Result |
+| --- | --- |
+| Anonymous 22 downloads / API / SHA256SUMS | PASS |
+| Same-byte reuse: 22 provenance + 6 runtime SPDX | PASS |
+| Debian 13 public bootstrap / actual setup / collection / backup / cleanup | PASS: fixed-version download, separate 64-column setup, real advancing watermarks, verified schema-12 online backup and installed-helper purge |
+| Fedora 44 public bootstrap / actual setup / collection / backup / cleanup | PASS: fixed-version download, separate 64-column setup, real advancing watermarks, verified schema-12 online backup and installed-helper purge; SELinux Enforcing |
+| Strict doctor snapshots | unknown / exit 2 on both: Debian 13 `auth_window_warmup` + `sensor_commit_unavailable`; Fedora 44 only `sensor_commit_unavailable` |
+| Own-process/lease cleanup and final soft-stop state | PASS: installed-helper purge, verified exports, own processes exited, preserved/released locks, bounded soft stops; both STOPPED |
+
+Both installed 64-column menus saved and reread Asia/Shanghai and Telegram
+Chinese without enabling external senders or changing the system timezone. Debian
+retained automatic interface selection. Fedora started from disabled presets;
+explicit Services Start enabled and started both units, observed active/enabled
+afterward. Boot execution was NOT RUN. Later committed-watermark progress and
+consistent backups do not turn the earlier strict snapshots healthy.
+
+Publication uses the same frozen bootstrap: default alpha.5, explicit
+`--version v0.4.0-alpha.7 --no-setup`, then separate `noderampart setup`.
+The interactive curl-pipe path is NOT RUN. Prior test-merge CI packages at
+`8b2f70c1883533a967bee8e2d3357aabfafa86e3` have the same source tree but different
+embedded commit/date and bytes; they do not substitute for final C runtime
+acceptance. Earlier actual old queues were empty; nonempty backlog/claims/
+old-body retry/target/privacy/language interactions remain same-C synthetic
+SQLite/mock-HTTP coverage, not observed real-backlog delivery.
+
+The first PR Replay fuzz deadline failure and one same-parameter failed-job
+rerun remain recorded; the cause is unproved. This publication's first-attempt
+main/release successes are separate. Natural SSH pending onset/recovery remains
+unproved/BLOCKED. Native ARM64, current alpha.7 Debian12/Fedora43 runtime, VM race,
+sustained pressure, 72-hour soak, real MMDB and all optional outgoing targets
+remain NOT RUN. Current-instant DST displays do not prove both-season VM clock
+changes. Unknown strict results must not become healthy claims.
+
+alpha.7 于上述 UTC/东京时间从固定 C 发布为预发布版，main/release 首次全部通过；
+22 个文件真实匿名下载及校验通过，原 28 项认证证明仅因完全同字节复用。两台公开
+bootstrap/64 列实际 setup/采集/在线备份/已安装 helper purge 与清理均 **PASS**，
+最终均 STOPPED。两台保存并重读 Asia/Shanghai 与 Telegram 中文，外发保持禁用。
+strict 快照均 unknown/退出码 2：Debian 13 为 `auth_window_warmup` 与
+`sensor_commit_unavailable`；Fedora 44 仅为 `sensor_commit_unavailable`。Fedora
+初始 preset 为 disabled，实际 Services Start 后两项服务 enabled/active；开机执行
+NOT RUN。后续真实提交水位推进不改变原 strict 快照。默认仍 alpha.5，明确选 alpha.7 并分开运行 setup，
+不宣称管道交互路径、真实外发、原生 ARM64 或自然 SSH 恢复链通过。旧 alpha.6
+发行历史、资产及 C 包内文档字节不变；本次纯文档更新不重新发行安装包。

@@ -8,13 +8,19 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
+> **v0.4.0-alpha.7：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) 新增可搜索的报告时区及独立中英 Telegram 正文。数据库升级为 schema 12；升级前验证匹配备份并分别保护旧配置/密钥，先安装三个匹配程序再保存新配置。
+
+> **本次分发验收：** 22 项匿名下载及校验和通过，与已认证的 22 项 provenance、6 项 runtime SPDX 完全同字节。Debian 13/Fedora 44 公开 bootstrap、setup、基础采集、在线备份和清理：**PASS**。两台 strict 诊断快照仍为 **unknown / 退出码 2**。当前 alpha.7 的 Debian 12/Fedora 43 运行、真实 ARM64 和自然 SSH 恢复链仍未验收，不代表生产就绪。见[本次发布核验](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)。
+
+以下 alpha.6 范围保留为历史记录，不替代 alpha.7 运行证明：
+
 > **v0.4.0-alpha.6：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6) 增加通知目标隔离、完整本地报告、诊断及采集提交水位。数据库升级至 schema 11，采集协议升级至 v5；升级前请保留已验证的兼容备份。
 
 > **验收范围：** 22 项资产的新环境匿名下载及校验和通过，字节与已认证核验的 22 项 provenance、6 项 SPDX 一致。Debian 12/13、Fedora 43/44 的准确最终包跨版本升级及生命周期通过；Debian 13、Fedora 44 的公开 bootstrap 与分开运行 setup 通过。真实 ARM64 和 SSH 自然恢复链仍未验证，不代表生产就绪。详见[发布验证](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification)。
 
 > **GeoIP 修复范围：** alpha.4 修复共享 MMDB 数据重复解析造成的预算误拒绝，并提供安全的 MMDB 校验/资源预算错误提示。匹配候选对 City/ASN 的完整离线校验通过；用户正式下载、激活和每日更新尚未验证。详见[验证范围与资源限制](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)及[升级与 GeoIP 验收](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance)。
 
-> **固定版本安装：** 请在下列命令中明确选择 `v0.4.0-alpha.6`。冻结的 bootstrap 省略 `--version` 时仍默认 alpha.5。[验收摘要](docs/ALPHA6_ACCEPTANCE.md#publication-and-distribution-2026-10-01)区分实际结果与未验证范围。
+> **固定版本安装：** 请在下列命令中明确选择 `v0.4.0-alpha.7`。冻结的 bootstrap 省略 `--version` 时仍默认 alpha.5。[本次验收摘要](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)区分实际结果与未验证范围。
 
 ## 能帮你做什么？
 
@@ -40,11 +46,11 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.6/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.7/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # 查看并接受脚本行为后，再单独执行：
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.6 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.7 --no-setup
 sudo noderampart setup
 ~~~
 
@@ -52,7 +58,7 @@ sudo noderampart setup
 
 安装器会识别系统和 CPU，下载对应 DEB/RPM，核对 SHA256、版本和架构，通过包管理器安装。`--no-setup` 将菜单留给随后单独运行的 setup。已有配置和服务启用/禁用状态会保留；下载源或制品尚未发布时会明确报错并停止。
 
-明确选择 alpha.6、下载后用 `--no-setup` 安装并单独运行 setup 的路径已在 Debian 13、Fedora 44 实测；本轮未执行受支持的 curl 管道交互安装路径。省略 `--version` 仍选择 alpha.5。支持构建的平台不等于所有平台均已完成真实运行验收，具体边界见[当前限制](docs/ALPHA_LIMITATIONS.md)。
+明确选择 alpha.7、下载后用 `--no-setup` 安装并单独运行 setup 的路径在 Debian 13、Fedora 44 的本次验收通过；受支持的 curl 管道交互安装路径未执行。省略 `--version` 仍选择 alpha.5。支持构建的平台不等于所有平台均已完成真实运行验收，具体边界见[当前限制](docs/ALPHA_LIMITATIONS.md)。
 
 上述安装命令使用 **--no-setup** 完成无人值守安装，之后再单独打开配置向导。安装器不会从脚本管道读取交互答案或凭据。Debian 首次装包会按系统服务策略启用服务并以安全默认配置开始观察；Fedora 遵循系统的服务 preset。
 
@@ -72,9 +78,9 @@ sudo noderampart setup --language zh
 
 菜单用方向键和 Enter 操作，表单用 Tab/Shift+Tab 切换字段，Escape 返回。也可在菜单中随时切换中文和 English。
 
-尚未发布的 alpha.7 候选新增可搜索的地区/城市时区列表，以及独立的 Telegram
-**English / 简体中文**推送选择；已发布 alpha.6 安装包不包含这两项。
-草稿保存和旧消息处理规则见[时区与推送语言操作说明](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language-unreleased-source)。
+alpha.7 提供可搜索的地区/城市时区列表及独立的 Telegram
+**English / 简体中文**正文选择，缺省仍为英文，与界面语言独立。只有新入队消息使用
+新呈现设置，旧正文/重试不重译。保存与旧消息规则见[时区与推送语言操作说明](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language)。
 
 ## 平时怎么使用？
 

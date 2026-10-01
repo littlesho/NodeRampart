@@ -8,13 +8,19 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
+> **v0.4.0-alpha.7 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) add a searchable report timezone and independent English/Chinese Telegram text. The database upgrades to schema 12; verify a matching backup, preserve earlier configuration/keys separately and install all three matching programs before saving new settings.
+
+> **This distribution:** All 22 anonymous downloads and checksums match the authenticated 22 provenance and six runtime SPDX subjects byte-for-byte. Debian 13/Fedora 44 public bootstrap, setup, basic collection, online backup and cleanup: **PASS**. Both strict doctor snapshots remained **unknown / exit 2**. Current alpha.7 Debian 12/Fedora 43 runtime, native ARM64 and natural SSH recovery remain unvalidated; this is not production readiness. See [this release verification](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
+
+The following alpha.6 scope is historical and does not prove alpha.7 runtime acceptance:
+
 > **v0.4.0-alpha.6 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6) add isolated notification targets, full local reports, diagnosis and committed sensor watermarks. The database upgrades to schema 11 and the sensor protocol to v5; retain a verified compatible pre-upgrade backup.
 
 > **Validation:** All 22 assets passed fresh anonymous download/checksum checks; their bytes match the authenticated 22 provenance and six SPDX checks. Exact final-package upgrades and lifecycle checks passed on Debian 12/13 and Fedora 43/44 amd64/x86_64. Public bootstrap with separate setup passed on Debian 13 and Fedora 44. Native ARM64 and the natural SSH recovery chain remain unvalidated; this does not establish production readiness. See [release verification](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification).
 
 > **GeoIP fix scope:** alpha.4 fixes repeated parsing of shared MMDB data that could exhaust the validation budget, and adds safe MMDB validation/resource-budget errors. Matching candidate City/ASN samples passed complete offline validation; user download, activation and daily updates remain unverified. See [validation scope and resource limits](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) and [upgrade and GeoIP acceptance](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance).
 
-> **Pinned installation:** explicitly select `v0.4.0-alpha.6` in the commands below. The frozen bootstrap still defaults to alpha.5 when `--version` is omitted. The [acceptance summary](docs/ALPHA6_ACCEPTANCE.md#publication-and-distribution-2026-10-01) separates measured results from remaining limits.
+> **Pinned installation:** explicitly select `v0.4.0-alpha.7` below. The frozen bootstrap still defaults to alpha.5 when `--version` is omitted. The [current acceptance](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification) separates measured results from remaining limits.
 
 ## What can it do?
 
@@ -40,11 +46,11 @@ Download into a separate directory and inspect the script before deciding to exe
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.6/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.7/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # Run separately, after reviewing and accepting the script:
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.6 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.7 --no-setup
 sudo noderampart setup
 ~~~
 
@@ -52,7 +58,7 @@ For manual package and provenance checks, see [release verification](docs/RELEAS
 
 The installer downloads the package for your distribution and CPU, checks its SHA256 and package identity, and installs it with your package manager. `--no-setup` leaves the menu to the separate setup command. Existing configuration and service enable/disable choices are preserved. If the release is unavailable, installation stops with an explanation.
 
-The explicit alpha.6 download, `--no-setup` installation and separate setup were exercised on Debian 13 and Fedora 44. The supported curl-pipe interactive path was not exercised in this publication check. Omitting `--version` still selects alpha.5. Build targets do not imply that every distribution and ARM64 runtime has been tested; see [validation scope](docs/ALPHA_LIMITATIONS.md).
+The explicit alpha.7 download, `--no-setup` installation and separate setup passed on Debian 13 and Fedora 44. The supported curl-pipe interactive path was not exercised in this publication check. Omitting `--version` still selects alpha.5. Build targets do not imply that every distribution and ARM64 runtime has been tested; see [validation scope](docs/ALPHA_LIMITATIONS.md).
 
 **--no-setup** permits unattended installation; open setup separately afterward. No terminal answers or credentials are read from the script pipe. A fresh Debian package enables and starts observation with safe defaults, subject to system service policy; Fedora follows its service presets.
 
@@ -72,11 +78,11 @@ sudo noderampart setup
 
 Use arrow keys and Enter for menus, Tab/Shift+Tab for form fields, and Escape to go back. English and Chinese are available from the language menu or the --language en / --language zh option.
 
-The unreleased alpha.7 candidate adds a searchable region/city timezone selector and
-an independent Telegram **English / 简体中文** message choice. These are not in
-the published alpha.6 packages. See the bilingual [timezone and message language
-instructions](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language-unreleased-source)
-for draft/save behavior and retained older messages.
+Alpha.7 adds a searchable region/city timezone selector and independent Telegram
+**English / 简体中文** text, defaulting to English regardless of UI language. Only
+newly admitted messages use changed presentation settings; old bodies and retries
+are not translated again. See the bilingual [timezone and message language
+instructions](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language).
 
 ## Everyday use
 

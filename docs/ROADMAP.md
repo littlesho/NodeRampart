@@ -28,7 +28,7 @@
 - Offline pseudonymized metadata replay and threshold comparison.
 - See [v0.3 operations](V0.3_OPERATIONS.md) for supported contracts.
 
-## `v0.4.0-alpha.6` — current unpublished candidate
+## `v0.4.0-alpha.6` — historical published alpha
 
 - Local terminal management, optional data-only GeoIP updates and public tariff caches.
 - Budget/health alerts, saved pricing evidence and bounded redacted local exports.
@@ -36,6 +36,10 @@
   [operations guide](V0.4_OPERATIONS.md) describes implemented commands.
 - Source publication, local packages and an approved upgrade release are separate;
   see [current validation scope and limitations](ALPHA_LIMITATIONS.md).
+- Published alpha.7 adds the searchable report timezone and independent Telegram
+  language. Its exact source/distribution/runtime scope is recorded in
+  [release verification](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification);
+  prior alpha.6 acceptance does not certify the new package bytes.
 
 ## `v0.5.0-beta`
 
