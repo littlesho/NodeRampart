@@ -66,6 +66,8 @@ func TestBackupRejectsMissingOrChangedSchemaConstraints(t *testing.T) {
 		{"extra_check", "interface_hourly", "rx_bytes INTEGER NOT NULL", "rx_bytes INTEGER NOT NULL CHECK(rx_bytes=0)"},
 		{"extra_foreign_key", "interface_hourly", "rx_bytes INTEGER NOT NULL", "rx_bytes INTEGER NOT NULL REFERENCES events(id)"},
 		{"missing_official_check", "notification_counters", "CHECK(id=1)", ""},
+		{"missing_channel_check", "event_notifications", "CHECK(channel IN ('telegram','webhook','feishu','wecom','discord','slack','teams','google_chat'))", ""},
+		{"extra_channel", "event_notifications", "'google_chat'", "'google_chat','unapproved'"},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
@@ -222,6 +224,15 @@ func TestBackupAcceptsAndMigratesAllSupportedSchemaVersions(t *testing.T) {
 				t.Fatal(err)
 			}
 			var statements []string
+			if version < 13 {
+				statements = append(statements, `ALTER TABLE notification_targets DROP COLUMN activated_at`, `DROP INDEX event_notifications_message_idx`, `ALTER TABLE event_notifications RENAME TO event_notifications_v13`,
+					`CREATE TABLE event_notifications (event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+					 channel TEXT NOT NULL DEFAULT 'telegram' CHECK(channel IN ('telegram','webhook')),
+					 notification_id TEXT NOT NULL DEFAULT '', decision TEXT NOT NULL CHECK(decision IN ('queued','merged','silenced','ineligible','rejected')),
+					 silence_id TEXT NOT NULL DEFAULT '', recorded_at INTEGER NOT NULL, PRIMARY KEY(event_id,channel))`,
+					`INSERT INTO event_notifications SELECT event_id,channel,notification_id,decision,silence_id,recorded_at FROM event_notifications_v13 WHERE channel IN ('telegram','webhook')`,
+					`DROP TABLE event_notifications_v13`, `CREATE INDEX event_notifications_message_idx ON event_notifications(notification_id)`)
+			}
 			if version < 12 {
 				statements = append(statements, `ALTER TABLE notification_outbox DROP COLUMN presentation_timezone`, `ALTER TABLE notification_outbox DROP COLUMN language`)
 			}

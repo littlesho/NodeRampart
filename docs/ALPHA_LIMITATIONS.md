@@ -257,3 +257,30 @@ alpha.6 safely copies GeoIP inputs as streams and uses a fixed-purpose,
 unprivileged verification subprocess with bounded cancellation and resources.
 This preserves full Verify and paired activation; it does not inherit the
 historical real-MMDB result as acceptance of new program bytes.
+
+## alpha.8 development candidate notification limits
+
+Six new adapters are implemented behind default-disabled configuration. One target
+per channel, outbound HTTPS only: no private-message bots, incoming chat, commands,
+OAuth/Entra token acquisition, file uploads or runtime SDK downloads. Native
+messages are one deterministic summary, not a complete report. There is no
+unbounded splitting or guaranteed exactly-once delivery. Interface confirmation
+is the observation boundary; Teams only confirms workflow request acceptance.
+
+Contract mocks do not certify real accounts, tenant policies, delivery or human
+reading. Real six-platform tests are NOT RUN unless an explicitly authorized
+synthetic target and receiver confirmation are recorded in [acceptance](ALPHA8_ACCEPTANCE.md).
+Native ARM64 execution is separate from cross-build evidence. Unsupported official
+URL shapes fail closed; users must not bypass tenant policy or TLS checks.
+
+Manual in-place reversible credential edits may share filesystem timestamp
+granularity; use managed rotation, or atomically replace a manual file and restart.
+Persistent target transitions still never revive isolated A→B→A queues. Secrets
+in backup archives remain protected by operator storage permissions, not database
+encryption. Slack commercial distribution requirements are separate from MIT;
+this source makes no Marketplace or vendor approval claim.
+
+中文：六个新渠道默认停用，每渠道一目标，仅出站 HTTPS。mock 不是平台/租户/人工
+接收验收；Teams 只有工作流接受回执，网络与写回故障仍可能重复。无真实授权目标的
+联调为 NOT RUN，交叉编译不等于 ARM64 运行。手工凭据应原子替换并重启，推荐管理
+界面轮换；不得绕过租户策略、TLS 或第三方分发条款。

@@ -170,3 +170,32 @@ language/timezone contexts; unknown and Local contexts cannot coalesce. Recipien
 正文并拒绝未来schema。心跳无持久队列；Webhook复用已有发件队列及目标/隐私隔离。
 均不增加监听端口；未发布 alpha.7 时区/推送语言候选新增 schema12 队列呈现字段，重试沿用
 已保存正文，合并不混合语言/时区上下文；目标身份及隐私策略不变。
+
+## alpha.8 development candidate: native outbound channels
+
+The fixed notification set is Telegram, generic Webhook, Feishu, WeCom, Discord,
+Slack, Teams Workflows and Google Chat, with one target per channel. Six new
+channels default disabled. Each uses the existing persistent outbox and leased
+worker; the shared event transaction records admission and per-target decisions
+before advancing the sensor committed watermark. No network runs under that
+transaction or a monitoring lock. Daily reports share the existing timezone and
+schedule; native target activation timestamps prevent automatic historical sends.
+
+Native senders hold inspected credential snapshots and derive opaque identities
+from channel, canonical endpoint, signing material and file generation. Managed
+rotation writes a new owned file and isolates older unsent work. Configuration
+is reference-only, schema 1; database schema 13 transactionally expands the event
+channel constraint and records native activation. Old schema-12 data, bodies and
+presentation metadata survive. New bodies are bounded semantic summaries,
+persisted with language/timezone context. Generic Webhook JSON stays unchanged.
+
+Direct native HTTPS uses exact vendor contracts, DNS/connected-address checks,
+verified TLS, no proxy or redirects, bounded requests/responses and cancellation.
+A fixed worker per enabled channel reserves durable attempt pacing before each
+request; only defined acknowledgments count, with Teams displayed as accepted.
+See [channel contracts](NOTIFICATION_CHANNELS.md) and [acceptance](ALPHA8_ACCEPTANCE.md).
+
+中文版：八个固定渠道复用持久 outbox/租约/发送前校验，六个新渠道默认停用；
+每渠道一个目标与独立去重、队列预算和结果，不增加监听端口或 sensor 权限。
+新日报目标保存启用边界，不补发历史。schema 13 保留旧数据/正文/语言时区，
+配置 API 1、sensor 协议 5 不变。凭据仅引用，sender 固定快照；轮换隔离旧正文。

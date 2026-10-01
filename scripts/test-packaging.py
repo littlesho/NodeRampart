@@ -28,6 +28,18 @@ with (lab / "commands.jsonl").open("a") as log:
 if name == "id":
     if args == ["-u"]:
         print(os.environ.get("MOCK_UID", "0"))
+    elif args == ["-u", "noderampart"]:
+        print(os.environ.get("MOCK_NATIVE_SERVICE_UID", str(os.getuid())))
+    elif args == ["-g", "noderampart"]:
+        print(os.environ.get("MOCK_NATIVE_SERVICE_GID", str(os.getgid())))
+elif name == "stat":
+    result = subprocess.run(["/usr/bin/stat", *args], text=True, capture_output=True, check=False)
+    if result.returncode == 0 and os.environ.get("MOCK_NATIVE_TRUSTED_DIR") and args[:2] == ["-c", "%u:%g"] and pathlib.Path(args[-1]) == lab / "root/etc/noderampart/secrets":
+        print("0:" + os.environ.get("MOCK_NATIVE_SERVICE_GID", str(os.getgid())))
+    else:
+        sys.stdout.write(result.stdout)
+    sys.stderr.write(result.stderr)
+    sys.exit(result.returncode)
 elif name == "systemctl":
     if os.environ.get("MOCK_SYSTEMD_UNAVAILABLE"):
         sys.exit(1)
@@ -131,7 +143,7 @@ class PackagingTests(unittest.TestCase):
         for name in ("id", "getent", "groupadd", "useradd", "usermod", "userdel",
                      "groupdel", "chown", "chmod", "systemctl", "mountpoint",
                      "install", "rm", "rmdir", "go", "dpkg", "dpkg-deb", "rpmbuild",
-                     "dpkg-query", "rpm", "deb-systemd-helper", "deb-systemd-invoke"):
+                     "dpkg-query", "rpm", "deb-systemd-helper", "deb-systemd-invoke", "stat"):
             self.write(self.mocks / name, mock, executable=True)
         for path in ("etc/noderampart", "var/lib/noderampart", "var/cache/noderampart",
                      "run/systemd/system", "tmp", "usr/local/bin", "etc/systemd/system"):
@@ -179,6 +191,15 @@ class PackagingTests(unittest.TestCase):
         path = self.lab / "commands.jsonl"
         return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
+    def run_purge_credential_guard(self, source):
+        content = (REPO / source).read_text()
+        body = content.split("purge_native_credentials_guard() {", 1)[1].split("\n}\n", 1)[0]
+        content = "#!/bin/sh\nset -eu\npurge_native_credentials_guard() {" + body + "\n}\npurge_native_credentials_guard\n"
+        content = re.sub(r"/(?:etc|usr|lib|var|run|proc)/", lambda m: str(self.root) + m[0], content)
+        staged = self.project / "purge-credential-guard.sh"
+        self.write(staged, content)
+        return subprocess.run(["/bin/sh", str(staged)], env=self.env, text=True, capture_output=True, check=False)
+
     def prepare_rpm_source(self, version="0.4.0-alpha"):
         files = ["LICENSE", "README.md", "README.zh-CN.md", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md",
                  "SECURITY.md", "CONTRIBUTING.md", "Makefile", "go.mod", "go.sum", "VERSION",
@@ -193,6 +214,10 @@ class PackagingTests(unittest.TestCase):
 
     def assert_no_mutations(self):
         for command in self.commands():
+            if command[0] == "stat":
+                self.assertEqual(command[1], "-c", command)
+                self.assertIn(command[2], ("%u:%g", "%a", "%h:%u:%g:%a", "%s"), command)
+                continue
             self.assertIn(command[0], ("id", "mountpoint"), command)
 
     def test_installers_reject_config_symlinks_before_mutations(self):
@@ -417,6 +442,107 @@ class PackagingTests(unittest.TestCase):
                     self.assertTrue((self.root / "var/lib/noderampart/state").is_file())
                     self.assert_no_mutations()
 
+    def test_all_purge_entries_protect_manual_native_credentials_before_mutations(self):
+        sources = ("scripts/uninstall.sh", "packaging/debian/postrm", "scripts/manage-remove.sh")
+        for relative in ("feishu.credential.json", "wecom.credential.json", "discord.credential.json",
+                         "slack.credential.json", "teams.credential.json", "google_chat.credential.json",
+                         "custom-authorized-hook.json", "secrets/slack-user.secret", "secrets/.manual.secret"):
+            with self.subTest(relative=relative):
+                path = self.root / "etc/noderampart" / relative
+                self.write(path, "SYNTHETIC_PRIVATE_WEBHOOK_CREDENTIAL")
+                path.chmod(0o600)
+                self.env["MOCK_NATIVE_TRUSTED_DIR"] = "1"
+                for source in sources:
+                    result = self.run_purge_credential_guard(source)
+                    self.assertNotEqual(result.returncode, 0, source)
+                    self.assertEqual(path.read_text(), "SYNTHETIC_PRIVATE_WEBHOOK_CREDENTIAL")
+                    self.assertNotIn("SYNTHETIC_PRIVATE_WEBHOOK_CREDENTIAL", result.stdout + result.stderr)
+                    self.assert_no_mutations()
+                path.unlink()
+        for source, argument in (("scripts/uninstall.sh", "--purge"), ("packaging/debian/postrm", "purge")):
+            path = self.root / "etc/noderampart/slack.credential.json"
+            self.write(path, "SYNTHETIC_PRIVATE_WEBHOOK_CREDENTIAL")
+            result = self.run_script(source, argument)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertTrue((self.root / "var/lib/noderampart/state").is_file())
+            self.assert_no_mutations()
+            path.unlink()
+
+    def test_all_purge_entries_recognize_only_safe_managed_native_secret_files(self):
+        self.env["MOCK_NATIVE_TRUSTED_DIR"] = "1"
+        directory = self.root / "etc/noderampart/secrets"
+        directory.mkdir()
+        directory.chmod(0o750)
+        sources = ("scripts/uninstall.sh", "packaging/debian/postrm", "scripts/manage-remove.sh")
+        paths = []
+        for channel in ("telegram", "privacy", "feishu", "wecom", "discord", "slack", "teams", "google_chat"):
+            path = directory / (channel + "-" + "A" * 26 + ".secret")
+            self.write(path, "synthetic managed credential")
+            path.chmod(0o600)
+            paths.append(path)
+        for source in sources:
+            self.assertEqual(self.run_purge_credential_guard(source).returncode, 0, source)
+        target = paths[-1]
+        target.chmod(0o644)
+        for source in sources:
+            self.assertNotEqual(self.run_purge_credential_guard(source).returncode, 0)
+        target.chmod(0o600)
+        linked = directory / ("slack-" + "B" * 26 + ".secret")
+        os.link(target, linked)
+        for source in sources:
+            self.assertNotEqual(self.run_purge_credential_guard(source).returncode, 0)
+        linked.unlink()
+        linked.symlink_to(target)
+        for source in sources:
+            self.assertNotEqual(self.run_purge_credential_guard(source).returncode, 0)
+        linked.unlink()
+        target.write_text("x" * 8193)
+        for source in sources:
+            self.assertNotEqual(self.run_purge_credential_guard(source).returncode, 0)
+        self.assert_no_mutations()
+
+    def test_purge_guard_runs_again_before_recursive_removal(self):
+        for source in ("scripts/uninstall.sh", "packaging/debian/postrm"):
+            text = (REPO / source).read_text()
+            self.assertGreaterEqual(text.count("purge_native_credentials_guard || exit 1"), 2)
+            self.assertLess(text.rindex("purge_native_credentials_guard || exit 1"), text.index("rm -rf --one-file-system"))
+        helper = (REPO / "scripts/manage-remove.sh").read_text()
+        self.assertIn("purge_native_credentials_guard || remove_die", helper)
+        self.assertGreaterEqual(helper.count("remove_validate_purge"), 3)
+
+    def test_purge_guard_rejects_wrong_service_identity_and_excessive_managed_files(self):
+        self.env["MOCK_NATIVE_TRUSTED_DIR"] = "1"
+        directory = self.root / "etc/noderampart/secrets"
+        directory.mkdir()
+        directory.chmod(0o750)
+        target = directory / ("slack-" + "A" * 26 + ".secret")
+        self.write(target, "synthetic managed credential")
+        target.chmod(0o600)
+        sources = ("scripts/uninstall.sh", "packaging/debian/postrm", "scripts/manage-remove.sh")
+        self.env["MOCK_NATIVE_SERVICE_UID"] = str(os.getuid() + 1)
+        for source in sources:
+            self.assertNotEqual(self.run_purge_credential_guard(source).returncode, 0)
+        del self.env["MOCK_NATIVE_SERVICE_UID"]
+        alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+        for index in range(128):
+            generation = "Z" + alphabet[index // 32] + alphabet[index % 32] + "A" * 23
+            path = directory / ("slack-" + generation + ".secret")
+            self.write(path, "synthetic managed credential")
+            path.chmod(0o600)
+        for source in sources:
+            result = self.run_purge_credential_guard(source)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("managed file limit", result.stderr)
+        self.assertTrue(target.is_file())
+        self.assert_no_mutations()
+
+    def test_normal_removal_keeps_manual_native_credentials(self):
+        path = self.root / "etc/noderampart/secrets/slack-user.secret"
+        self.write(path, "SYNTHETIC_PRIVATE_WEBHOOK_CREDENTIAL")
+        result = self.run_script("scripts/uninstall.sh")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(path.read_text(), "SYNTHETIC_PRIVATE_WEBHOOK_CREDENTIAL")
+
     def test_stop_failures_prevent_removal(self):
         self.env["MOCK_STOP_FAIL"] = "1"
         for source, arg in (("scripts/uninstall.sh", "--purge"), ("packaging/debian/postrm", "purge"),
@@ -511,7 +637,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_public_alpha_suffix_native_versions_keep_release_order(self):
         native_versions = []
-        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7'):
+        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8'):
             with self.subTest(suffix=suffix):
                 version = '0.4.0-alpha' + suffix
                 self.write(self.project / 'VERSION', version + '\n')

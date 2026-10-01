@@ -101,7 +101,7 @@ func (u *ui) editField(f field) {
 			}
 		}
 		labels := append([]string(nil), f.choices...)
-		if f.path == "notifications.telegram.language" {
+		if strings.HasSuffix(f.path, ".language") && strings.HasPrefix(f.path, "notifications.") {
 			labels = []string{"English", "简体中文"}
 		}
 		if f.choices[0] == "true" {

@@ -2,7 +2,10 @@
 
 package daemon
 
-import "time"
+import (
+	"github.com/littlesho/NodeRampart/internal/config"
+	"time"
+)
 
 // Diagnosis is a bounded explanation of current observations. It never applies
 // a repair. Unknown required observations take precedence over a healthy claim.
@@ -61,12 +64,17 @@ func DiagnoseAt(status Status, foreignKeysRequired bool, now time.Time) Diagnosi
 			add(feature.code, "degraded", "An enabled optional feature is unavailable; base monitoring continues.", "Correct its protected local resource, validate configuration, then restart.")
 		}
 	}
+	for _, channel := range config.NativeChannelNames() {
+		if _, failed := status.OptionalFailures[channel]; failed {
+			add(channel+"_credentials_unavailable", "degraded", "An enabled optional notification channel is unavailable; base monitoring continues.", "Correct its protected credential file, validate configuration, then restart.")
+		}
+	}
 	for _, component := range status.Components {
 		if component.State != "degraded" && component.State != "failed" {
 			continue
 		}
 		switch component.Name {
-		case "notification_worker", "webhook_worker", "heartbeat", "report_scheduler", "geoip", "billing":
+		case "notification_worker", "webhook_worker", "feishu_worker", "wecom_worker", "discord_worker", "slack_worker", "teams_worker", "google_chat_worker", "heartbeat", "report_scheduler", "geoip", "billing":
 			add("optional_component_degraded", "degraded", "An optional component reports degraded operation.", "Inspect the component state and its fixed local failure reason; retry or restart after correction.")
 		}
 	}

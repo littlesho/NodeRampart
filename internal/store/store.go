@@ -31,6 +31,10 @@ type Store struct {
 const (
 	maxPendingOutboxMessages = 10_000
 	maxPendingOutboxBytes    = 32 << 20
+	// Include all identities and retained isolated/quarantined bodies in a
+	// channel's share, so credential rotation cannot bypass this bound.
+	maxChannelOutboxMessages = maxPendingOutboxMessages / MaxNotificationChannels
+	maxChannelOutboxBytes    = maxPendingOutboxBytes / MaxNotificationChannels
 	maxAuthKeysPerHour       = 65_536
 	maxTrafficKeysPerHour    = 16_384
 )
@@ -254,6 +258,11 @@ func (s *Store) migrate(ctx context.Context) error {
 	}
 	if version < 12 {
 		if err := migrateV12(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if version < 13 {
+		if err := migrateV13(ctx, tx); err != nil {
 			return err
 		}
 	}
@@ -591,8 +600,8 @@ func recordBatchHealth(ctx context.Context, db executor, batch protocol.Batch) e
 }
 
 type OutboxMessage struct {
-	// Secondary is admitted only with an event, in the same transaction. There
-	// are exactly two supported channels; nested or same-channel pairs fail.
+	// Secondary links event deliveries admitted in the same transaction. The
+	// chain contains at most eight distinct, explicitly configured channels.
 	Secondary   *OutboxMessage `json:"secondary,omitempty"`
 	ID          string
 	DedupeKey   string
@@ -663,12 +672,15 @@ func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, erro
 	if exists == 1 {
 		return false, nil
 	}
-	var pendingCount, pendingBytes int64
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0) FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL`).Scan(&pendingCount, &pendingBytes); err != nil {
+	var pendingCount, pendingBytes, channelCount, channelBytes int64
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0),
+ COALESCE(SUM(channel=?),0),COALESCE(SUM(CASE WHEN channel=? THEN LENGTH(CAST(body AS BLOB)) ELSE 0 END),0)
+ FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL`, message.Channel, message.Channel).Scan(&pendingCount, &pendingBytes, &channelCount, &channelBytes); err != nil {
 		return false, err
 	}
-	if pendingCount >= maxPendingOutboxMessages || pendingBytes+int64(len(message.Body)) > maxPendingOutboxBytes {
-		if _, err := tx.ExecContext(ctx, `UPDATE notification_counters SET rejected=rejected+1 WHERE id=1`); err != nil {
+	if pendingCount >= maxPendingOutboxMessages || pendingBytes+int64(len(message.Body)) > maxPendingOutboxBytes ||
+		message.Channel != "" && (channelCount >= maxChannelOutboxMessages || channelBytes+int64(len(message.Body)) > maxChannelOutboxBytes) {
+		if _, err := tx.ExecContext(ctx, `UPDATE notification_counters SET rejected=MIN(rejected,9223372036854775806)+1 WHERE id=1`); err != nil {
 			return false, err
 		}
 		return false, ErrOutboxFull
@@ -741,6 +753,16 @@ func (s *Store) pendingDestination(ctx context.Context, now time.Time, count int
 }
 
 func (s *Store) MarkSent(ctx context.Context, id string, now time.Time) error {
+	return s.MarkSentWithCooldown(ctx, id, now, 0)
+}
+
+// MarkSentWithCooldown acknowledges the immutable row and its receiver's
+// minimum interval in one commit. A restart cannot lose a successful-send hold;
+// rows admitted during the hold are blocked by the same persistent cooldown.
+func (s *Store) MarkSentWithCooldown(ctx context.Context, id string, now time.Time, minimumInterval time.Duration) error {
+	if now.IsZero() || minimumInterval < 0 || minimumInterval > 24*time.Hour {
+		return errors.New("invalid notification success cooldown")
+	}
 	release, admitErr := s.beginWrite(ctx, writeCritical)
 	if admitErr != nil {
 		return admitErr
@@ -761,6 +783,17 @@ func (s *Store) MarkSent(ctx context.Context, id string, now time.Time) error {
 		return err
 	}
 	if count > 0 {
+		if minimumInterval > 0 {
+			until := now.Add(minimumInterval)
+			if !until.Equal(until.Truncate(time.Millisecond)) {
+				until = until.Truncate(time.Millisecond).Add(time.Millisecond)
+			}
+			if _, err := tx.ExecContext(ctx, `INSERT INTO notification_cooldowns(destination,until_at)
+ SELECT destination,? FROM notification_outbox WHERE id=?
+ ON CONFLICT(destination) DO UPDATE SET until_at=MAX(until_at,excluded.until_at)`, until.UnixMilli(), id); err != nil {
+				return err
+			}
+		}
 		if _, err := tx.ExecContext(ctx, `UPDATE notification_counters SET last_sent_at=MAX(last_sent_at,?) WHERE id=1`, now.UnixMilli()); err != nil {
 			return err
 		}

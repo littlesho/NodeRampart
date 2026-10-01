@@ -1,0 +1,708 @@
+
+== ssh_login_success start ==
+NodeRampart CRITICAL — SSH login success
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: ssh_login_success
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: A successful SSH authentication was observed.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== ssh_login_success update ==
+NodeRampart CRITICAL — SSH login success
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: ssh_login_success
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: A successful SSH authentication was observed.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== ssh_login_success recovery ==
+NodeRampart CRITICAL — SSH login success
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: ssh_login_success
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: A successful SSH authentication was observed.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== ssh_brute_force start ==
+NodeRampart CRITICAL — SSH authentication failures
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: ssh_brute_force
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: 123 SSH authentication failures were recorded in 60 seconds.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== ssh_brute_force update ==
+NodeRampart CRITICAL — SSH authentication failures
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: ssh_brute_force
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: 123 SSH authentication failures were recorded in 60 seconds.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== ssh_brute_force recovery ==
+NodeRampart CRITICAL — SSH authentication failures
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: ssh_brute_force
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: 123 SSH authentication failures were recorded in 60 seconds.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== syn_flood start ==
+NodeRampart CRITICAL — SYN rate alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: syn_flood
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed rate 123 packets/s; configured threshold 100 packets/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== syn_flood update ==
+NodeRampart CRITICAL — SYN rate alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: syn_flood
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed rate 123 packets/s; configured threshold 100 packets/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== syn_flood recovery ==
+NodeRampart CRITICAL — SYN rate alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: syn_flood
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Recorded recovery: rate 123 packets/s; configured threshold 100 packets/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== udp_flood start ==
+NodeRampart CRITICAL — UDP rate alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: udp_flood
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed rate 123 packets/s; configured threshold 100 packets/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== udp_flood update ==
+NodeRampart CRITICAL — UDP rate alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: udp_flood
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed rate 123 packets/s; configured threshold 100 packets/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== udp_flood recovery ==
+NodeRampart CRITICAL — UDP rate alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: udp_flood
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Recorded recovery: rate 123 packets/s; configured threshold 100 packets/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== icmp_flood start ==
+NodeRampart CRITICAL — ICMP rate alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: icmp_flood
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed rate 123 packets/s; configured threshold 100 packets/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== icmp_flood update ==
+NodeRampart CRITICAL — ICMP rate alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: icmp_flood
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed rate 123 packets/s; configured threshold 100 packets/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== icmp_flood recovery ==
+NodeRampart CRITICAL — ICMP rate alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: icmp_flood
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Recorded recovery: rate 123 packets/s; configured threshold 100 packets/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== bandwidth_spike start ==
+NodeRampart CRITICAL — Bandwidth alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: bandwidth_spike
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed rate 123 bytes/s; configured threshold 100 bytes/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== bandwidth_spike update ==
+NodeRampart CRITICAL — Bandwidth alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: bandwidth_spike
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed rate 123 bytes/s; configured threshold 100 bytes/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== bandwidth_spike recovery ==
+NodeRampart CRITICAL — Bandwidth alert
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: bandwidth_spike
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Recorded recovery: rate 123 bytes/s; configured threshold 100 bytes/s.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== port_scan start ==
+NodeRampart CRITICAL — Port scan observation
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: port_scan
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: At least 123 distinct local ports were probed.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== port_scan update ==
+NodeRampart CRITICAL — Port scan observation
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: port_scan
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: At least 123 distinct local ports were probed.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== port_scan recovery ==
+NodeRampart CRITICAL — Port scan observation
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: port_scan
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: At least 123 distinct local ports were probed.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_month_bytes start ==
+NodeRampart CRITICAL — Cycle traffic allowance
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_month_bytes
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed guest TX estimate reached 100% of the configured threshold.
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Threshold bytes: 2048
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_month_bytes update ==
+NodeRampart CRITICAL — Cycle traffic allowance
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_month_bytes
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed guest TX estimate reached 100% of the configured threshold.
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Threshold bytes: 2048
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_month_bytes recovery ==
+NodeRampart CRITICAL — Cycle traffic allowance
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_month_bytes
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed guest TX estimate reached 100% of the configured threshold.
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Threshold bytes: 2048
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_month_cost start ==
+NodeRampart CRITICAL — Cycle estimated cost budget
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_month_cost
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Recorded estimated cost reached 100% of the configured cost budget.
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Estimated cost: 3.5 USD
+Cost budget: 2 USD
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_month_cost update ==
+NodeRampart CRITICAL — Cycle estimated cost budget
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_month_cost
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Recorded estimated cost reached 100% of the configured cost budget.
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Estimated cost: 3.5 USD
+Cost budget: 2 USD
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_month_cost recovery ==
+NodeRampart CRITICAL — Cycle estimated cost budget
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_month_cost
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Recorded estimated cost reached 100% of the configured cost budget.
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Estimated cost: 3.5 USD
+Cost budget: 2 USD
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_day_bytes start ==
+NodeRampart CRITICAL — Daily traffic threshold
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_day_bytes
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed guest TX estimate reached 100% of the configured threshold.
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Threshold bytes: 2048
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_day_bytes update ==
+NodeRampart CRITICAL — Daily traffic threshold
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_day_bytes
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed guest TX estimate reached 100% of the configured threshold.
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Threshold bytes: 2048
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_day_bytes recovery ==
+NodeRampart CRITICAL — Daily traffic threshold
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_day_bytes
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed guest TX estimate reached 100% of the configured threshold.
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Threshold bytes: 2048
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_day_growth start ==
+NodeRampart CRITICAL — Daily traffic growth
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_day_growth
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed daily guest TX reached the recorded growth threshold (estimate).
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_day_growth update ==
+NodeRampart CRITICAL — Daily traffic growth
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_day_growth
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed daily guest TX reached the recorded growth threshold (estimate).
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== budget_day_growth recovery ==
+NodeRampart CRITICAL — Daily traffic growth
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: budget_day_growth
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: Observed daily guest TX reached the recorded growth threshold (estimate).
+Reason: insufficient coverage
+Count / integer rate: 123
+Guest TX bytes: 4096
+Recorded coverage: incomplete
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_sensor start ==
+NodeRampart CRITICAL — Sensor health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_sensor
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_sensor update ==
+NodeRampart CRITICAL — Sensor health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_sensor
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_sensor recovery ==
+NodeRampart CRITICAL — Sensor health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_sensor
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: A component health recovery was recorded.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_interface_counter start ==
+NodeRampart CRITICAL — Interface counter health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_interface_counter
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_interface_counter update ==
+NodeRampart CRITICAL — Interface counter health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_interface_counter
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_interface_counter recovery ==
+NodeRampart CRITICAL — Interface counter health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_interface_counter
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: A component health recovery was recorded.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_ssh_journal start ==
+NodeRampart CRITICAL — SSH journal health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_ssh_journal
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_ssh_journal update ==
+NodeRampart CRITICAL — SSH journal health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_ssh_journal
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_ssh_journal recovery ==
+NodeRampart CRITICAL — SSH journal health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_ssh_journal
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: A component health recovery was recorded.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_storage start ==
+NodeRampart CRITICAL — Storage health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_storage
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_storage update ==
+NodeRampart CRITICAL — Storage health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_storage
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_storage recovery ==
+NodeRampart CRITICAL — Storage health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_storage
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: A component health recovery was recorded.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_geoip_update start ==
+NodeRampart CRITICAL — GeoIP update health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: start
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_geoip_update
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_geoip_update update ==
+NodeRampart CRITICAL — GeoIP update health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: update
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_geoip_update
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: The recorded component health condition requires attention.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native
+
+== health_geoip_update recovery ==
+NodeRampart CRITICAL — GeoIP update health
+Time: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+Phase: recovery
+Host: 主机 ＠everyone [31m
+Event: evt_native
+Type: health_geoip_update
+Coverage: retained observations only; missing data is unknown.
+WARNING: incomplete coverage.
+Evidence: A component health recovery was recorded.
+Reason: insufficient coverage
+Count / integer rate: 123
+Observed only; no automatic blocking. Details: sudo noderampart events show --id evt_native

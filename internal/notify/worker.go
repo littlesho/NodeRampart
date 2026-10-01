@@ -85,6 +85,33 @@ func (w *Worker) process(ctx context.Context) error {
 			}
 			continue
 		}
+		interval := time.Duration(0)
+		if limited, ok := w.Sender.(interface{ MinimumInterval() time.Duration }); ok {
+			interval = limited.MinimumInterval()
+		}
+		if interval > 0 {
+			reserved, err := w.Store.ReserveNotificationAttempt(ctx, message.ID, destination, time.Now().UTC(), interval)
+			if err != nil {
+				return err
+			}
+			if !reserved {
+				if err := w.Store.ReleaseNotificationClaim(ctx, message.ID); err != nil {
+					return err
+				}
+				continue
+			}
+			// A target/privacy change after the reservation still fails closed.
+			allowed, err = w.Store.NotificationDeliveryAllowed(ctx, message.ID, destination)
+			if err != nil {
+				return err
+			}
+			if !allowed {
+				if err := w.Store.ReleaseNotificationClaim(ctx, message.ID); err != nil {
+					return err
+				}
+				continue
+			}
+		}
 		deliveryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		if sender, ok := w.Sender.(interface {
 			SendMessage(context.Context, store.OutboxMessage) error
@@ -95,7 +122,7 @@ func (w *Worker) process(ctx context.Context) error {
 		}
 		cancel()
 		if err == nil {
-			if err := w.Store.MarkSent(ctx, message.ID, time.Now().UTC()); err != nil {
+			if err := w.Store.MarkSentWithCooldown(ctx, message.ID, time.Now().UTC(), interval); err != nil {
 				return err
 			}
 			continue
@@ -107,8 +134,11 @@ func (w *Worker) process(ctx context.Context) error {
 			return err
 		}
 		delay := retryDelay(message.Attempts)
+		if delay < interval {
+			delay = interval
+		}
 		// Sender errors can contain request URLs or response bodies. Persist only
-		// fixed categories and the numeric codes supplied by our Telegram client.
+		// fixed categories and the numeric codes supplied by our clients.
 		reason := "notification delivery failed"
 		var delivery *DeliveryError
 		if errors.As(err, &delivery) {

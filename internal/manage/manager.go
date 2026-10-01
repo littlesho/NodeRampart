@@ -577,6 +577,26 @@ func (m *Manager) preflight(cfg config.Config) error {
 			return errors.New("Telegram token is missing or invalid; use Telegram setup")
 		}
 	}
+	for _, channel := range config.NativeChannelNames() {
+		n := cfg.Notifications.NativeChannels()[channel]
+		if !n.Enabled && (!m.sandbox || n.CredentialFile == "") {
+			continue
+		}
+		credentialDir := filepath.Dir(n.CredentialFile)
+		managedDir := filepath.Dir(m.ConfigPath)
+		if credentialDir != managedDir && credentialDir != filepath.Join(managedDir, "secrets") {
+			return errors.New(channel + " credentials must remain in the managed configuration or secrets directory / 凭据必须位于托管配置或 secrets 目录")
+		}
+		if !n.Enabled {
+			continue
+		}
+		if m.daemonReadable(n.CredentialFile, false) != nil {
+			return errors.New(channel + " credentials must be protected and readable by the daemon service identity / 凭据须受保护且守护进程服务身份可读")
+		}
+		if _, err := notify.NewNative(channel, n); err != nil {
+			return errors.New(channel + " credentials or official webhook target are invalid / 凭据或官方 Webhook 目标无效")
+		}
+	}
 	if cfg.Privacy.NotificationIP == "hash" || cfg.Privacy.StoreIP == "hash" {
 		if m.daemonReadable(cfg.Privacy.HashKeyFile, true) != nil {
 			return errors.New("privacy hash key must be daemon-owned 0600; use Generate privacy key")

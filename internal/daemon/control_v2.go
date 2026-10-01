@@ -93,7 +93,7 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 		if args.Channel == "" {
 			args.Channel = "telegram"
 		}
-		if args.Channel != "telegram" && args.Channel != "webhook" {
+		if !config.IsNotificationChannel(args.Channel) {
 			return invalid()
 		}
 		if request.Command == "notify_discard_isolated" {
@@ -107,6 +107,9 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 			if args.Channel == "webhook" {
 				sender, destination, enabled = a.options.WebhookNotifier, a.options.WebhookDestination, a.options.Config.Notifications.Webhook.Enabled
 			}
+			if config.IsNativeChannel(args.Channel) {
+				sender, destination, enabled = a.options.NativeNotifiers[args.Channel], a.options.NativeDestinations[args.Channel], a.options.Config.Notifications.NativeChannels()[args.Channel].Enabled
+			}
 			if sender == nil || !enabled {
 				return controlFailure("selected notification sender is disabled or unavailable")
 			}
@@ -115,7 +118,12 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 			if args.Channel == "telegram" {
 				language = config.TelegramLanguage(a.options.Config.Notifications.Telegram)
 			}
-			_, err := a.options.Store.Enqueue(ctx, store.OutboxMessage{ID: id, DedupeKey: "test:" + model.NewID("once"), Channel: args.Channel, PrivacyMode: a.options.Config.Privacy.NotificationIP, Destination: destination, Language: language, Body: notify.FormatTest(a.options.Config.Hostname, language)})
+			body := notify.FormatTest(a.options.Config.Hostname, language)
+			if config.IsNativeChannel(args.Channel) {
+				language = config.NativeChannelLanguage(a.options.Config.Notifications.NativeChannels()[args.Channel])
+				body = notify.FormatNativeTest(a.options.Config.Hostname, language)
+			}
+			_, err := a.options.Store.Enqueue(ctx, store.OutboxMessage{ID: id, DedupeKey: "test:" + model.NewID("once"), Channel: args.Channel, PrivacyMode: a.options.Config.Privacy.NotificationIP, Destination: destination, Language: language, Body: body})
 			if err != nil {
 				return controlFailure("could not queue test notification")
 			}

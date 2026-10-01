@@ -35,12 +35,16 @@ import (
 
 type Options struct {
 	Config                  config.Config
+	ConfigDirectory         string
+	nativeActivatedAt       map[string]time.Time
 	Store                   *store.Store
 	Geo                     *enrich.Resolver
 	Notifier                notify.Sender
 	NotificationDestination string
 	WebhookNotifier         notify.Sender
 	WebhookDestination      string
+	NativeNotifiers         map[string]notify.Sender
+	NativeDestinations      map[string]string
 	HeartbeatSender         notify.HeartbeatSender
 	Billing                 *billing.Profile
 	StorePrivacy            *privacy.Transformer
@@ -121,6 +125,7 @@ type Status struct {
 	LastSensorBatch      time.Time                        `json:"last_sensor_batch_utc,omitempty"`
 	SensorPeer           ipc.Peer                         `json:"sensor_peer"`
 	Batches              uint64                           `json:"batches"`
+	NativeChannels       map[string]bool                  `json:"native_channels"`
 	WebhookEnabled       bool                             `json:"webhook_enabled"`
 	HeartbeatEnabled     bool                             `json:"heartbeat_enabled"`
 	TelegramEnabled      bool                             `json:"telegram_enabled"`
@@ -184,6 +189,9 @@ func New(options Options) (*App, error) {
 		options.WebhookDestination = "webhook:unknown"
 	}
 	if err := options.Store.ConfigureNotificationTarget(context.Background(), "webhook", options.WebhookDestination, options.Config.Privacy.NotificationIP, options.Config.Notifications.Webhook.Enabled, time.Now().UTC()); err != nil {
+		return nil, err
+	}
+	if err := configureNativeTargets(&options); err != nil {
 		return nil, err
 	}
 	if options.Logger == nil {
@@ -358,6 +366,7 @@ func (a *App) Run(ctx context.Context) error {
 			a.options.Logger.Warn("record webhook component", "error", err)
 		}
 	}
+	a.startNativeWorkers(ctx, child, start)
 	if a.options.Config.Heartbeat.Enabled && a.options.HeartbeatSender != nil {
 		start("heartbeat", "starting", false, func() error { return a.runHeartbeat(child) })
 	} else {
@@ -377,7 +386,15 @@ func (a *App) Run(ctx context.Context) error {
 		if a.options.Config.Notifications.Webhook.Enabled {
 			destinations = append(destinations, a.options.WebhookDestination)
 		}
-		scheduler := &report.Scheduler{Store: a.options.Store, Builder: a.report, DailyAt: a.options.Config.Reports.DailyAt, Destinations: destinations, NotificationPrivacy: a.options.Config.Privacy.NotificationIP, TelegramLanguage: config.TelegramLanguage(a.options.Config.Notifications.Telegram), Logger: a.options.Logger, BackfillDays: a.options.Config.Reports.BackfillDays}
+		languages := map[string]string{}
+		for _, channel := range config.NativeChannelNames() {
+			native := a.options.Config.Notifications.NativeChannels()[channel]
+			if native.Enabled {
+				destinations = append(destinations, a.options.NativeDestinations[channel])
+				languages[channel] = config.NativeChannelLanguage(native)
+			}
+		}
+		scheduler := &report.Scheduler{NativeLanguages: languages, Store: a.options.Store, Builder: a.report, DailyAt: a.options.Config.Reports.DailyAt, Destinations: destinations, NotificationPrivacy: a.options.Config.Privacy.NotificationIP, TelegramLanguage: config.TelegramLanguage(a.options.Config.Notifications.Telegram), Logger: a.options.Logger, BackfillDays: a.options.Config.Reports.BackfillDays}
 		start("report_scheduler", "running", false, func() error { return scheduler.Run(child) })
 	} else if err := a.options.Store.SetComponentStatus(ctx, "report_scheduler", "disabled", time.Now().UTC()); err != nil {
 		a.options.Logger.Warn("record disabled component", "component", "report_scheduler", "error", err)
@@ -551,23 +568,25 @@ func (a *App) prepareEvent(event model.Event) (model.Event, *store.OutboxMessage
 	if event.SourceIP != "" {
 		stored.SourceIP, stored.SourceRange = a.options.StorePrivacy.IP(event.SourceIP)
 	}
-	if (!a.options.Config.Notifications.Telegram.Enabled && !a.options.Config.Notifications.Webhook.Enabled) || (event.Phase != "recovery" && severityRank(event.Severity) < severityRank(model.SeverityMedium)) {
+	if !a.notificationsEnabled() || (event.Phase != "recovery" && severityRank(event.Severity) < severityRank(model.SeverityMedium)) {
 		return stored, nil
 	}
 	notification := event
 	if event.SourceIP != "" {
 		notification.SourceIP, notification.SourceRange = a.options.NotifyPrivacy.IP(event.SourceIP)
 	}
-	var primary *store.OutboxMessage
-	for _, target := range []struct {
-		channel, destination string
-		enabled              bool
-	}{
-		{"telegram", a.options.NotificationDestination, a.options.Config.Notifications.Telegram.Enabled},
-		{"webhook", a.options.WebhookDestination, a.options.Config.Notifications.Webhook.Enabled},
-	} {
+	var primary, tail *store.OutboxMessage
+	for _, target := range a.notificationTargets() {
 		if !target.enabled {
 			continue
+		}
+		// Journal replay and retained observations stay local when predating a
+		// newly enabled native target. Local event commit/watermark are unchanged.
+		if config.IsNativeChannel(target.channel) {
+			activated := a.options.nativeActivatedAt[target.channel]
+			if activated.IsZero() || event.ObservedAt.Before(activated) {
+				continue
+			}
 		}
 		message := &store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "event:" + event.ID + ":" + target.channel, Channel: target.channel, PrivacyMode: a.options.Config.Privacy.NotificationIP, Destination: target.destination, Body: notify.FormatEvent(a.options.Config.Hostname, notification)}
 		// Webhook's English event renderer uses UTC independently of Telegram.
@@ -578,11 +597,19 @@ func (a *App) prepareEvent(event model.Event) (model.Event, *store.OutboxMessage
 			message.Timezone = location.String() + "|" + timezones.Offset(event.ObservedAt.In(location))
 			message.Body = notify.FormatEventLocalized(a.options.Config.Hostname, notification, message.Language, location)
 		}
+		if config.IsNativeChannel(target.channel) {
+			native := a.options.Config.Notifications.NativeChannels()[target.channel]
+			message.Language = config.NativeChannelLanguage(native)
+			location := a.report.Location
+			message.Timezone = location.String() + "|" + timezones.Offset(event.ObservedAt.In(location))
+			message.Body = notify.FormatNativeEvent(a.options.Config.Hostname, notification, message.Language, location)
+		}
 		if primary == nil {
 			primary = message
 		} else {
-			primary.Secondary = message
+			tail.Secondary = message
 		}
+		tail = message
 	}
 	return stored, primary
 }
@@ -608,6 +635,10 @@ func (a *App) Status(ctx context.Context) Status {
 	a.mu.RLock()
 	status := Status{Version: version.Current(), StartedAt: a.started, Uptime: time.Since(a.started).Round(time.Second).String(), SensorRequired: a.options.Config.Sensor.Required, LastSensorBatch: a.lastSensor, SensorPeer: a.sensorPeer, Batches: a.batches, TelegramEnabled: a.options.Config.Notifications.Telegram.Enabled, GeoEnabled: a.options.Config.Geo.CityMMDB != "" || a.options.Config.Geo.ASNMMDB != ""}
 	status.GeneratedAt = time.Now().UTC()
+	status.NativeChannels = map[string]bool{}
+	for channel, native := range a.options.Config.Notifications.NativeChannels() {
+		status.NativeChannels[channel] = native.Enabled
+	}
 	status.WebhookEnabled, status.HeartbeatEnabled = a.options.Config.Notifications.Webhook.Enabled, a.options.Config.Heartbeat.Enabled
 	status.SensorEnabled, status.AuthEnabled = a.options.Config.Sensor.Enabled, a.options.Config.Auth.Enabled
 	status.OptionalFailures = make(map[string]string, len(a.options.OptionalFailures))

@@ -3,6 +3,47 @@
 
 set -eu
 
+# Credential files entered by administrators are not automatically product-owned.
+# Purge recognizes only the managed random-file namespace, never arbitrary names.
+purge_native_credentials_guard() {
+  [ -e /etc/noderampart ] || [ -L /etc/noderampart ] || return 0
+  [ ! -L /etc/noderampart ] && [ -d /etc/noderampart ] || { echo 'Refusing purge of an unsafe configuration directory.' >&2; return 1; }
+  for credential_entry in /etc/noderampart/* /etc/noderampart/.[!.]* /etc/noderampart/..?*; do
+    [ -e "$credential_entry" ] || [ -L "$credential_entry" ] || continue
+    case "${credential_entry##*/}" in
+      config.json|config.json.rpmsave|config.json.rpmnew|telegram.token|webhook.token|heartbeat.token|maxmind.credentials.json|geoip-state.json|geoip-health.json|prices-aws.json|prices-azure.json|prices-gcp.json|prices-alicloud.json|.management-apply.json|geoip|prices|secrets) ;;
+      *) echo 'Refusing purge of a file whose ownership is unknown; move manually supplied credentials outside the product directory first.' >&2; return 1;;
+    esac
+  done
+  credential_directory=/etc/noderampart/secrets
+  [ -e "$credential_directory" ] || [ -L "$credential_directory" ] || return 0
+  [ ! -L "$credential_directory" ] && [ -d "$credential_directory" ] || { echo 'Refusing purge of an unsafe credentials directory.' >&2; return 1; }
+  credential_uid=$(id -u noderampart) || return 1
+  credential_gid=$(id -g noderampart) || return 1
+  case "$credential_uid:$credential_gid" in *[!0-9:]*|:*|*:) echo 'Cannot verify credential service ownership.' >&2; return 1;; esac
+  [ "$(stat -c '%u:%g' "$credential_directory")" = "0:$credential_gid" ] || { echo 'Refusing purge of a credentials directory whose ownership is unknown.' >&2; return 1; }
+  credential_mode=$(stat -c '%a' "$credential_directory") || return 1
+  [ "$((0$credential_mode & 0022))" -eq 0 ] || { echo 'Refusing purge of a shared writable credentials directory.' >&2; return 1; }
+  credential_count=0
+  for credential_entry in "$credential_directory"/* "$credential_directory"/.[!.]* "$credential_directory"/..?*; do
+    [ -e "$credential_entry" ] || [ -L "$credential_entry" ] || continue
+    credential_count=$((credential_count + 1))
+    [ "$credential_count" -le 128 ] || { echo 'Credentials directory exceeds the managed file limit; inspect it before purging.' >&2; return 1; }
+    credential_name=${credential_entry##*/}
+    case "$credential_name" in
+      telegram-*.secret|privacy-*.secret|feishu-*.secret|wecom-*.secret|discord-*.secret|slack-*.secret|teams-*.secret|google_chat-*.secret) ;;
+      *) echo 'Refusing purge of an unowned credential file; move manually supplied credentials first.' >&2; return 1;;
+    esac
+    credential_generation=${credential_name#*-}
+    credential_generation=${credential_generation%.secret}
+    case "$credential_generation" in *[!A-Z2-7]*) echo 'Refusing purge of an unowned credential file.' >&2; return 1;; esac
+    [ "${#credential_generation}" -ge 26 ] && [ "${#credential_generation}" -le 128 ] || { echo 'Refusing purge of an unowned credential file.' >&2; return 1; }
+    [ ! -L "$credential_entry" ] && [ -f "$credential_entry" ] && [ "$(stat -c '%h:%u:%g:%a' "$credential_entry")" = "1:$credential_uid:$credential_gid:600" ] || { echo 'Refusing purge of a credential file whose ownership or permissions are unsafe.' >&2; return 1; }
+    credential_bytes=$(stat -c '%s' "$credential_entry") || return 1
+    [ "$credential_bytes" -le 8192 ] || { echo 'Refusing purge of a credential file outside managed size limits.' >&2; return 1; }
+  done
+}
+
 if [ "$(id -u)" -ne 0 ]; then
   echo "uninstall.sh must be run as root" >&2
   exit 1
@@ -33,6 +74,7 @@ done
 if [ "$PURGE" = true ]; then
   command -v mountpoint >/dev/null 2>&1 || { echo "mountpoint is required for safe purge" >&2; exit 1; }
   command -v awk >/dev/null 2>&1 || { echo "awk is required for safe purge" >&2; exit 1; }
+  purge_native_credentials_guard || exit 1
   # Validate every target before stopping services or deleting any files.
   for path in /etc/noderampart /var/lib/noderampart /var/cache/noderampart; do
     if [ -L "$path" ]; then
@@ -89,6 +131,7 @@ rmdir /usr/local/share/doc/noderampart/third-party /usr/local/share/doc/noderamp
 systemctl daemon-reload
 
 if [ "$PURGE" = true ]; then
+  purge_native_credentials_guard || exit 1
   for path in /etc/noderampart /var/lib/noderampart /var/cache/noderampart; do
     [ ! -e "$path" ] || rm -rf --one-file-system -- "$path"
   done

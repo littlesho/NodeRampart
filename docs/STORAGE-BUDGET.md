@@ -165,3 +165,34 @@ ownership, corruption/schema rejection, path/symlink checks, cancellation, page
 cap exhaustion, and actual database+journal sizes during a large uncommitted
 update. These tests are unprivileged local checks. They do not establish power
 loss recovery, filesystem fault tolerance, or Debian/Fedora lifecycle results.
+
+## alpha.8 notification admission and schema 13
+
+Eight fixed channels share the existing 10,000-pending-row / 32-MiB outbox bound.
+Each channel has a 1,250-row / 4-MiB admission share across all credential identities,
+including quarantined/isolated unsent rows. This prevents a failing or repeatedly
+rotated target from consuming the whole queue. Upgraded queues above a new share
+are retained and may drain; new admission waits below the bound. Pending counts,
+rejections, isolation, suppression and expiry remain observable. The seven-day
+TTL, bounded retries and retention behavior are preserved. Native summaries are
+at most 1,800 UTF-8 bytes; native rows do not use Telegram HTML coalescing.
+
+One worker per configured channel fetches at most 20 rows per pass, claims short
+leases and validates target binding immediately before dispatch. A short atomic
+reservation persists the minimum attempt interval even after failures/restart;
+server Retry-After is never shortened. Explicit operator resume can clear a
+cooldown and is not automatic. External requests occur outside write transactions.
+Per-channel event decisions are atomic with local event admission and independent
+of other channels' success. Teams acknowledgments are exposed as accepted.
+
+Migration 13 expands the fixed event-channel constraint and adds native target
+activation timestamps; historic bodies/decisions/targets/language/timezone remain.
+Backup schema verification and foreign-key checks include the new version; older
+binaries reject it. Daily reports finished before native activation are not
+sent automatically. Backfill stays local-only. Rollback needs matching old
+configuration, protected credentials and a schema-12 database backup.
+
+中文：八渠道各有 1250 条/4 MiB 准入份额，跨轮换且包括隔离未发正文，全局仍
+10000 条/32 MiB。旧超份额队列保留可排空，拒绝/过期可观察。固定 worker/有界租约，
+尝试间隔和厂商等待持久化，不在事务内外发；每渠道独立去重/结果。schema 13 保存
+原生日报启用边界，不补历史，备份/外键校验同步；回退使用匹配旧备份。

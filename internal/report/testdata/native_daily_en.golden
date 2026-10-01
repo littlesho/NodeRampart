@@ -1,0 +1,17 @@
+NodeRampart — daily report 2026-03-08
+Period (end exclusive): 2026-03-08 00:00 UTC-05:00 — 2026-03-09 00:00 UTC-04:00
+Timezone: America/New_York
+Coverage interface_counter: complete
+Coverage sensor_feed: partial
+Coverage ssh_journal: unknown
+Missing observations are unknown; coverage does not prove lossless data. Guest TX is an estimate, not a bill.
+WARNING: retained gaps/bounded history/lower-bound counters; inspect locally.
+Retained events 5; SSH observations 14 (counts may be lower bounds)
+Interface RX 4.00 KiB / TX 8.00 KiB; sensor batches 100
+Capture drops 4; parse/statistics errors 3/2; overflow 9 packets
+IPC loss estimate 5 batches / 20 packets
+Estimated cycle cost: 1.00 USD
+Whole-cycle coverage unknown; private/duplicate paths and excluded costs limit this estimate.
+WARNING: retained coverage gaps, bounded history or lower-bound counters; inspect locally.
+Retention history is unavailable or pruning overlaps the report.
+sudo noderampart report show --date 2026-03-08 --format json

@@ -210,6 +210,15 @@ func upgradeKeyDependencies(cfg config.Config) error {
 			return errors.New("Enabled Webhook credentials or fixed target are invalid.")
 		}
 	}
+	for _, channel := range config.NativeChannelNames() {
+		n := cfg.Notifications.NativeChannels()[channel]
+		if !n.Enabled {
+			continue
+		}
+		if _, err := notify.NewNative(channel, n); err != nil {
+			return errors.New(channel + " credentials are missing, unsafe or invalid; credentials are not included in backups / 凭据缺失、不安全或无效；备份不包含凭据")
+		}
+	}
 	if cfg.Heartbeat.Enabled {
 		if _, err := readFile(cfg.Heartbeat.CredentialFile, 512, true, -1); err != nil {
 			return errors.New("Enabled heartbeat credentials are missing or unsafe; they are not included in backups.")

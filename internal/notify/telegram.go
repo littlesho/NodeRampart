@@ -82,6 +82,7 @@ type DeliveryError struct {
 	Permanent       bool
 	RateLimited     bool
 	InvalidResponse bool
+	InvalidPayload  bool
 	// An unrepresentable or excessive server wait requires explicit operator
 	// resume; automatically shortening the server's minimum could flood it.
 	SuspendDestination bool
@@ -92,8 +93,25 @@ func (e *DeliveryError) Error() string {
 	if e.Channel == "webhook" {
 		channel = "Webhook"
 	}
+	switch e.Channel {
+	case "feishu":
+		channel = "Feishu"
+	case "wecom":
+		channel = "WeCom"
+	case "discord":
+		channel = "Discord"
+	case "slack":
+		channel = "Slack"
+	case "teams":
+		channel = "Teams workflow"
+	case "google_chat":
+		channel = "Google Chat"
+	}
 	if e.SuspendDestination {
 		return fmt.Sprintf("%s retry interval requires destination resume (HTTP %d, API %d)", channel, e.StatusCode, e.APIErrorCode)
+	}
+	if e.InvalidPayload {
+		return fmt.Sprintf("%s payload invalid", channel)
 	}
 	if e.InvalidResponse {
 		return fmt.Sprintf("%s response invalid (HTTP %d)", channel, e.StatusCode)

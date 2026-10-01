@@ -285,7 +285,7 @@ func TestSimulationWelcomeSkipsExternalFeaturesAndChangesLanguage(t *testing.T) 
 func openTelegram(t *testing.T, s *recordedScreen) string {
 	t.Helper()
 	selectIndex(s, 5)
-	awaitFrame(t, s, "Telegram and notifications")
+	awaitFrame(t, s, "Notification channels")
 	selectIndex(s, 0)
 	return awaitFrame(t, s, "Bot token (hidden)")
 }
@@ -302,7 +302,7 @@ func TestSimulationSecretIsMaskedAndCancelDoesNotApply(t *testing.T) {
 		t.Fatal("secret rendered in clear text")
 	}
 	key(s, tcell.KeyEscape)
-	awaitFrame(t, s, "Telegram and notifications")
+	awaitFrame(t, s, "Notification channels")
 	selectIndex(s, 0)
 	frame = awaitFrame(t, s, "Bot token (hidden)")
 	if strings.Contains(frame, "••") {

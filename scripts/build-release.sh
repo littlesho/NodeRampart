@@ -7,7 +7,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 cd "$PROJECT_DIR"
 VERSION=$(tr -d '\n' < VERSION)
-[ "$VERSION" = 0.4.0-alpha.7 ] || { echo 'release tooling currently targets 0.4.0-alpha.7' >&2; exit 1; }
+[ "$VERSION" = 0.4.0-alpha.8 ] || { echo 'release tooling currently targets 0.4.0-alpha.8' >&2; exit 1; }
 # Empty workflow outputs must never fall back to local Git or the wall clock.
 # Obtain both declarations once with release-metadata.sh in the source job.
 COMMIT=${COMMIT-}
@@ -39,7 +39,7 @@ case "$1" in
     case "$ARCH" in amd64|arm64) ;; *) echo 'unsupported architecture' >&2; exit 1;; esac
     export ARCH
     if [ "$1" = --deb ]; then
-      LOCAL_PACKAGE="dist/noderampart_0.4.0~alpha.7_${ARCH}.deb"
+      LOCAL_PACKAGE="dist/noderampart_0.4.0~alpha.8_${ARCH}.deb"
       RELEASE_PACKAGE="dist/noderampart_${VERSION}_${ARCH}.deb"
       [ ! -e "$RELEASE_PACKAGE" ] && [ ! -L "$RELEASE_PACKAGE" ] || { echo 'official package output already exists; preserve it before rebuilding' >&2; exit 1; }
       GOOS=linux GOARCH="$ARCH" make build
@@ -88,7 +88,7 @@ try:
     for name, path in found.items():
         shutil.copyfile(path, stage / name)
     shutil.copyfile(project / 'scripts/bootstrap.sh', stage / 'bootstrap.sh')
-    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha.7',
+    (stage / 'release.json').write_text(json.dumps({'format': 1, 'version': '0.4.0-alpha.8',
         'commit': commit, 'build_date': build_date, 'package_count': 6,
         'source_package_count': 1, 'sbom_count': 6,
         'sbom_scope': 'packaged Go programs; runtime system dependencies excluded'}, indent=2) + '\n')

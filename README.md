@@ -2,11 +2,13 @@
 
 **See what is happening on your Linux VPS: suspicious traffic, SSH logins, daily usage and estimated Internet egress costs.**
 
-NodeRampart watches your server in the background. It records events, builds daily reports and can notify you through Telegram. A terminal menu guides you through setup and everyday management over SSH.
+NodeRampart watches your server in the background. It records events, builds daily reports and can notify you through configured notification channels. A terminal menu guides you through setup and everyday management over SSH.
 
 It observes and reports. It does not block IP addresses, change your firewall, inspect application payloads or open a web dashboard port. It is not DDoS mitigation or a traffic-scrubbing service.
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
+
+> **Source development: 0.4.0-alpha.8 (Unreleased).** Six native channels are disabled by default; [setup and platform permissions](docs/NOTIFICATION_CHANNELS.md), [actual acceptance](docs/ALPHA8_ACCEPTANCE.md), [privacy](docs/PRIVACY.md) and [user agreement](docs/USER_AGREEMENT.md). The published installation instructions below remain alpha.7.
 
 > **v0.4.0-alpha.7 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) add a searchable report timezone and independent English/Chinese Telegram text. The database upgrades to schema 12; verify a matching backup, preserve earlier configuration/keys separately and install all three matching programs before saving new settings.
 
@@ -98,7 +100,7 @@ Closing the menu leaves the background services running.
 | Configuration | Edit every configurable field, including advanced settings; validate and review before saving. |
 | Reports | Read the current report, open saved daily reports and fill missing dates. |
 | Events and incidents | Follow the timeline and inspect an incident. |
-| Telegram and notifications | Configure delivery, inspect outcomes and manage expiring silences. |
+| Notification channels | Configure Telegram, generic Webhook and six native channels; inspect independent outcomes and expiring silences. |
 | Local GeoIP databases | Download, refresh, inspect database age and enable/disable daily updates. |
 | Cloud egress cost estimates | Fetch public prices, compare cached AWS/OCI scenarios or enter a custom tariff. |
 | Backup, replay and privacy | Back up the database, verify backups and compare offline detection rules. |
@@ -186,6 +188,18 @@ configuration or privacy-key change starts a new observation period. Existing
 privacy settings apply; no additional raw addresses or baseline are stored.
 
 HTTPS heartbeat and a single generic JSON Webhook are also available, disabled by default. Configure fixed targets and protected bearer files in Notifications; no port is opened. Heartbeat separates process liveness from functional degradation, while Webhook shares the isolated outbox. [Configuration, identity changes and retry bounds](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook).
+
+## Native channels in the alpha.8 source candidate
+
+Feishu, WeCom, Discord, Slack, Teams Workflows and Google Chat each support one
+independent target and message language. Configure hidden credentials in
+**Notification channels**, review/apply, then explicitly select one test target.
+Eligible events/recoveries and short daily summaries use the existing durable
+outbox; no incoming commands, listeners or SDK runtime. Read the
+[English/Chinese operations](docs/NOTIFICATION_CHANNELS.md) for administrator
+requirements, Teams' acceptance boundary, Slack distribution terms, rotation
+and rollback. Real-platform tests require your separately authorized webhook.
+These are candidate source features, not downloadable alpha.8 release assets.
 
 ## Telegram and local GeoIP
 

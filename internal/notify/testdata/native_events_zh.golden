@@ -1,0 +1,708 @@
+
+== ssh_login_success start ==
+NodeRampart 严重 — SSH 登录成功
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: ssh_login_success
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观察到一次 SSH 认证成功。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== ssh_login_success update ==
+NodeRampart 严重 — SSH 登录成功
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: ssh_login_success
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观察到一次 SSH 认证成功。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== ssh_login_success recovery ==
+NodeRampart 严重 — SSH 登录成功
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: ssh_login_success
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观察到一次 SSH 认证成功。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== ssh_brute_force start ==
+NodeRampart 严重 — SSH 认证失败告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: ssh_brute_force
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：在 60 秒内记录了 123 次 SSH 认证失败。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== ssh_brute_force update ==
+NodeRampart 严重 — SSH 认证失败告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: ssh_brute_force
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：在 60 秒内记录了 123 次 SSH 认证失败。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== ssh_brute_force recovery ==
+NodeRampart 严重 — SSH 认证失败告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: ssh_brute_force
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：在 60 秒内记录了 123 次 SSH 认证失败。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== syn_flood start ==
+NodeRampart 严重 — SYN 速率告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: syn_flood
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测速率 123 包/秒；配置阈值 100 包/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== syn_flood update ==
+NodeRampart 严重 — SYN 速率告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: syn_flood
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测速率 123 包/秒；配置阈值 100 包/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== syn_flood recovery ==
+NodeRampart 严重 — SYN 速率告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: syn_flood
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录恢复：速率 123 包/秒；配置阈值 100 包/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== udp_flood start ==
+NodeRampart 严重 — UDP 速率告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: udp_flood
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测速率 123 包/秒；配置阈值 100 包/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== udp_flood update ==
+NodeRampart 严重 — UDP 速率告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: udp_flood
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测速率 123 包/秒；配置阈值 100 包/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== udp_flood recovery ==
+NodeRampart 严重 — UDP 速率告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: udp_flood
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录恢复：速率 123 包/秒；配置阈值 100 包/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== icmp_flood start ==
+NodeRampart 严重 — ICMP 速率告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: icmp_flood
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测速率 123 包/秒；配置阈值 100 包/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== icmp_flood update ==
+NodeRampart 严重 — ICMP 速率告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: icmp_flood
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测速率 123 包/秒；配置阈值 100 包/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== icmp_flood recovery ==
+NodeRampart 严重 — ICMP 速率告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: icmp_flood
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录恢复：速率 123 包/秒；配置阈值 100 包/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== bandwidth_spike start ==
+NodeRampart 严重 — 带宽告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: bandwidth_spike
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测速率 123 字节/秒；配置阈值 100 字节/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== bandwidth_spike update ==
+NodeRampart 严重 — 带宽告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: bandwidth_spike
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测速率 123 字节/秒；配置阈值 100 字节/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== bandwidth_spike recovery ==
+NodeRampart 严重 — 带宽告警
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: bandwidth_spike
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录恢复：速率 123 字节/秒；配置阈值 100 字节/秒。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== port_scan start ==
+NodeRampart 严重 — 端口扫描观察
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: port_scan
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：至少记录了 123 个不同本地端口被探测。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== port_scan update ==
+NodeRampart 严重 — 端口扫描观察
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: port_scan
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：至少记录了 123 个不同本地端口被探测。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== port_scan recovery ==
+NodeRampart 严重 — 端口扫描观察
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: port_scan
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：至少记录了 123 个不同本地端口被探测。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_month_bytes start ==
+NodeRampart 严重 — 结算周期流量配额
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_month_bytes
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：所选接口出站估算已达到配置阈值的 100%。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+阈值字节: 2048
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_month_bytes update ==
+NodeRampart 严重 — 结算周期流量配额
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_month_bytes
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：所选接口出站估算已达到配置阈值的 100%。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+阈值字节: 2048
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_month_bytes recovery ==
+NodeRampart 严重 — 结算周期流量配额
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_month_bytes
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：所选接口出站估算已达到配置阈值的 100%。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+阈值字节: 2048
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_month_cost start ==
+NodeRampart 严重 — 结算周期费用估算预算
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_month_cost
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录估算费用达到配置费用预算的 100%。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+估算费用: 3.5 USD
+费用预算: 2 USD
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_month_cost update ==
+NodeRampart 严重 — 结算周期费用估算预算
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_month_cost
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录估算费用达到配置费用预算的 100%。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+估算费用: 3.5 USD
+费用预算: 2 USD
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_month_cost recovery ==
+NodeRampart 严重 — 结算周期费用估算预算
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_month_cost
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录估算费用达到配置费用预算的 100%。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+估算费用: 3.5 USD
+费用预算: 2 USD
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_day_bytes start ==
+NodeRampart 严重 — 日流量阈值
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_day_bytes
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：所选接口出站估算已达到配置阈值的 100%。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+阈值字节: 2048
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_day_bytes update ==
+NodeRampart 严重 — 日流量阈值
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_day_bytes
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：所选接口出站估算已达到配置阈值的 100%。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+阈值字节: 2048
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_day_bytes recovery ==
+NodeRampart 严重 — 日流量阈值
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_day_bytes
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：所选接口出站估算已达到配置阈值的 100%。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+阈值字节: 2048
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_day_growth start ==
+NodeRampart 严重 — 日流量增长
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_day_growth
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测日出站流量达到已记录的增长阈值（估算）。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_day_growth update ==
+NodeRampart 严重 — 日流量增长
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_day_growth
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测日出站流量达到已记录的增长阈值（估算）。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== budget_day_growth recovery ==
+NodeRampart 严重 — 日流量增长
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: budget_day_growth
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已观测日出站流量达到已记录的增长阈值（估算）。
+原因: 覆盖不足
+计数或整数速率: 123
+接口出站字节: 4096
+记录覆盖: 不足
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_sensor start ==
+NodeRampart 严重 — 采集器健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_sensor
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_sensor update ==
+NodeRampart 严重 — 采集器健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_sensor
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_sensor recovery ==
+NodeRampart 严重 — 采集器健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_sensor
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录组件健康恢复。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_interface_counter start ==
+NodeRampart 严重 — 接口计数器健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_interface_counter
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_interface_counter update ==
+NodeRampart 严重 — 接口计数器健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_interface_counter
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_interface_counter recovery ==
+NodeRampart 严重 — 接口计数器健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_interface_counter
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录组件健康恢复。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_ssh_journal start ==
+NodeRampart 严重 — SSH 日志健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_ssh_journal
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_ssh_journal update ==
+NodeRampart 严重 — SSH 日志健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_ssh_journal
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_ssh_journal recovery ==
+NodeRampart 严重 — SSH 日志健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_ssh_journal
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录组件健康恢复。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_storage start ==
+NodeRampart 严重 — 存储健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_storage
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_storage update ==
+NodeRampart 严重 — 存储健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_storage
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_storage recovery ==
+NodeRampart 严重 — 存储健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_storage
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录组件健康恢复。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_geoip_update start ==
+NodeRampart 严重 — 地理数据库更新健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 开始
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_geoip_update
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_geoip_update update ==
+NodeRampart 严重 — 地理数据库更新健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 更新
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_geoip_update
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录的组件健康状态需关注。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native
+
+== health_geoip_update recovery ==
+NodeRampart 严重 — 地理数据库更新健康
+时间: 2026-03-08 03:30:00 America/New_York (UTC-04:00)
+阶段: 恢复
+主机: 主机 ＠everyone [31m
+事件: evt_native
+类型: health_geoip_update
+覆盖：仅保留观测；缺失数据为未知。
+警告：覆盖不足。
+证据：已记录组件健康恢复。
+原因: 覆盖不足
+计数或整数速率: 123
+仅观察；未自动封禁。详情：sudo noderampart events show --id evt_native

@@ -16,6 +16,7 @@ import (
 
 type optionalDependencies struct {
 	geo       *enrich.Resolver
+	native    map[string]notify.Sender
 	webhook   notify.Sender
 	heartbeat notify.HeartbeatSender
 	sender    notify.Sender
@@ -27,7 +28,11 @@ type optionalDependencies struct {
 // configuration are not made valid by disabling a feature. Retry is an explicit
 // restart after correcting the local resource, rather than a new scheduler.
 func loadOptional(cfg config.Config) (optionalDependencies, error) {
-	d := optionalDependencies{failures: map[string]string{}}
+	return loadOptionalAt(cfg, "")
+}
+
+func loadOptionalAt(cfg config.Config, configDir string) (optionalDependencies, error) {
+	d := optionalDependencies{failures: map[string]string{}, native: map[string]notify.Sender{}}
 	for _, path := range []string{cfg.Geo.CityMMDB, cfg.Geo.ASNMMDB} {
 		if err := checkOptionalFile(path, false); err != nil {
 			return d, fmt.Errorf("unsafe GeoIP resource: %w", err)
@@ -62,6 +67,22 @@ func loadOptional(cfg config.Config) (optionalDependencies, error) {
 			d.failures["webhook"] = "webhook_credentials_unavailable"
 		} else {
 			d.webhook = sender
+		}
+	}
+	for _, channel := range config.NativeChannelNames() {
+		native := cfg.Notifications.NativeChannels()[channel]
+		if !native.Enabled {
+			continue
+		}
+		if configDir != "" && filepath.Dir(native.CredentialFile) != configDir && filepath.Dir(native.CredentialFile) != filepath.Join(configDir, "secrets") {
+			d.failures[channel] = channel + "_credentials_unavailable"
+			continue
+		}
+		sender, err := notify.NewNative(channel, native)
+		if err != nil {
+			d.failures[channel] = channel + "_credentials_unavailable"
+		} else {
+			d.native[channel] = sender
 		}
 	}
 	if cfg.Heartbeat.Enabled {

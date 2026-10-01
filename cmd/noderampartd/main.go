@@ -69,7 +69,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	optional, err := loadOptional(cfg)
+	optional, err := loadOptionalAt(cfg, filepath.Dir(absoluteConfig))
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func run() error {
 	for component, reason := range optional.failures {
 		logger.Warn("optional feature unavailable", "component", component, "reason", reason)
 	}
-	app, err := daemon.New(daemon.Options{Config: cfg, Store: database, Geo: optional.geo, Notifier: optional.sender, WebhookNotifier: optional.webhook, HeartbeatSender: optional.heartbeat, Billing: optional.billing, OptionalFailures: optional.failures, StorePrivacy: storePrivacy, NotifyPrivacy: notifyPrivacy, Logger: logger, SensorUID: sensorUID, AssetHealthPath: filepath.Join(filepath.Dir(absoluteConfig), "geoip-health.json")})
+	app, err := daemon.New(daemon.Options{Config: cfg, ConfigDirectory: filepath.Dir(absoluteConfig), Store: database, Geo: optional.geo, Notifier: optional.sender, WebhookNotifier: optional.webhook, NativeNotifiers: optional.native, HeartbeatSender: optional.heartbeat, Billing: optional.billing, OptionalFailures: optional.failures, StorePrivacy: storePrivacy, NotifyPrivacy: notifyPrivacy, Logger: logger, SensorUID: sensorUID, AssetHealthPath: filepath.Join(filepath.Dir(absoluteConfig), "geoip-health.json")})
 	if err != nil {
 		return err
 	}
