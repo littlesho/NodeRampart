@@ -2,7 +2,13 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-## 0.4.0-alpha.7 - Unreleased
+## 0.4.0-alpha.7 - 2026-10-01 (UTC)
+
+- Published as an alpha prerelease at `2026-10-01T08:33:06Z`
+  (`2026-10-01T17:33:06+09:00`, Asia/Tokyo), from
+  `d164978433b5e49d68d310cf8d6f5819b855e2e0`. All 22 anonymous assets match the
+  authenticated provenance/SPDX subjects byte-for-byte. Public bootstrap/runtime
+  scope is recorded in [release verification](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
 
 - Add an offline searchable report-timezone selector with bilingual names,
   date-specific UTC offsets and embedded IANA rules. Preserve exact existing
@@ -16,9 +22,15 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 - Project `0.4.0-alpha.7` maps to Debian internal `0.4.0~alpha.7` and RPM
   `0.4.0-0.alpha.8%{?dist}`. Bootstrap supports explicit alpha.7 only; its
   default and existing published-version mappings remain unchanged. This is a
-  local unreleased candidate, not a published package or runtime acceptance.
+  published alpha prerelease; ordinary local/CI candidates remain separate
+  artifacts and do not inherit its release proofs or runtime acceptance.
 
 ## 0.4.0-alpha.6 - Unreleased
+
+The heading and entries below retain their pre-publication snapshot. Alpha.6
+was subsequently published at `2026-09-30T18:54:24Z` from
+`4d204b43499ca2f41c15b92334537d57bfc8b20c`; see its
+[historical distribution record](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification).
 
 - Integrate the consolidated reliability fixes: initialize every SQLite
   connection, isolate notification recipients and legacy backlog, preserve

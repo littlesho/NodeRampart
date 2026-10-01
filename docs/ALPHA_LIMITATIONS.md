@@ -1,9 +1,38 @@
-# `v0.4.0-alpha.6` limitations
+# `v0.4.0-alpha.7` limitations
 
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
 
 ## Validation scope
+
+[alpha.7](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7)
+was published as an alpha prerelease at `2026-10-01T08:33:06Z`
+(`2026-10-01T17:33:06+09:00`, Asia/Tokyo) from `d164978433b5e49d68d310cf8d6f5819b855e2e0`.
+All 22 anonymous downloads/checksums matched the already authenticated 22
+provenance and six runtime SPDX subjects byte-for-byte. Public Debian 13/Fedora 44
+bootstrap, setup, basic collection, online backup and cleanup: **PASS**; both ended
+STOPPED. Strict snapshots remained **unknown / exit 2**: Debian 13 retained
+`auth_window_warmup` and `sensor_commit_unavailable`; Fedora 44 retained only
+`sensor_commit_unavailable`. Later advancing watermarks do not change those
+snapshots; unknown is not healthy. Fedora Services Start enabled and started both
+units, observed active/enabled afterward; boot execution remains **NOT RUN**.
+Current alpha.7 Debian 12/Fedora 43 runtime, native ARM64, VM race, sustained
+pressure, 72-hour soak, real MMDB and optional outgoing targets remain **NOT RUN**.
+Natural SSH pending/recovery remains unproved/BLOCKED; earlier known-pending
+independent-copy results remain separate. See the [current distribution record](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
+Schema 12 adds saved outbox language/timezone; older programs require matching
+verified earlier DB/configuration/key dependencies for rollback. No in-place
+schema downgrade is provided. Config/API 1 and protocol v5 remain unchanged.
+
+alpha.7 已发布为预发布版，22 项匿名文件与原认证证明完全同字节；两台公开 bootstrap、
+setup、采集、在线备份和清理均 **PASS**，最终两台均 STOPPED。strict 快照仍
+unknown / 退出码 2：Debian 13 保留 `auth_window_warmup` 与
+`sensor_commit_unavailable`，Fedora 44 仅为 `sensor_commit_unavailable`；后续水位
+推进不改变原快照。Fedora 的 Services Start 实际启用并启动两项服务，之后状态
+为 active/enabled；开机执行仍为 **NOT RUN**。
+旧非空积压由同源合成测试覆盖，不称实际外发；自然 SSH 恢复链、原生 ARM64 等范围仍未证明。
+
+### Historical alpha.6 acceptance
 
 [alpha.6](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6)
 was published as an alpha prerelease at `2026-09-30T18:54:24Z` from
