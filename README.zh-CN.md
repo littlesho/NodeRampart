@@ -72,6 +72,10 @@ sudo noderampart setup --language zh
 
 菜单用方向键和 Enter 操作，表单用 Tab/Shift+Tab 切换字段，Escape 返回。也可在菜单中随时切换中文和 English。
 
+尚未发布的 alpha.7 候选新增可搜索的地区/城市时区列表，以及独立的 Telegram
+**English / 简体中文**推送选择；已发布 alpha.6 安装包不包含这两项。
+草稿保存和旧消息处理规则见[时区与推送语言操作说明](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language-unreleased-source)。
+
 ## 平时怎么使用？
 
 ~~~bash

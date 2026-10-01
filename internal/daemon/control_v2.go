@@ -5,12 +5,13 @@ package daemon
 import (
 	"context"
 	"encoding/json"
-	"html"
 	"path/filepath"
 	"time"
 
 	"github.com/littlesho/NodeRampart/internal/api"
+	"github.com/littlesho/NodeRampart/internal/config"
 	"github.com/littlesho/NodeRampart/internal/model"
+	"github.com/littlesho/NodeRampart/internal/notify"
 	"github.com/littlesho/NodeRampart/internal/protocol"
 	"github.com/littlesho/NodeRampart/internal/report"
 	"github.com/littlesho/NodeRampart/internal/store"
@@ -110,7 +111,11 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 				return controlFailure("selected notification sender is disabled or unavailable")
 			}
 			id := model.NewID("msg")
-			_, err := a.options.Store.Enqueue(ctx, store.OutboxMessage{ID: id, DedupeKey: "test:" + model.NewID("once"), Channel: args.Channel, PrivacyMode: a.options.Config.Privacy.NotificationIP, Destination: destination, Body: "✅ <b>NodeRampart notification test</b>\nHost: " + html.EscapeString(a.options.Config.Hostname)})
+			language := "en"
+			if args.Channel == "telegram" {
+				language = config.TelegramLanguage(a.options.Config.Notifications.Telegram)
+			}
+			_, err := a.options.Store.Enqueue(ctx, store.OutboxMessage{ID: id, DedupeKey: "test:" + model.NewID("once"), Channel: args.Channel, PrivacyMode: a.options.Config.Privacy.NotificationIP, Destination: destination, Language: language, Body: notify.FormatTest(a.options.Config.Hostname, language)})
 			if err != nil {
 				return controlFailure("could not queue test notification")
 			}

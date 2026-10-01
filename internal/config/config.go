@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata" // Offline rule fallback when the host has no tzdata.
 
 	"github.com/littlesho/NodeRampart/internal/protocol"
 	"golang.org/x/sys/unix"
@@ -133,10 +134,20 @@ type NotificationsConfig struct {
 }
 
 type TelegramConfig struct {
+	Language  string   `json:"language"`
 	Enabled   bool     `json:"enabled"`
 	TokenFile string   `json:"token_file"`
 	ChatID    string   `json:"chat_id"`
 	Timeout   Duration `json:"timeout"`
+}
+
+// TelegramLanguage is independent of the terminal interface language. An old
+// configuration with no language keeps the original English notification text.
+func TelegramLanguage(c TelegramConfig) string {
+	if c.Language == "" {
+		return "en"
+	}
+	return c.Language // Preserve invalid nonempty values for fail-closed callers.
 }
 
 type ReportsConfig struct {
@@ -178,7 +189,7 @@ func Defaults() Config {
 			BytesPerSecond: 100 * 1024 * 1024, RecoveryRatio: 0.5, RecoveryWindows: 3,
 			UpdateInterval: Duration{5 * time.Minute}, ScanUniquePorts: 20, ScanWindow: Duration{60 * time.Second},
 		},
-		Notifications: NotificationsConfig{Telegram: TelegramConfig{TokenFile: "/etc/noderampart/telegram.token", Timeout: Duration{10 * time.Second}}, Webhook: WebhookConfig{CredentialFile: "/etc/noderampart/webhook.token", Timeout: Duration{10 * time.Second}}, MergeWindow: Duration{10 * time.Minute}},
+		Notifications: NotificationsConfig{Telegram: TelegramConfig{Language: "en", TokenFile: "/etc/noderampart/telegram.token", Timeout: Duration{10 * time.Second}}, Webhook: WebhookConfig{CredentialFile: "/etc/noderampart/webhook.token", Timeout: Duration{10 * time.Second}}, MergeWindow: Duration{10 * time.Minute}},
 		Heartbeat:     HeartbeatConfig{CredentialFile: "/etc/noderampart/heartbeat.token", Interval: Duration{5 * time.Minute}, Timeout: Duration{10 * time.Second}},
 		Reports:       ReportsConfig{Enabled: true, DailyAt: "09:00", Timezone: "Local", TopN: 10, BackfillDays: 7},
 		Privacy:       PrivacyConfig{NotificationIP: "prefix", StoreIP: "prefix"},
@@ -322,6 +333,9 @@ func (c Config) Validate() error {
 	if c.Auth.Enabled && c.Auth.Journalctl != "/usr/bin/journalctl" && c.Auth.Journalctl != "/bin/journalctl" {
 		problems = append(problems, "auth.journalctl must be /usr/bin/journalctl or /bin/journalctl")
 	}
+	if language := c.Notifications.Telegram.Language; language != "" && language != "en" && language != "zh" {
+		problems = append(problems, "telegram.language must be en or zh")
+	}
 	if c.Notifications.Telegram.Enabled {
 		if !cleanAbsolute(c.Notifications.Telegram.TokenFile) {
 			problems = append(problems, "telegram.token_file must be a clean absolute path")
@@ -351,7 +365,9 @@ func (c Config) Validate() error {
 	if _, _, err := parseClock(c.Reports.DailyAt); err != nil {
 		problems = append(problems, err.Error())
 	}
-	if c.Reports.Timezone != "Local" {
+	if c.Reports.Timezone == "" {
+		problems = append(problems, "reports.timezone must be Local, UTC, or an IANA timezone name")
+	} else if c.Reports.Timezone != "Local" {
 		if _, err := time.LoadLocation(c.Reports.Timezone); err != nil {
 			problems = append(problems, "invalid reports.timezone")
 		}
@@ -389,6 +405,9 @@ func cleanAbsolute(path string) bool {
 }
 
 func ReportLocation(c ReportsConfig) (*time.Location, error) {
+	if c.Timezone == "" {
+		return nil, errors.New("reports.timezone must be Local, UTC, or an IANA timezone name")
+	}
 	if c.Timezone == "Local" {
 		return time.Local, nil
 	}

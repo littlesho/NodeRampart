@@ -112,6 +112,7 @@ internal/config/notification_identity_test.go
 internal/config/outbound.go
 internal/config/outbound_test.go
 internal/config/storage_test.go
+internal/config/telegram_language_test.go
 internal/console/actions.go
 internal/console/alert_results_test.go
 internal/console/browser.go
@@ -129,6 +130,8 @@ internal/console/retention.go
 internal/console/terminal_linux_test.go
 internal/console/threshold.go
 internal/console/threshold_test.go
+internal/console/timezone.go
+internal/console/timezone_language_test.go
 internal/daemon/app.go
 internal/daemon/app_test.go
 internal/daemon/auth_history.go
@@ -166,6 +169,7 @@ internal/daemon/monitor_rollover_test.go
 internal/daemon/monitor_state.go
 internal/daemon/monitor_test.go
 internal/daemon/notification_binding_test.go
+internal/daemon/notification_language_test.go
 internal/daemon/outbound_test.go
 internal/daemon/readiness.go
 internal/daemon/readiness_test.go
@@ -189,6 +193,7 @@ internal/detect/ip_bounds_test.go
 internal/detect/network.go
 internal/detect/network_port_budget_test.go
 internal/detect/network_regression_test.go
+internal/detect/notification_evidence_test.go
 internal/detect/review_resource_benchmark_test.go
 internal/enrich/geo.go
 internal/enrich/geo_test.go
@@ -235,6 +240,7 @@ internal/manage/report.go
 internal/manage/report_full_test.go
 internal/manage/report_test.go
 internal/manage/service_test.go
+internal/manage/telegram_language_test.go
 internal/manage/threshold.go
 internal/manage/threshold_test.go
 internal/manage/upgrade.go
@@ -245,12 +251,18 @@ internal/model/id.go
 internal/model/model.go
 internal/notify/eligibility_test.go
 internal/notify/format.go
+internal/notify/format_localized.go
+internal/notify/format_localized_test.go
 internal/notify/https.go
 internal/notify/https_test.go
+internal/notify/localized_pipeline_test.go
 internal/notify/notify_test.go
 internal/notify/target_test.go
 internal/notify/telegram.go
 internal/notify/telegram_test.go
+internal/notify/template_coverage_test.go
+internal/notify/testdata/events_en.golden
+internal/notify/testdata/events_zh.golden
 internal/notify/worker.go
 internal/notify/worker_test.go
 internal/privacy/boundaries_test.go
@@ -285,6 +297,8 @@ internal/report/document.go
 internal/report/document_trend_test.go
 internal/report/forecast.go
 internal/report/month_test.go
+internal/report/notification.go
+internal/report/notification_localized_test.go
 internal/report/notification_summary_test.go
 internal/report/regression_test.go
 internal/report/report.go
@@ -292,6 +306,8 @@ internal/report/report_test.go
 internal/report/retention.go
 internal/report/retention_test.go
 internal/report/scheduler.go
+internal/report/testdata/notification_en.golden
+internal/report/testdata/notification_zh.golden
 internal/report/trend.go
 internal/sensor/aggregate.go
 internal/sensor/benchmark_test.go
@@ -348,6 +364,7 @@ internal/store/migration_test.go
 internal/store/migration_v10.go
 internal/store/migration_v11.go
 internal/store/migration_v11_test.go
+internal/store/migration_v12.go
 internal/store/migration_v3.go
 internal/store/migration_v4.go
 internal/store/migration_v4_test.go
@@ -364,6 +381,8 @@ internal/store/monitor_state.go
 internal/store/monitor_state_test.go
 internal/store/notification_targets.go
 internal/store/notification_targets_test.go
+internal/store/presentation.go
+internal/store/presentation_test.go
 internal/store/query_bounds_test.go
 internal/store/queue.go
 internal/store/queue_test.go
@@ -383,6 +402,11 @@ internal/store/time_bounds.go
 internal/store/timeline.go
 internal/store/timeline_channels_test.go
 internal/store/timeline_test.go
+internal/timezones/fallback_linux_test.go
+internal/timezones/names.txt
+internal/timezones/testdata/New_York.tzif
+internal/timezones/zones.go
+internal/timezones/zones_test.go
 internal/version/version.go
 packaging/debian/control.template
 packaging/debian/postinst

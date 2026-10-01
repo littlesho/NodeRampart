@@ -4,6 +4,15 @@ This document describes published `v0.4.0-alpha.6` and retains earlier release
 records. The examples explicitly select alpha.6; its frozen bootstrap default
 remains `v0.4.0-alpha.5`. Review the intended source/tag and verify the matching
 assets and attestations before installation.
+The current source/build tools target unreleased alpha.7 (DEB `0.4.0~alpha.7`,
+RPM `0.4.0-0.alpha.8`). Use the frozen alpha.6 source/tools for its historical
+asset collection assertions. Alpha.7 CI artifacts are experimental candidates,
+without a tag, Release or release-provenance claim. The published examples below
+remain alpha.6.
+
+当前源码/构建工具面向未发布 alpha.7 候选；核对 alpha.6 历史发行集合应使用其冻结
+源码工具。候选 CI 包不等于正式发行包或发行证明，下方公开安装例仍是 alpha.6。
+
 The release workflow creates a draft for a maintainer to inspect; local workflow
 edits and tests neither publish a release nor prove that hosted checks ran.
 
@@ -194,7 +203,7 @@ architecture metadata before running Syft. No target program is executed.
 The collector requires all six package/SBOM/inspection triples and compares
 package and program digests before it creates `dist/release`.
 
-For a reviewed local package, with Go 1.26.8 and the appropriate read-only
+For a reviewed unreleased alpha.7 local package, with Go 1.26.8 and the appropriate read-only
 `dpkg-deb` or `rpm`/`rpm2cpio` inspection tools available:
 
 ```sh
@@ -205,7 +214,7 @@ BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 export COMMIT BUILD_DATE
 make build
 ./scripts/build-deb.sh
-python3 scripts/release_sbom.py dist/noderampart_0.4.0~alpha.6_amd64.deb \
+python3 scripts/release_sbom.py dist/noderampart_0.4.0~alpha.7_amd64.deb \
   --syft "$TOOLS_DIR/syft/syft" --output dist/sbom
 ```
 

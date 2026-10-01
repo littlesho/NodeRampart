@@ -362,6 +362,12 @@ func (m *Manager) telegram(ctx context.Context, input map[string]string) (string
 	if input["enabled"] != "yes" && input["enabled"] != "no" {
 		return "", errors.New("choose whether Telegram is enabled")
 	}
+	if language, provided := input["language"]; provided {
+		if language != "" && language != "en" && language != "zh" {
+			return "", errors.New("Telegram language must be en or zh")
+		}
+		snapshot.Config.Notifications.Telegram.Language = language
+	}
 	snapshot.Config.Notifications.Telegram.Enabled = input["enabled"] == "yes"
 	if input["chat_id"] != "" {
 		snapshot.Config.Notifications.Telegram.ChatID = input["chat_id"]
@@ -389,6 +395,8 @@ func (m *Manager) telegram(ctx context.Context, input map[string]string) (string
 	if err == nil {
 		result += "\nTelegram queue policy: changing bot/chat or tightening notification privacy retains older pending bodies in isolation. Disabled same-target delivery is paused. Review Notification messages; explicitly discard isolated bodies if no longer needed. An already in-flight request may finish at its original recipient."
 		result += "\nTelegram 队列策略：更换 Bot/Chat 或收紧通知隐私会保留隔离旧正文；停用同一目标只暂停投递。可在通知列表检查并显式丢弃隔离正文。已在发送中的请求可能在原收件方完成。"
+		result += "\nLanguage affects newly queued Telegram bodies only; retained retries keep their original language. Changing language does not change the recipient or cooldown."
+		result += "\n语言仅影响新入队的 Telegram 正文；旧重试保留原语言。仅改语言不会改变收件方或冷却。"
 	}
 	return result, err
 }

@@ -511,7 +511,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_public_alpha_suffix_native_versions_keep_release_order(self):
         native_versions = []
-        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6'):
+        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7'):
             with self.subTest(suffix=suffix):
                 version = '0.4.0-alpha' + suffix
                 self.write(self.project / 'VERSION', version + '\n')

@@ -19,16 +19,17 @@ bootstrap_main() {
     case "$1" in
       --version) [ "$#" -ge 2 ] || bootstrap_die '--version requires a supported fixed release tag'; release=$2; shift 2;;
       --no-setup|--non-interactive) setup=false; shift;;
-      --help) echo 'usage: bootstrap.sh [--version v0.4.0-alpha|v0.4.0-alpha.5|v0.4.0-alpha.6] [--no-setup|--non-interactive]'; return;;
+      --help) echo 'usage: bootstrap.sh [--version v0.4.0-alpha|v0.4.0-alpha.5|v0.4.0-alpha.6|v0.4.0-alpha.7] [--no-setup|--non-interactive]'; return;;
       *) bootstrap_die 'unknown installer option';;
     esac
   done
   case "$release" in
     v0.4.0-alpha) deb_version=0.4.0~alpha; rpm_release=0.alpha.1;;
     v0.4.0-alpha.5) deb_version=0.4.0~alpha.5; rpm_release=0.alpha.6;;
-    # Explicit candidate opt-in; its assets are unavailable until published.
     v0.4.0-alpha.6) deb_version=0.4.0~alpha.6; rpm_release=0.alpha.7;;
-    *) bootstrap_die 'this installer supports v0.4.0-alpha, public v0.4.0-alpha.5 and explicit candidate v0.4.0-alpha.6; use the installer from the requested release';;
+    # Explicit candidate opt-in; its assets are unavailable until published.
+    v0.4.0-alpha.7) deb_version=0.4.0~alpha.7; rpm_release=0.alpha.8;;
+    *) bootstrap_die 'this installer supports v0.4.0-alpha, public v0.4.0-alpha.5/alpha.6 and explicit candidate v0.4.0-alpha.7; use the installer from the requested release';;
   esac
   [ "$(id -u)" -eq 0 ] || bootstrap_die 'root is required: run the downloaded installer with sudo sh, or use curl ... | sudo sh -s -- (never sudo -S)'
   [ "$(uname -s)" = Linux ] || bootstrap_die 'Linux is required'

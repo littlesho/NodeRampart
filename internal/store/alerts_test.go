@@ -16,7 +16,7 @@ import (
 
 func alertFixture(id, incident, phase string) (model.Event, *OutboxMessage) {
 	event := model.Event{ID: id, IncidentID: incident, Kind: "syn_flood", Phase: phase, Severity: model.SeverityHigh, ObservedAt: time.Now().UTC(), Summary: "synthetic observation"}
-	return event, &OutboxMessage{ID: "msg_" + id, DedupeKey: "event:" + id + ":telegram", Destination: "telegram", Body: "<b>synthetic</b> " + id}
+	return event, &OutboxMessage{ID: "msg_" + id, DedupeKey: "event:" + id + ":telegram", Destination: "telegram", Body: "<b>synthetic</b> " + id, Timezone: "UTC|UTC+00:00"}
 }
 
 func TestAlertMergeRetainsEventsAndClaimsLatestBody(t *testing.T) {

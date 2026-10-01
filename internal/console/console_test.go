@@ -282,12 +282,12 @@ func TestSimulationWelcomeSkipsExternalFeaturesAndChangesLanguage(t *testing.T) 
 	}
 }
 
-func openTelegram(t *testing.T, s *recordedScreen) {
+func openTelegram(t *testing.T, s *recordedScreen) string {
 	t.Helper()
 	selectIndex(s, 5)
 	awaitFrame(t, s, "Telegram and notifications")
 	selectIndex(s, 0)
-	awaitFrame(t, s, "Bot token (hidden)")
+	return awaitFrame(t, s, "Bot token (hidden)")
 }
 
 func TestSimulationSecretIsMaskedAndCancelDoesNotApply(t *testing.T) {
@@ -332,6 +332,7 @@ func TestSimulationSecretFailureDoesNotEchoBackendError(t *testing.T) {
 	textKeys(s, "12345")
 	key(s, tcell.KeyTab)
 	key(s, tcell.KeyTab)
+	key(s, tcell.KeyTab) // Message language is a separate field before Continue.
 	key(s, tcell.KeyEnter)
 	frame := awaitFrame(t, s, "Confirm action")
 	if strings.Contains(frame, value) {

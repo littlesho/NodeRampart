@@ -114,15 +114,15 @@ class SBOMTests(unittest.TestCase):
                 release.inspect_binary(binary, 'amd64')
 
     def test_source_rpm_and_arbitrary_package_names_are_rejected(self):
-        for name in ('noderampart-0.4.0-0.alpha.7.fc44.src.rpm', 'other_0.4.0~alpha.6_amd64.deb',
-                     'noderampart_0.4.0~alpha.6_amd64.deb/../escape', 'noderampart_0.4.0~alpha.6_i386.deb'):
+        for name in ('noderampart-0.4.0-0.alpha.8.fc44.src.rpm', 'other_0.4.0~alpha.7_amd64.deb',
+                     'noderampart_0.4.0~alpha.7_amd64.deb/../escape', 'noderampart_0.4.0~alpha.7_i386.deb'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 release.package_arch(name)
 
     def test_wrong_tool_digest_and_existing_outputs_are_rejected(self):
         tool = self.root / 'syft'
         tool.write_text('synthetic wrong tool')
-        package = self.root / 'noderampart_0.4.0~alpha.6_amd64.deb'
+        package = self.root / 'noderampart_0.4.0~alpha.7_amd64.deb'
         package.write_text('synthetic package')
         with patch.object(release, 'command') as command:
             with self.assertRaisesRegex(ValueError, 'verified Syft'):
@@ -155,35 +155,36 @@ class SBOMTests(unittest.TestCase):
         release.validate_uploaded(document, assets)
         for separator in ('-', '~'):
             for arch in ('amd64', 'arm64'):
-                name = f'noderampart_0.4.0{separator}alpha.6_{arch}.deb'
+                name = f'noderampart_0.4.0{separator}alpha.7_{arch}.deb'
                 self.assertEqual(release.package_identity(name),
-                                 {'name': 'noderampart', 'version': '0.4.0~alpha.6', 'architecture': arch})
+                                 {'name': 'noderampart', 'version': '0.4.0~alpha.7', 'architecture': arch})
                 self.assertEqual(name in release.runtime_packages(), separator == '-')
         for fedora in (43, 44):
-            self.assertEqual(release.package_identity(f'noderampart-0.4.0-0.alpha.7.fc{fedora}.x86_64.rpm')['version'],
-                             f'0.4.0-0.alpha.7.fc{fedora}')
+            self.assertEqual(release.package_identity(f'noderampart-0.4.0-0.alpha.8.fc{fedora}.x86_64.rpm')['version'],
+                             f'0.4.0-0.alpha.8.fc{fedora}')
         for changed in (assets[:-1], assets + [assets[0]],
                         [dict(asset, state='starter') if index == 0 else asset for index, asset in enumerate(assets)],
                         [dict(assets[0], name='extra.txt')] + assets[1:],
-                        [dict(asset, name=asset['name'].replace('-alpha.6_', '.alpha.6_')) for asset in assets]):
+                        [dict(asset, name=asset['name'].replace('-alpha.7_', '.alpha.7_')) for asset in assets]):
             with self.assertRaises(ValueError):
                 release.validate_uploaded(document, changed)
         for name in ('bad~name', '.hidden', 'trailing.', 'a/b', 'a%20b', 'a b'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 release.validate_uploaded(document, [dict(assets[0], name=name)] + assets[1:])
-        for changed in ({}, dict(document, draft=False), dict(document, prerelease=False), dict(document, tag_name='v0.4.0-alpha.5')):
+        for changed in ({}, dict(document, draft=False), dict(document, prerelease=False),
+                        dict(document, tag_name='v0.4.0-alpha.5'), dict(document, tag_name='v0.4.0-alpha.6')):
             with self.assertRaises(ValueError):
                 release.validate_uploaded(changed, assets)
         with self.assertRaises(ValueError):
             release.validate_uploaded(document, {})
 
     def test_portable_deb_name_cannot_override_native_version(self):
-        package = self.root / 'noderampart_0.4.0-alpha.6_amd64.deb'
+        package = self.root / 'noderampart_0.4.0-alpha.7_amd64.deb'
         package.write_bytes(b'synthetic package')
-        for values in (('other', '0.4.0~alpha.6', 'amd64'),
-                       ('noderampart', '0.4.0-alpha.6', 'amd64'),
+        for values in (('other', '0.4.0~alpha.7', 'amd64'),
+                       ('noderampart', '0.4.0-alpha.7', 'amd64'),
                        ('noderampart', '0.4.0~alpha.1', 'amd64'),
-                       ('noderampart', '0.4.0~alpha.6', 'arm64')):
+                       ('noderampart', '0.4.0~alpha.7', 'arm64')):
             def response(args, **kwargs):
                 self.assertEqual(args[:2], ['dpkg-deb', '-f'])
                 return subprocess.CompletedProcess(args, 0, values[('Package', 'Version', 'Architecture').index(args[-1])])

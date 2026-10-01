@@ -22,6 +22,7 @@ type Scheduler struct {
 	Destination         string
 	Destinations        []string
 	NotificationPrivacy string
+	TelegramLanguage    string
 	Logger              *slog.Logger
 	BackfillDays        int
 }
@@ -122,21 +123,46 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 	if len(generated) == 0 {
 		return nil
 	}
-	notificationBody, err := NotificationBody(snapshot)
-	if err != nil {
-		return err
+	timezone := ""
+	if len(snapshot.Document) != 0 {
+		document, err := DecodeDocument(snapshot.Document)
+		if err != nil {
+			return err
+		}
+		timezone = document.Timezone
+	}
+	telegramLanguage := "en"
+	for destination := range generated {
+		if strings.HasPrefix(destination, "telegram:") {
+			telegramLanguage, err = notificationLanguage(s.TelegramLanguage)
+			if err != nil {
+				return err
+			}
+			break
+		}
 	}
 	for destination, exists := range generated {
 		if exists {
 			continue
 		}
 		channel := ""
+		language := "en"
 		if strings.HasPrefix(destination, "telegram:") {
 			channel = "telegram"
+			language = telegramLanguage
 		} else if strings.HasPrefix(destination, "webhook:") {
 			channel = "webhook"
 		}
-		inserted, err := s.Store.Enqueue(ctx, store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "daily:" + date + ":" + destination, Channel: channel, PrivacyMode: s.NotificationPrivacy, Destination: destination, Body: notificationBody})
+		var notificationBody string
+		if channel == "telegram" {
+			notificationBody, err = NotificationBodyLocalized(snapshot, language)
+		} else {
+			notificationBody, err = NotificationBody(snapshot)
+		}
+		if err != nil {
+			return err
+		}
+		inserted, err := s.Store.Enqueue(ctx, store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "daily:" + date + ":" + destination, Channel: channel, PrivacyMode: s.NotificationPrivacy, Destination: destination, Body: notificationBody, Language: language, Timezone: timezone})
 		if err != nil {
 			return err
 		}

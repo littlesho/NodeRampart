@@ -2,6 +2,22 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.7 - Unreleased
+
+- Add an offline searchable report-timezone selector with bilingual names,
+  date-specific UTC offsets and embedded IANA rules. Preserve exact existing
+  aliases and the system timezone; selection still uses the safe draft/apply flow.
+- Add independent English / Simplified Chinese Telegram message language for
+  events, test messages and daily reports. Saved queue bodies keep their original
+  language and timezone context; Webhook messages remain English.
+- SQLite schema 12 adds non-secret language and presentation-timezone metadata
+  to the existing outbox. Keep a verified compatible pre-upgrade database and
+  configuration backup; older programs cannot read the new schema.
+- Project `0.4.0-alpha.7` maps to Debian internal `0.4.0~alpha.7` and RPM
+  `0.4.0-0.alpha.8%{?dist}`. Bootstrap supports explicit alpha.7 only; its
+  default and existing published-version mappings remain unchanged. This is a
+  local unreleased candidate, not a published package or runtime acceptance.
+
 ## 0.4.0-alpha.6 - Unreleased
 
 - Integrate the consolidated reliability fixes: initialize every SQLite

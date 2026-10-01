@@ -252,6 +252,11 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 	}
+	if version < 12 {
+		if err := migrateV12(ctx, tx); err != nil {
+			return err
+		}
+	}
 	return tx.Commit()
 }
 
@@ -593,6 +598,10 @@ type OutboxMessage struct {
 	DedupeKey   string
 	Channel     string
 	PrivacyMode string
+	// Language and Timezone describe this immutable delivery body. They do not
+	// change target identity, retry policy or saved event/report machine data.
+	Language    string
+	Timezone    string
 	Destination string
 	Body        string
 	Attempts    int
@@ -626,6 +635,9 @@ func (s *Store) Enqueue(ctx context.Context, message OutboxMessage) (bool, error
 }
 
 func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, error) {
+	if err := normalizePresentation(&message); err != nil {
+		return false, err
+	}
 	if message.Secondary != nil {
 		return false, errors.New("paired messages require event admission")
 	}
@@ -639,7 +651,7 @@ func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, erro
 		return false, errors.New("outbox target is invalid")
 	}
 	if len(message.Body) > 4096 {
-		return false, errors.New("outbox message exceeds Telegram limit")
+		return false, errors.New("outbox message exceeds conservative delivery byte limit")
 	}
 	if message.NextAttempt.IsZero() {
 		message.NextAttempt = time.Now().UTC()
@@ -673,8 +685,8 @@ func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, erro
 		}
 	}
 	result, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO notification_outbox
-		(id, dedupe_key, channel, destination, body, next_attempt, created_at, expires_at, isolated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		message.ID, limit(message.DedupeKey, 512), limit(message.Channel, 32), limit(message.Destination, 128), message.Body, message.NextAttempt.UnixMilli(), now.UnixMilli(), now.Add(OutboxTTL).UnixMilli(), isolated)
+		(id, dedupe_key, channel, destination, body, next_attempt, created_at, expires_at, isolated_at,language,presentation_timezone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		message.ID, limit(message.DedupeKey, 512), limit(message.Channel, 32), limit(message.Destination, 128), message.Body, message.NextAttempt.UnixMilli(), now.UnixMilli(), now.Add(OutboxTTL).UnixMilli(), isolated, message.Language, message.Timezone)
 	if err != nil {
 		return false, err
 	}
@@ -704,7 +716,7 @@ func (s *Store) pendingDestination(ctx context.Context, now time.Time, count int
 	if count < 1 || count > 100 {
 		count = 20
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id, dedupe_key, channel, destination, body, attempts, next_attempt
+	rows, err := s.db.QueryContext(ctx, `SELECT id, dedupe_key, channel, destination, body, attempts, next_attempt,language,presentation_timezone
 		FROM notification_outbox AS o WHERE sent_at IS NULL AND quarantined_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL AND expires_at > ? AND next_attempt <= ?
  AND (channel='' OR EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=1))
  AND (lease_until IS NULL OR lease_until<=?)
@@ -719,7 +731,7 @@ func (s *Store) pendingDestination(ctx context.Context, now time.Time, count int
 	for rows.Next() {
 		var message OutboxMessage
 		var next int64
-		if err := rows.Scan(&message.ID, &message.DedupeKey, &message.Channel, &message.Destination, &message.Body, &message.Attempts, &next); err != nil {
+		if err := rows.Scan(&message.ID, &message.DedupeKey, &message.Channel, &message.Destination, &message.Body, &message.Attempts, &next, &message.Language, &message.Timezone); err != nil {
 			return nil, err
 		}
 		message.NextAttempt = time.UnixMilli(next).UTC()

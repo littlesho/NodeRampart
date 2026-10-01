@@ -72,6 +72,12 @@ sudo noderampart setup
 
 Use arrow keys and Enter for menus, Tab/Shift+Tab for form fields, and Escape to go back. English and Chinese are available from the language menu or the --language en / --language zh option.
 
+The unreleased alpha.7 candidate adds a searchable region/city timezone selector and
+an independent Telegram **English / 简体中文** message choice. These are not in
+the published alpha.6 packages. See the bilingual [timezone and message language
+instructions](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language-unreleased-source)
+for draft/save behavior and retained older messages.
+
 ## Everyday use
 
 ~~~bash
