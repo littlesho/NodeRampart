@@ -29,6 +29,7 @@ import (
 	"github.com/littlesho/NodeRampart/internal/protocol"
 	"github.com/littlesho/NodeRampart/internal/report"
 	"github.com/littlesho/NodeRampart/internal/store"
+	"github.com/littlesho/NodeRampart/internal/timezones"
 	"github.com/littlesho/NodeRampart/internal/version"
 )
 
@@ -142,6 +143,13 @@ func New(options Options) (*App, error) {
 	if options.Store == nil || options.Geo == nil || options.StorePrivacy == nil || options.NotifyPrivacy == nil {
 		return nil, errors.New("daemon dependencies are incomplete")
 	}
+	if language := options.Config.Notifications.Telegram.Language; language != "" && language != "en" && language != "zh" {
+		return nil, errors.New("telegram.language must be en or zh")
+	}
+	location, err := config.ReportLocation(options.Config.Reports)
+	if err != nil {
+		return nil, err
+	}
 	if err := options.Store.ConfigureNotifications(options.Config.Notifications.MergeWindow.Duration); err != nil {
 		return nil, err
 	}
@@ -180,10 +188,6 @@ func New(options Options) (*App, error) {
 	}
 	if options.Logger == nil {
 		options.Logger = slog.Default()
-	}
-	location, err := config.ReportLocation(options.Config.Reports)
-	if err != nil {
-		return nil, err
 	}
 	return &App{options: options, network: detect.NewFleet(options.Config.Detection, options.Config.Sensor.InterfaceLimit()), auth: detect.NewAuth(options.Config.Auth), report: &report.Builder{Store: options.Store, Hostname: options.Config.Hostname, Location: location, TopN: options.Config.Reports.TopN, Billing: options.Billing, CycleStartDay: options.Config.Billing.CycleStartDay, ThresholdBytes: options.Config.Alerts.Budget.MonthlyBytes, ThresholdCost: options.Config.Alerts.Budget.MonthlyCost}, started: time.Now().UTC()}, nil
 }
@@ -373,7 +377,7 @@ func (a *App) Run(ctx context.Context) error {
 		if a.options.Config.Notifications.Webhook.Enabled {
 			destinations = append(destinations, a.options.WebhookDestination)
 		}
-		scheduler := &report.Scheduler{Store: a.options.Store, Builder: a.report, DailyAt: a.options.Config.Reports.DailyAt, Destinations: destinations, NotificationPrivacy: a.options.Config.Privacy.NotificationIP, Logger: a.options.Logger, BackfillDays: a.options.Config.Reports.BackfillDays}
+		scheduler := &report.Scheduler{Store: a.options.Store, Builder: a.report, DailyAt: a.options.Config.Reports.DailyAt, Destinations: destinations, NotificationPrivacy: a.options.Config.Privacy.NotificationIP, TelegramLanguage: config.TelegramLanguage(a.options.Config.Notifications.Telegram), Logger: a.options.Logger, BackfillDays: a.options.Config.Reports.BackfillDays}
 		start("report_scheduler", "running", false, func() error { return scheduler.Run(child) })
 	} else if err := a.options.Store.SetComponentStatus(ctx, "report_scheduler", "disabled", time.Now().UTC()); err != nil {
 		a.options.Logger.Warn("record disabled component", "component", "report_scheduler", "error", err)
@@ -566,6 +570,14 @@ func (a *App) prepareEvent(event model.Event) (model.Event, *store.OutboxMessage
 			continue
 		}
 		message := &store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "event:" + event.ID + ":" + target.channel, Channel: target.channel, PrivacyMode: a.options.Config.Privacy.NotificationIP, Destination: target.destination, Body: notify.FormatEvent(a.options.Config.Hostname, notification)}
+		// Webhook's English event renderer uses UTC independently of Telegram.
+		message.Timezone = "UTC|UTC+00:00"
+		if target.channel == "telegram" {
+			message.Language = config.TelegramLanguage(a.options.Config.Notifications.Telegram)
+			location := a.report.Location // The validated production report location.
+			message.Timezone = location.String() + "|" + timezones.Offset(event.ObservedAt.In(location))
+			message.Body = notify.FormatEventLocalized(a.options.Config.Hostname, notification, message.Language, location)
+		}
 		if primary == nil {
 			primary = message
 		} else {

@@ -62,6 +62,11 @@ func recordOneEventNotification(ctx context.Context, tx *sql.Tx, event model.Eve
 	if message == nil {
 		return record()
 	}
+	copyPresentation := *message
+	if err := normalizePresentation(&copyPresentation); err != nil {
+		return err
+	}
+	message = &copyPresentation
 	// An older daemon may have committed this exact event before migration.
 	err := tx.QueryRowContext(ctx, `SELECT id FROM notification_outbox WHERE dedupe_key=?`, message.DedupeKey).Scan(&notificationID)
 	if err == nil {
@@ -92,18 +97,18 @@ func recordOneEventNotification(ctx context.Context, tx *sql.Tx, event model.Eve
 	if err != nil {
 		return err
 	}
-	mergeable := bound && window > 0 && event.Phase == "update" && event.IncidentID != "" && len(message.Body) <= 4096-mergeBodyReserve
+	mergeable := bound && mergeablePresentation(*message) && window > 0 && event.Phase == "update" && event.IncidentID != "" && len(message.Body) <= 4096-mergeBodyReserve
 	if mergeable {
 		var count, previousBytes int64
 		err := tx.QueryRowContext(ctx, `SELECT id,merged_count,LENGTH(CAST(body AS BLOB)) FROM notification_outbox
- WHERE incident_id=? AND event_kind=? AND destination=? AND event_phase='update' AND merge_until>?
+	 WHERE incident_id=? AND event_kind=? AND destination=? AND language=? AND presentation_timezone=? AND event_phase='update' AND merge_until>?
  AND sent_at IS NULL AND suppressed_at IS NULL AND isolated_at IS NULL AND quarantined_at IS NULL AND lease_until IS NULL AND attempts=0 AND expires_at>?
- ORDER BY merge_until,id LIMIT 1`, event.IncidentID, event.Kind, message.Destination, now.UnixMilli(), now.UnixMilli()).Scan(&notificationID, &count, &previousBytes)
+ ORDER BY merge_until,id LIMIT 1`, event.IncidentID, event.Kind, message.Destination, message.Language, message.Timezone, now.UnixMilli(), now.UnixMilli()).Scan(&notificationID, &count, &previousBytes)
 		if err == nil {
 			if count == 1<<63-1 {
 				return errors.New("notification merge count exhausted")
 			}
-			body := mergedBody(count+1, message.Body)
+			body := mergedBodyLocalized(count+1, message.Body, message.Language)
 			var pendingBytes int64
 			if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0) FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL`).Scan(&pendingBytes); err != nil {
 				return err
@@ -132,7 +137,7 @@ func recordOneEventNotification(ctx context.Context, tx *sql.Tx, event model.Eve
 	mergeUntil := int64(0)
 	if mergeable {
 		copy.NextAttempt = now.Add(window)
-		copy.Body = mergedBody(1, copy.Body)
+		copy.Body = mergedBodyLocalized(1, copy.Body, copy.Language)
 		mergeUntil = copy.NextAttempt.UnixMilli()
 	}
 	inserted, err := enqueue(ctx, tx, copy)
@@ -154,6 +159,13 @@ func recordOneEventNotification(ctx context.Context, tx *sql.Tx, event model.Eve
 }
 
 func mergedBody(count int64, latest string) string {
+	return mergedBodyLocalized(count, latest, "en")
+}
+
+func mergedBodyLocalized(count int64, latest, language string) string {
+	if language == "zh" {
+		return fmt.Sprintf("<b>%d 次事件更新</b> · 以下为最新观察，所有事件保留在时间线。\n%s", count, latest)
+	}
 	return fmt.Sprintf("<b>%d incident updates</b> · latest observation below; all events retained in the timeline.\n%s", count, latest)
 }
 
@@ -188,7 +200,7 @@ func (s *Store) ClaimNotification(ctx context.Context, id string, now time.Time)
 	}
 	var message OutboxMessage
 	var next int64
-	if err := tx.QueryRowContext(ctx, `SELECT id,dedupe_key,channel,destination,body,attempts,next_attempt FROM notification_outbox WHERE id=?`, id).Scan(&message.ID, &message.DedupeKey, &message.Channel, &message.Destination, &message.Body, &message.Attempts, &next); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT id,dedupe_key,channel,destination,body,attempts,next_attempt,language,presentation_timezone FROM notification_outbox WHERE id=?`, id).Scan(&message.ID, &message.DedupeKey, &message.Channel, &message.Destination, &message.Body, &message.Attempts, &next, &message.Language, &message.Timezone); err != nil {
 		return OutboxMessage{}, false, err
 	}
 	message.NextAttempt = time.UnixMilli(next).UTC()

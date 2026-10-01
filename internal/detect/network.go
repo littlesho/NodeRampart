@@ -334,7 +334,10 @@ func (n *Network) observeFlood(kind string, value, threshold float64, severity m
 }
 
 func floodEvent(kind, phase string, state *floodState, value, threshold float64, severity model.Severity, unit string, flow protocol.Flow, now time.Time) *model.Event {
-	event := &model.Event{ID: model.NewID("evt"), IncidentID: state.incidentID, ObservedAt: now.UTC(), Kind: kind, Phase: phase, Severity: severity, Count: uint64(value), Summary: fmt.Sprintf("observed %.0f %s; configured threshold %.0f %s", value, unit, threshold, unit), Evidence: map[string]string{"threshold": fmt.Sprintf("%.0f %s", threshold, unit)}}
+	event := &model.Event{ID: model.NewID("evt"), IncidentID: state.incidentID, ObservedAt: now.UTC(), Kind: kind, Phase: phase, Severity: severity, Count: uint64(value), Summary: fmt.Sprintf("observed %.0f %s; configured threshold %.0f %s", value, unit, threshold, unit), Evidence: map[string]string{"threshold": fmt.Sprintf("%.0f %s", threshold, unit), "observed_rate": strconv.FormatFloat(value, 'f', -1, 64), "threshold_rate": strconv.FormatFloat(threshold, 'f', -1, 64)}}
+	if phase == "recovery" {
+		event.Evidence["incident_duration_millis"] = strconv.FormatInt(now.Sub(state.started).Milliseconds(), 10)
+	}
 	if flow.RemoteIP != "" {
 		event.SourceIP = flow.RemoteIP
 		event.SourceRange = PrefixString(flow.RemoteIP)
@@ -435,7 +438,7 @@ func (n *Network) scanEvents(now time.Time) []model.Event {
 		}
 		if !state.emitted && len(state.ports) >= n.config.ScanUniquePorts {
 			state.emitted = true
-			events = append(events, model.Event{ID: model.NewID("evt"), IncidentID: model.NewID("inc"), ObservedAt: now.UTC(), Kind: "port_scan", Phase: "start", Severity: model.SeverityMedium, SourceIP: source, SourceRange: PrefixString(source), Count: uint64(len(state.ports)), Summary: fmt.Sprintf("at least %d unique local ports probed in %s", len(state.ports), now.Sub(state.started).Round(time.Second)), Evidence: map[string]string{"packets": strconv.FormatUint(state.packets, 10), "rule": "inbound_syn_or_unsolicited_udp", "threshold": strconv.Itoa(n.config.ScanUniquePorts), "window_seconds": strconv.FormatFloat(n.config.ScanWindow.Seconds(), 'f', -1, 64)}})
+			events = append(events, model.Event{ID: model.NewID("evt"), IncidentID: model.NewID("inc"), ObservedAt: now.UTC(), Kind: "port_scan", Phase: "start", Severity: model.SeverityMedium, SourceIP: source, SourceRange: PrefixString(source), Count: uint64(len(state.ports)), Summary: fmt.Sprintf("at least %d unique local ports probed in %s", len(state.ports), now.Sub(state.started).Round(time.Second)), Evidence: map[string]string{"packets": strconv.FormatUint(state.packets, 10), "rule": "inbound_syn_or_unsolicited_udp", "threshold": strconv.Itoa(n.config.ScanUniquePorts), "window_seconds": strconv.FormatFloat(n.config.ScanWindow.Seconds(), 'f', -1, 64), "elapsed_millis": strconv.FormatInt(now.Sub(state.started).Milliseconds(), 10)}})
 		}
 	}
 	return events

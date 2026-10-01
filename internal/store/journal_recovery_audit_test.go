@@ -83,11 +83,11 @@ func recoveryDataSnapshot(t *testing.T, db *sql.DB) map[string]string {
 				t.Fatal(err)
 			}
 			// Snapshot every legacy user column independently of new target,
-			// channel and full-report columns. Their own migrations cover those
+			// channel, presentation and full-report columns. Their own migrations cover those
 			// additions; they must not change the historical data assertion shape.
 			legacyValues := make([]any, 0, len(values))
 			for i, value := range values {
-				if table == "notification_outbox" && (columns[i] == "channel" || columns[i] == "isolated_at") {
+				if table == "notification_outbox" && (columns[i] == "channel" || columns[i] == "isolated_at" || columns[i] == "language" || columns[i] == "presentation_timezone") {
 					continue
 				}
 				if table == "event_notifications" && columns[i] == "channel" || table == "report_snapshots" && columns[i] == "document_json" {

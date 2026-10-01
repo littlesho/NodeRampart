@@ -86,6 +86,10 @@ func (u *ui) configGroup(key string) {
 }
 
 func (u *ui) editField(f field) {
+	if f.path == "reports.timezone" {
+		u.editTimezone(f)
+		return
+	}
 	form := tview.NewForm()
 	value := fieldText(&u.snapshot.Config, f.path)
 	read := func() string { return value }
@@ -97,6 +101,9 @@ func (u *ui) editField(f field) {
 			}
 		}
 		labels := append([]string(nil), f.choices...)
+		if f.path == "notifications.telegram.language" {
+			labels = []string{"English", "简体中文"}
+		}
 		if f.choices[0] == "true" {
 			labels = []string{u.tr("Enabled", "启用"), u.tr("Disabled", "关闭")}
 		}

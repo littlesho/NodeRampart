@@ -97,7 +97,7 @@ func (a *Auth) Observe(observation collector.AuthObservation) *model.Event {
 		if observation.Root {
 			severity = model.SeverityMedium
 		}
-		var evidence map[string]string
+		evidence := map[string]string{"method": observation.Method, "window_millis": strconv.FormatInt(a.config.Window.Milliseconds(), 10)}
 		prior := 0
 		cutoff := observation.ObservedAt.Add(-a.config.Window.Duration)
 		for _, failure := range a.failures[source] {
@@ -106,12 +106,11 @@ func (a *Auth) Observe(observation collector.AuthObservation) *model.Event {
 			}
 		}
 		if prior > 0 {
-			evidence = map[string]string{"preceding_source_failures": strconv.Itoa(prior), "window": a.config.Window.Duration.String(), "count_basis": "openssh_final_failure"}
+			evidence["preceding_source_failures"] = strconv.Itoa(prior)
+			evidence["window"] = a.config.Window.Duration.String()
+			evidence["count_basis"] = "openssh_final_failure"
 		}
 		if observation.ObservedAt.Before(a.incompleteUntil) {
-			if evidence == nil {
-				evidence = make(map[string]string)
-			}
 			evidence["preceding_source_failures_complete"] = "false"
 		}
 		return &model.Event{ID: model.NewID("evt"), IncidentID: model.NewID("inc"), ObservedAt: observation.ObservedAt, Kind: "ssh_login_success", Phase: "observed", Severity: severity, SourceIP: source, SourceRange: PrefixString(source), Target: "ssh user=" + observation.User, Count: 1, Summary: "successful SSH " + observation.Method + " authentication", Evidence: evidence}
@@ -175,7 +174,7 @@ func (a *Auth) Observe(observation collector.AuthObservation) *model.Event {
 		return nil
 	}
 	a.lastAlert[source] = observation.ObservedAt
-	return &model.Event{ID: model.NewID("evt"), IncidentID: model.NewID("inc"), ObservedAt: observation.ObservedAt, Kind: "ssh_brute_force", Phase: "start", Severity: model.SeverityHigh, SourceIP: source, SourceRange: PrefixString(source), Target: "ssh user=" + observation.User, Count: uint64(len(kept)), Summary: fmt.Sprintf("%d SSH authentication failures in %s", len(kept), a.config.Window.Duration), Evidence: map[string]string{"method": observation.Method, "invalid_user": strconv.FormatBool(observation.InvalidUser), "count_basis": "openssh_final_failure", "detection_window_complete": strconv.FormatBool(!observation.ObservedAt.Before(a.incompleteUntil))}}
+	return &model.Event{ID: model.NewID("evt"), IncidentID: model.NewID("inc"), ObservedAt: observation.ObservedAt, Kind: "ssh_brute_force", Phase: "start", Severity: model.SeverityHigh, SourceIP: source, SourceRange: PrefixString(source), Target: "ssh user=" + observation.User, Count: uint64(len(kept)), Summary: fmt.Sprintf("%d SSH authentication failures in %s", len(kept), a.config.Window.Duration), Evidence: map[string]string{"window_millis": strconv.FormatInt(a.config.Window.Milliseconds(), 10), "method": observation.Method, "invalid_user": strconv.FormatBool(observation.InvalidUser), "count_basis": "openssh_final_failure", "detection_window_complete": strconv.FormatBool(!observation.ObservedAt.Before(a.incompleteUntil))}}
 }
 
 func (a *Auth) markIncomplete(at time.Time) {

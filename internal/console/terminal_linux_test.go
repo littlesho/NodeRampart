@@ -46,6 +46,7 @@ func TestTerminalUTF8PTY(t *testing.T) {
 		{"unsupported TERM", "C", "", "", "en", "badterm", "supported controlling terminal"},
 		{"no controlling tty", "C", "", "", "en", "notty", "controlling terminal"},
 		{"Chinese input", "C", "", "en_US.UTF-8", "zh", "input", ""},
+		{"Timezone search narrow UTF8", "C", "", "en_US.UTF-8", "zh", "timezone", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			master, err := os.OpenFile("/dev/ptmx", os.O_RDWR|syscall.O_NOCTTY, 0)
@@ -65,7 +66,11 @@ func TestTerminalUTF8PTY(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer slave.Close()
-			if err := unix.IoctlSetWinsize(int(slave.Fd()), unix.TIOCSWINSZ, &unix.Winsize{Row: 40, Col: 120}); err != nil {
+			size := &unix.Winsize{Row: 40, Col: 120}
+			if tc.mode == "timezone" {
+				size = &unix.Winsize{Row: 24, Col: 64}
+			}
+			if err := unix.IoctlSetWinsize(int(slave.Fd()), unix.TIOCSWINSZ, size); err != nil {
 				t.Fatal(err)
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -105,7 +110,9 @@ func TestTerminalUTF8PTY(t *testing.T) {
 			type interaction struct{ text, keys string }
 			var actions []interaction
 			if tc.wantError == "" {
-				if tc.mode == "input" {
+				if tc.mode == "timezone" {
+					actions = []interaction{{"选择报告时区", "上海\r"}, {"日报", "\x03"}}
+				} else if tc.mode == "input" {
 					actions = []interaction{{"编辑设置", "\x15中文主机\t\r"}, {"中文主机", "\x03"}}
 				} else {
 					en, zh, toggle := "Main menu", "主菜单", "\x1bOF\x1bOA\r"
@@ -158,6 +165,9 @@ func TestTerminalUTF8PTY(t *testing.T) {
 			}
 			if tc.wantError == "" {
 				words := []string{"中文", "↑", "—", "·"}
+				if tc.mode == "timezone" {
+					words = []string{"↑", "—", "·"} // This screen has no interface-language toggle label.
+				}
 				switch tc.mode {
 				case "setup":
 					words = append(words, "欢迎", "基本设置", "网络")
@@ -165,6 +175,8 @@ func TestTerminalUTF8PTY(t *testing.T) {
 					words = append(words, "主菜单", "当前运行状态", "采集")
 				case "input":
 					words = append(words, "编辑设置", "主机显示名称", "中文主机")
+				case "timezone":
+					words = append(words, "选择报告时区", "当前配置", "上海", "日报")
 				}
 				for _, word := range words {
 					if !bytes.Contains(terminalControls.ReplaceAll(output, nil), []byte(word)) {
@@ -200,7 +212,7 @@ func TestTerminalProcess(t *testing.T) {
 		t.Setenv("TERM", "noderampart-nonexistent-terminal-fixture")
 	}
 	backend := &fakeBackend{cfg: config.Defaults(), calls: make(chan backendCall, 1), saves: make(chan Snapshot, 1)}
-	if mode == "input" {
+	if mode == "input" || mode == "timezone" {
 		screen, err := newTerminalScreen()
 		if err != nil {
 			t.Fatal(err)
@@ -210,7 +222,7 @@ func TestTerminalProcess(t *testing.T) {
 		u := &ui{app: tview.NewApplication(), screen: screen, backend: backend, ctx: context.Background(), lang: "zh", snapshot: Snapshot{Config: backend.cfg}, loaded: true, changed: map[string]bool{}}
 		u.app.SetScreen(screen)
 		for _, f := range fields {
-			if f.path == "hostname" {
+			if mode == "input" && f.path == "hostname" || mode == "timezone" && f.path == "reports.timezone" {
 				u.editField(f)
 			}
 		}
@@ -224,8 +236,8 @@ func TestTerminalProcess(t *testing.T) {
 		if err := u.app.Run(); err != nil {
 			t.Fatal(err)
 		}
-		if u.snapshot.Config.Hostname != "中文主机" || !u.dirty {
-			t.Fatal("Chinese input did not reach the draft intact")
+		if mode == "input" && u.snapshot.Config.Hostname != "中文主机" || mode == "timezone" && u.snapshot.Config.Reports.Timezone != "Asia/Shanghai" || !u.dirty {
+			t.Fatal("Chinese input/selected timezone did not reach the draft intact")
 		}
 	} else {
 		err := Run(context.Background(), backend, Options{Setup: mode == "setup", Language: os.Getenv("NR_PTY_LANGUAGE")})

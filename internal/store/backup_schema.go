@@ -276,6 +276,9 @@ func schemaTokens(definition string) ([]schemaToken, error) {
 
 func downgradeSnapshotSchemaReference(ctx context.Context, db *sql.DB, version int) error {
 	var statements []string
+	if version < 12 {
+		statements = append(statements, `ALTER TABLE notification_outbox DROP COLUMN presentation_timezone`, `ALTER TABLE notification_outbox DROP COLUMN language`)
+	}
 	if version < 11 {
 		statements = append(statements, `DROP INDEX event_notifications_message_idx`, `ALTER TABLE event_notifications RENAME TO event_notifications_v11`,
 			`CREATE TABLE event_notifications (

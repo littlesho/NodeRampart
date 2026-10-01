@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/littlesho/NodeRampart/internal/assets"
+	"github.com/littlesho/NodeRampart/internal/config"
 	"github.com/rivo/tview"
 )
 
@@ -69,7 +70,7 @@ var actions = []action{
 	{id: "geo_download", en: "Set up local GeoIP downloads", zh: "设置本地 GeoIP 下载", helpEN: "Optional. Enroll with your own account: https://www.maxmind.com/en/geolite2/signup\nReview: https://www.maxmind.com/en/geolite/eula\nAccount ID and License Key are hidden. Choose Cancel / Skip to continue without GeoIP.", helpZH: "可选。使用自己的账户注册：https://www.maxmind.com/en/geolite2/signup\n请阅读条款：https://www.maxmind.com/en/geolite/eula\nAccount ID 与 License Key 均隐藏输入；可取消/跳过并继续使用。", params: []parameter{secret("account_id", "MaxMind Account ID", "MaxMind Account ID"), secret("license_key", "MaxMind License Key", "MaxMind License Key"), choice("accepted_terms", "I have accepted the GeoLite terms", "我已接受 GeoLite 条款", "no", "yes"), choice("auto_update", "Enable daily database updates", "启用每日数据库更新", "no", "yes")}, confirmEN: "Download GeoLite2 City and ASN using your account and apply the validated local databases?", confirmZH: "使用您的账户下载 GeoLite2 City 与 ASN，并应用经过验证的本地数据库？", mutation: true},
 	{id: "geo_refresh", en: "Refresh local GeoIP databases", zh: "更新本地 GeoIP 数据库", confirmEN: "Contact MaxMind using your stored credentials and refresh the local databases?", confirmZH: "使用已保存的凭据连接 MaxMind 并更新本地数据库？", mutation: true},
 	{id: "geo_schedule", en: "Daily GeoIP updates", zh: "GeoIP 每日更新", params: []parameter{choice("enabled", "Daily update schedule", "每日更新计划", "no", "yes")}, confirmEN: "Apply this daily database update schedule?", confirmZH: "应用此每日数据库更新计划？", mutation: true},
-	{id: "telegram_setup", en: "Set up Telegram", zh: "设置 Telegram", helpEN: "Enter a numeric chat ID. Blank token keeps the configured token. Changing bot/chat keeps old backlog isolated; inspect Notification messages and explicitly discard isolated bodies if needed. Same-target token rotation preserves retries and cooldowns. Setup sends no message.", helpZH: "填写数字 Chat ID；Token 留空保留已配置凭据。更换 Bot/Chat 后旧积压默认保留隔离，可查看通知列表并显式丢弃隔离正文。同目标换 Token 保留重试与限流。设置不会发送消息。", params: []parameter{secret("token", "Bot token (hidden)", "Bot Token（隐藏）"), p("chat_id", "Numeric Chat ID", "数字 Chat ID"), choice("enabled", "Enable Telegram notifications", "启用 Telegram 通知", "yes", "no")}, confirmEN: "Save Telegram settings and keep older target backlog isolated? No test message will be sent.", confirmZH: "保存 Telegram 设置并保留隔离旧目标积压？不会发送测试消息。", mutation: true},
+	{id: "telegram_setup", en: "Set up Telegram", zh: "设置 Telegram", helpEN: "Enter a numeric chat ID. Blank token keeps the configured token. Changing bot/chat keeps old backlog isolated; inspect Notification messages and explicitly discard isolated bodies if needed. Same-target token rotation preserves retries and cooldowns. Setup sends no message.", helpZH: "填写数字 Chat ID；Token 留空保留已配置凭据。更换 Bot/Chat 后旧积压默认保留隔离，可查看通知列表并显式丢弃隔离正文。同目标换 Token 保留重试与限流。设置不会发送消息。", params: []parameter{secret("token", "Bot token (hidden)", "Bot Token（隐藏）"), p("chat_id", "Numeric Chat ID", "数字 Chat ID"), choice("enabled", "Enable Telegram notifications", "启用 Telegram 通知", "yes", "no"), choice("language", "Message language (independent of UI)", "消息语言（与界面独立）", "en", "zh")}, confirmEN: "Save Telegram settings and keep older target backlog isolated? No test message will be sent.", confirmZH: "保存 Telegram 设置并保留隔离旧目标积压？不会发送测试消息。", mutation: true},
 	{id: "privacy_key_generate", en: "Generate a privacy hash key", zh: "生成隐私哈希密钥", confirmEN: "Generate and configure a local privacy key? A new key changes future hashed identifiers; existing history is not rewritten.", confirmZH: "生成并配置本地隐私密钥？新密钥改变未来的哈希标识；不会改写历史记录。", mutation: true},
 	{id: "prices_regions", en: "Available cloud regions", zh: "可用云区域", helpEN: "Public pricing regions and OCI geographic groups; no account discovery.", helpZH: "公开价格区域与 OCI 地理分组；不会查询账户资源。"},
 	{id: "prices_fetch", en: "Fetch official egress tariffs", zh: "获取官方出站价格", helpEN: "Enter the region shown in Available cloud regions. Assign this host's free allowance for the whole month after accounting for other hosts/services. Do not subtract this host's already observed usage again. The byte unit is a calculation assumption, not a verified provider meter. Requires Internet access.", helpZH: "填写“可用云区域”显示的区域。免费额度是扣除其他主机/服务分配后，分配给本机整个本月的份额；不要再次扣除本机已观测用量。字节单位仅为计算假设，不代表已验证的厂商计费口径。需要联网。", params: []parameter{choice("provider", "Cloud provider", "云厂商", "aws", "oci"), p("region", "AWS region / OCI group", "AWS 区域 / OCI 分组"), {key: "free_gb", en: "Monthly free allowance assigned to this host", zh: "分配给本机本月的免费额度", value: "0"}, choice("unit_bytes", "Bytes per tariff GB (assumption)", "每价格 GB 的字节数（假设）", "1073741824", "1000000000")}, confirmEN: "Fetch public tariffs and configure the selected egress estimate? No cloud credentials are used.", confirmZH: "获取公开价格并配置所选出站费用估算？不使用云账户凭据。", mutation: true},
@@ -176,6 +177,20 @@ func (u *ui) openAction(id string, back func()) {
 		u.priceProvider(back)
 		return
 	}
+	if id == "telegram_setup" && !u.loaded {
+		u.background(u.tr("Load Telegram settings", "加载 Telegram 设置"), func(ctx context.Context) func() {
+			snapshot, err := u.backend.Load(ctx)
+			return func() {
+				if err != nil {
+					u.output(u.tr("Telegram configuration unavailable", "Telegram 配置不可用"), u.tr("Load or recover a valid configuration before changing notification settings.", "请先加载或恢复有效配置，再修改通知设置。"), back)
+					return
+				}
+				u.snapshot, u.baseline, u.loaded = snapshot, cloneConfig(snapshot.Config), true
+				u.actionForm(a, back)
+			}
+		}, back)
+		return
+	}
 	u.actionForm(a, back)
 }
 
@@ -189,6 +204,19 @@ func (u *ui) actionForm(a action, back func()) {
 	clearers := []func(){}
 	for _, definition := range a.params {
 		param := definition
+		if a.id == "telegram_setup" {
+			switch param.key {
+			case "language":
+				param.value = config.TelegramLanguage(u.snapshot.Config.Notifications.Telegram)
+			case "chat_id":
+				param.value = u.snapshot.Config.Notifications.Telegram.ChatID
+			case "enabled":
+				param.value = "no"
+				if u.snapshot.Config.Notifications.Telegram.Enabled {
+					param.value = "yes"
+				}
+			}
+		}
 		label := u.tr(param.en, param.zh)
 		if len(param.choices) > 0 {
 			selected := 0
@@ -199,6 +227,9 @@ func (u *ui) actionForm(a action, back func()) {
 				}
 			}
 			labels := append([]string(nil), param.choices...)
+			if a.id == "telegram_setup" && param.key == "language" {
+				labels = []string{"English", "简体中文"}
+			}
 			if a.id == "retention" {
 				for i, value := range labels {
 					labels[i] = retentionLabel(param.key, value, u.lang)

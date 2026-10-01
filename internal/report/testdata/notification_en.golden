@@ -1,0 +1,37 @@
+🛡 <b>NodeRampart — daily report 2026-03-08</b>
+Local archive: 2026-03-08
+Host: 主机 &lt;A&amp;B&gt;
+Period (end exclusive): 2026-03-08 00:00 UTC-05:00 — 2026-03-09 00:00 UTC-04:00
+Snapshot timezone: America/New_York
+Counts reflect retained observations; missing observations are unknown; zero does not prove no activity.
+Retained security events: 5; SSH observations: 14
+Interface RX 4.00 KiB / TX 8.00 KiB
+Sensor batches: 100; parse errors: 3
+Kernel capture: 1000 packets; drops: 4; statistics errors: 2
+Flow overflow: 9 packets / 2.00 KiB
+IPC send loss estimate: 5 batches; 20 packets / 4.00 KiB
+Unattributed/reconciliation: RX 3.00 KiB / TX 6.00 KiB
+Older sensors do not report IPC loss; recovered counters may include earlier periods.
+<b>Recorded coverage</b>
+• interface_counter: complete
+• sensor_feed: partial
+• ssh_journal: unknown
+Retained coverage gaps: 1; a zero gap count means unknown loss, not zero loss.
+Unrecorded/conflicting time is unknown. Running coverage is not proof of complete or lossless data.
+Pruning overlaps this report; affected rows are not a count of lost packets.
+<b>Billing estimate</b>
+Accounting period (end exclusive): 2026-03-01 05:30 UTC+05:30 — 2026-03-09 09:30 UTC+05:30
+Whole-cycle data completeness is unknown; retained counters may understate usage or cost.
+Cycle guest TX: 2.79 GiB; free allowance 1.00 GB; billable estimate 2.00 GB
+Estimated cost: 1.00 USD; tariff saved at generation: 方案 &lt;A&amp;B&gt;
+Guest TX is not the provider billing meter or invoice. Estimates exclude fees outside the saved tariff.
+Billing snapshot timezone: Asia/Kolkata
+Retained statistics include overlapping UTC hours; missing observations are not reconstructed. Recent or late records can change during bounded generation.
+Source identifiers are omitted from this delivery; full retained detail stays in the local archive.
+<b>Retained security detail</b>
+• SSH success: 3
+• SSH failure: 8
+• SSH invalid_user: 2
+• SSH pam_failure: 1
+• ssh_brute_force / high: 2
+• ssh_login_success / info: 3

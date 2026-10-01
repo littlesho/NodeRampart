@@ -1,0 +1,782 @@
+=== bandwidth_spike/start ===
+🔴 <b>NodeRampart HIGH — Bandwidth alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: bandwidth_spike
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Observed rate 125.125 bytes/s; configured threshold 100.001 bytes/s.
+Recorded integer rate (rounded down): 125
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 bytes/s
+Recorded coverage complete: no
+Actual sample interval: 60001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== bandwidth_spike/update ===
+🔴 <b>NodeRampart HIGH — Bandwidth alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: update
+Event type code: bandwidth_spike
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Observed rate 125.125 bytes/s; configured threshold 100.001 bytes/s.
+Recorded integer rate (rounded down): 125
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 bytes/s
+Recorded coverage complete: no
+Actual sample interval: 60001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== bandwidth_spike/recovery ===
+🔴 <b>NodeRampart HIGH — Bandwidth alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: recovery
+Event type code: bandwidth_spike
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Recorded recovery: rate 12.125 bytes/s; configured threshold 100.001 bytes/s.
+Recorded integer rate (rounded down): 12
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 bytes/s
+Recorded coverage complete: yes
+Actual sample interval: 60001 milliseconds
+Incident duration: 123001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== budget_day_bytes/start ===
+🔴 <b>NodeRampart HIGH — Daily traffic threshold</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: budget_day_bytes
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: Observed guest TX estimate reached 100% of the configured threshold.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: configured threshold reached
+Recorded period label: 2026-07-15
+Period start: 2026-07-14 20:45:00 Asia/Kathmandu (UTC+05:45)
+Period end (exclusive): 2026-07-15 20:45:00 Asia/Kathmandu (UTC+05:45)
+Observed guest TX: 100 bytes
+Traffic threshold: 100 bytes
+Threshold milestone: 100%
+Coverage: incomplete
+Estimate basis: selected-interface guest TX; private/duplicate paths may be included; overlapping UTC-hour estimate, not a bill, excluding costs outside the model
+
+=== budget_day_bytes/update ===
+🔴 <b>NodeRampart HIGH — Daily traffic threshold</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: update
+Event type code: budget_day_bytes
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: Observed guest TX estimate reached 100% of the configured threshold.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: configured threshold reached
+Recorded period label: 2026-07-15
+Period start: 2026-07-14 20:45:00 Asia/Kathmandu (UTC+05:45)
+Period end (exclusive): 2026-07-15 20:45:00 Asia/Kathmandu (UTC+05:45)
+Observed guest TX: 100 bytes
+Traffic threshold: 100 bytes
+Threshold milestone: 100%
+Coverage: incomplete
+Estimate basis: selected-interface guest TX; private/duplicate paths may be included; overlapping UTC-hour estimate, not a bill, excluding costs outside the model
+
+=== budget_day_growth/start ===
+🔴 <b>NodeRampart HIGH — Daily traffic growth</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: budget_day_growth
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: Observed daily guest TX reached the recorded growth threshold (estimate).
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: configured threshold reached
+Recorded period label: 2026-07-15
+Period start: 2026-07-14 20:45:00 Asia/Kathmandu (UTC+05:45)
+Period end (exclusive): 2026-07-15 20:45:00 Asia/Kathmandu (UTC+05:45)
+Observed guest TX: 80 bytes
+Baseline daily mean (bytes): 32
+Configured growth ratio: 2.5
+Baseline complete days: 7
+Threshold milestone: 100%
+Coverage: incomplete
+Estimate basis: selected-interface guest TX; private/duplicate paths may be included; overlapping UTC-hour estimate, not a bill, excluding costs outside the model
+
+=== budget_day_growth/update ===
+🔴 <b>NodeRampart HIGH — Daily traffic growth</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: update
+Event type code: budget_day_growth
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: Observed daily guest TX reached the recorded growth threshold (estimate).
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: configured threshold reached
+Recorded period label: 2026-07-15
+Period start: 2026-07-14 20:45:00 Asia/Kathmandu (UTC+05:45)
+Period end (exclusive): 2026-07-15 20:45:00 Asia/Kathmandu (UTC+05:45)
+Observed guest TX: 80 bytes
+Baseline daily mean (bytes): 32
+Configured growth ratio: 2.5
+Baseline complete days: 7
+Threshold milestone: 100%
+Coverage: incomplete
+Estimate basis: selected-interface guest TX; private/duplicate paths may be included; overlapping UTC-hour estimate, not a bill, excluding costs outside the model
+
+=== budget_month_bytes/start ===
+🟠 <b>NodeRampart MEDIUM — Cycle traffic allowance</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: budget_month_bytes
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: Observed guest TX estimate reached 80% of the configured threshold.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: configured threshold reached
+Recorded period label: 2026-07
+Period start: 2026-06-30 20:45:00 Asia/Kathmandu (UTC+05:45)
+Period end (exclusive): 2026-07-31 20:45:00 Asia/Kathmandu (UTC+05:45)
+Observed guest TX: 80 bytes
+Traffic threshold: 100 bytes
+Threshold milestone: 80%
+Coverage: incomplete
+Estimate basis: selected-interface guest TX; private/duplicate paths may be included; overlapping UTC-hour estimate, not a bill, excluding costs outside the model
+
+=== budget_month_bytes/update ===
+🟠 <b>NodeRampart MEDIUM — Cycle traffic allowance</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: update
+Event type code: budget_month_bytes
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: Observed guest TX estimate reached 80% of the configured threshold.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: configured threshold reached
+Recorded period label: 2026-07
+Period start: 2026-06-30 20:45:00 Asia/Kathmandu (UTC+05:45)
+Period end (exclusive): 2026-07-31 20:45:00 Asia/Kathmandu (UTC+05:45)
+Observed guest TX: 80 bytes
+Traffic threshold: 100 bytes
+Threshold milestone: 80%
+Coverage: incomplete
+Estimate basis: selected-interface guest TX; private/duplicate paths may be included; overlapping UTC-hour estimate, not a bill, excluding costs outside the model
+
+=== budget_month_cost/start ===
+🟠 <b>NodeRampart MEDIUM — Cycle estimated cost budget</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: budget_month_cost
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: Recorded estimated cost reached 80% of the configured cost budget.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: configured threshold reached
+Recorded period label: 2026-07
+Period start: 2026-06-30 20:45:00 Asia/Kathmandu (UTC+05:45)
+Period end (exclusive): 2026-07-31 20:45:00 Asia/Kathmandu (UTC+05:45)
+Observed guest TX: 80000000000 bytes
+Estimated cost: 80 USD
+Cost budget: 100 USD
+Threshold milestone: 80%
+Coverage: incomplete
+Estimate basis: selected-interface guest TX; private/duplicate paths may be included; overlapping UTC-hour estimate, not a bill, excluding costs outside the model
+
+=== budget_month_cost/update ===
+🟠 <b>NodeRampart MEDIUM — Cycle estimated cost budget</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: update
+Event type code: budget_month_cost
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: Recorded estimated cost reached 80% of the configured cost budget.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: configured threshold reached
+Recorded period label: 2026-07
+Period start: 2026-06-30 20:45:00 Asia/Kathmandu (UTC+05:45)
+Period end (exclusive): 2026-07-31 20:45:00 Asia/Kathmandu (UTC+05:45)
+Observed guest TX: 80000000000 bytes
+Estimated cost: 80 USD
+Cost budget: 100 USD
+Threshold milestone: 80%
+Coverage: incomplete
+Estimate basis: selected-interface guest TX; private/duplicate paths may be included; overlapping UTC-hour estimate, not a bill, excluding costs outside the model
+
+=== health_geoip_update/start ===
+🔴 <b>NodeRampart HIGH — GeoIP update health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: health_geoip_update
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: The recorded component health condition requires attention.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component unavailable
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== health_geoip_update/recovery ===
+🔴 <b>NodeRampart HIGH — GeoIP update health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: recovery
+Event type code: health_geoip_update
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: A component health recovery was recorded.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component reported healthy
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== health_interface_counter/start ===
+🔴 <b>NodeRampart HIGH — Interface counter health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: health_interface_counter
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: The recorded component health condition requires attention.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component unavailable
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== health_interface_counter/recovery ===
+🔴 <b>NodeRampart HIGH — Interface counter health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: recovery
+Event type code: health_interface_counter
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: A component health recovery was recorded.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component reported healthy
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== health_sensor/start ===
+🔴 <b>NodeRampart HIGH — Sensor health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: health_sensor
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: The recorded component health condition requires attention.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component unavailable
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== health_sensor/recovery ===
+🔴 <b>NodeRampart HIGH — Sensor health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: recovery
+Event type code: health_sensor
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: A component health recovery was recorded.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component reported healthy
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== health_ssh_journal/start ===
+🔴 <b>NodeRampart HIGH — SSH journal health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: health_ssh_journal
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: The recorded component health condition requires attention.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component unavailable
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== health_ssh_journal/recovery ===
+🔴 <b>NodeRampart HIGH — SSH journal health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: recovery
+Event type code: health_ssh_journal
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: A component health recovery was recorded.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component reported healthy
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== health_storage/start ===
+🔴 <b>NodeRampart HIGH — Storage health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: health_storage
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: The recorded component health condition requires attention.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component unavailable
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== health_storage/recovery ===
+🔴 <b>NodeRampart HIGH — Storage health</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: recovery
+Event type code: health_storage
+Event ID: evt_fixture
+Incident: inc_fixture
+Evidence: A component health recovery was recorded.
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded context: recorded fields complete; not proof of complete coverage
+Reason: component reported healthy
+Condition since: 2026-07-15 08:50:06 Asia/Kathmandu (UTC+05:45)
+Health observation scope: recorded component health; does not guarantee complete collection or notification delivery
+
+=== icmp_flood/start ===
+🔴 <b>NodeRampart HIGH — ICMP rate alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: icmp_flood
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Observed rate 125.125 packets/s; configured threshold 100.001 packets/s.
+Recorded integer rate (rounded down): 125
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 packets/s
+Recorded coverage complete: no
+Actual sample interval: 60001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== icmp_flood/update ===
+🔴 <b>NodeRampart HIGH — ICMP rate alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: update
+Event type code: icmp_flood
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Observed rate 125.125 packets/s; configured threshold 100.001 packets/s.
+Recorded integer rate (rounded down): 125
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 packets/s
+Recorded coverage complete: no
+Actual sample interval: 60001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== icmp_flood/recovery ===
+🔴 <b>NodeRampart HIGH — ICMP rate alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: recovery
+Event type code: icmp_flood
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Recorded recovery: rate 12.125 packets/s; configured threshold 100.001 packets/s.
+Recorded integer rate (rounded down): 12
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 packets/s
+Recorded coverage complete: yes
+Actual sample interval: 60001 milliseconds
+Incident duration: 123001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== port_scan/start ===
+🔴 <b>NodeRampart HIGH — Port scan observation</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: port_scan
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: At least 8 distinct local ports were probed.
+Count: 8
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Recorded coverage complete: no
+Observed scan duration: 59001 milliseconds
+Observed packets: 20
+Unique-port threshold: 8
+Configured scan window: 60 seconds
+Probe basis: inbound SYN or unsolicited UDP
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== ssh_brute_force/start ===
+🔴 <b>NodeRampart HIGH — SSH authentication failures</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: ssh_brute_force
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: 8 SSH authentication failures were recorded in 60 seconds.
+Count: 8
+SSH user: 测试&lt;用户&gt;
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Authentication method: public key
+Count basis: OpenSSH final failure records; auxiliary logs are not counted twice
+Detection window: 60 seconds
+Invalid user: yes
+Detection window complete: no
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== ssh_login_success/observed ===
+🔴 <b>NodeRampart HIGH — SSH login success</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: observed
+Event type code: ssh_login_success
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: A successful SSH authentication was observed.
+Count: 1
+SSH user: 测试&lt;用户&gt;
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Authentication method: public key
+Count basis: OpenSSH final failure records; auxiliary logs are not counted twice
+Preceding source failures: 3
+Detection window: 60 seconds
+Preceding failure evidence complete: no
+SSH history: bounded historical hint available; not an intrusion finding
+History basis: successes retained by this process over 7 days; cold starts/privacy changes/pruning can limit history
+Source history hint: first observation of this shared prefix; a prefix is not an exact identity
+Time history hint: the current local hour was not seen in retained history; only a departure from known history
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== syn_flood/start ===
+🔴 <b>NodeRampart HIGH — SYN rate alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: syn_flood
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Observed rate 125.125 packets/s; configured threshold 100.001 packets/s.
+Recorded integer rate (rounded down): 125
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 packets/s
+Recorded coverage complete: no
+Actual sample interval: 60001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== syn_flood/update ===
+🔴 <b>NodeRampart HIGH — SYN rate alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: update
+Event type code: syn_flood
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Observed rate 125.125 packets/s; configured threshold 100.001 packets/s.
+Recorded integer rate (rounded down): 125
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 packets/s
+Recorded coverage complete: no
+Actual sample interval: 60001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== syn_flood/recovery ===
+🔴 <b>NodeRampart HIGH — SYN rate alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: recovery
+Event type code: syn_flood
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Recorded recovery: rate 12.125 packets/s; configured threshold 100.001 packets/s.
+Recorded integer rate (rounded down): 12
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 packets/s
+Recorded coverage complete: yes
+Actual sample interval: 60001 milliseconds
+Incident duration: 123001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== udp_flood/start ===
+🔴 <b>NodeRampart HIGH — UDP rate alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: start
+Event type code: udp_flood
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Observed rate 125.125 packets/s; configured threshold 100.001 packets/s.
+Recorded integer rate (rounded down): 125
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 packets/s
+Recorded coverage complete: no
+Actual sample interval: 60001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== udp_flood/update ===
+🔴 <b>NodeRampart HIGH — UDP rate alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: update
+Event type code: udp_flood
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Observed rate 125.125 packets/s; configured threshold 100.001 packets/s.
+Recorded integer rate (rounded down): 125
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 packets/s
+Recorded coverage complete: no
+Actual sample interval: 60001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding
+
+=== udp_flood/recovery ===
+🔴 <b>NodeRampart HIGH — UDP rate alert</b>
+Host: 节点 &lt;A&amp;B&gt;
+Time: 2026-07-15 09:50:06 Asia/Kathmandu (UTC+05:45)
+Phase: recovery
+Event type code: udp_flood
+Event ID: evt_fixture
+Incident: inc_fixture
+Source: 2001:db8:1234::/48
+Evidence: Recorded recovery: rate 12.125 packets/s; configured threshold 100.001 packets/s.
+Recorded integer rate (rounded down): 12
+Target (recorded value): tcp/443
+Action: observed only; no automatic blocking
+Interface (recorded name): eth0
+Configured rate threshold: 100.001 packets/s
+Recorded coverage complete: yes
+Actual sample interval: 60001 milliseconds
+Incident duration: 123001 milliseconds
+Top retained source packets: 500
+Top retained source bytes: 60000
+Source scope: top source among retained flows; not a complete source census
+Country (GeoIP estimate): Japan
+Region (database original name): 東京都
+City (database original name): 千代田区
+ASN: AS64500
+ASN organization (original name): Fixture &amp; Co
+ASN range: 2001:db8::/32
+GeoIP database age: 7 days
+GeoIP scope: database estimate; not a verified physical location or intrusion finding

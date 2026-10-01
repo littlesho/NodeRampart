@@ -222,6 +222,9 @@ func TestBackupAcceptsAndMigratesAllSupportedSchemaVersions(t *testing.T) {
 				t.Fatal(err)
 			}
 			var statements []string
+			if version < 12 {
+				statements = append(statements, `ALTER TABLE notification_outbox DROP COLUMN presentation_timezone`, `ALTER TABLE notification_outbox DROP COLUMN language`)
+			}
 			if version < 11 {
 				statements = append(statements, `DROP INDEX event_notifications_message_idx`, `ALTER TABLE event_notifications RENAME TO event_notifications_current`,
 					`CREATE TABLE event_notifications (event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,

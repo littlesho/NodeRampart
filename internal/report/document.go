@@ -7,8 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"html"
 	"io"
 	"strings"
 	"time"
@@ -114,29 +112,3 @@ func DecodeDocument(data json.RawMessage) (*Document, error) {
 }
 
 func ShortBody(body string) string { return joinWithin(strings.Split(body, "\n"), 4096) }
-
-// NotificationBody does not copy retained source identifiers into a new
-// delivery under today's privacy policy. Full detail stays in the local archive.
-func NotificationBody(snapshot store.ReportSnapshot) (string, error) {
-	lines := []string{"🛡 <b>NodeRampart — daily report " + snapshot.Date + "</b>", "Local archive: " + snapshot.Date}
-	if len(snapshot.Document) == 0 {
-		return ShortBody(strings.Join(append(lines, "Legacy original full content unavailable; open the preserved local report."), "\n")), nil
-	}
-	doc, err := DecodeDocument(snapshot.Document)
-	if err != nil {
-		return "", err
-	}
-	var events, auth uint64
-	for _, item := range doc.Summary.Events {
-		events += item.Count
-	}
-	for _, item := range doc.Summary.Auth {
-		auth += item.Count
-	}
-	lines = append(lines, "Host: "+html.EscapeString(doc.Hostname), fmt.Sprintf("Period: %s — %s", doc.PeriodStart.Format(time.RFC3339), doc.PeriodEnd.Format(time.RFC3339)), fmt.Sprintf("Interface RX %s / TX %s", formatBytes(doc.Summary.Interface.RXBytes), formatBytes(doc.Summary.Interface.TXBytes)), fmt.Sprintf("Sensor batches: %d; kernel drops: %d; IPC loss estimate: %d batches", doc.Summary.Batches, doc.Summary.KernelDrops, doc.Summary.IPCDroppedBatches), "Coverage can be partial or unknown; inspect the full local archive. Source identifiers are omitted from this delivery.")
-	lines = append(lines, fmt.Sprintf("Retained security events: %d; SSH observations: %d", events, auth))
-	if doc.Billing != nil {
-		lines = append(lines, fmt.Sprintf("Cycle guest TX estimate: %.2f %s; not a provider bill.", doc.Billing.Estimate.Cost, doc.Billing.Estimate.Currency))
-	}
-	return ShortBody(strings.Join(lines, "\n")), nil
-}

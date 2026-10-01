@@ -28,6 +28,22 @@ evidence. `scripts/build-release.sh` requires a clean checkout and an exact full
 HEAD declaration; it cannot turn an uncommitted local candidate into official
 release provenance. No command here commits, pushes or publishes a release.
 
+The timezone selector directory in `internal/timezones/names.txt` is copied
+from the Go 1.26.8 `lib/time/zoneinfo.zip` name/link list (IANA tzdata 2025c,
+598 names; the data are public domain, see [third-party notices](../THIRD_PARTY_NOTICES.md)). Its header retains the source checksum and update instructions.
+Rules still use `time.LoadLocation` and standard `time/tzdata` fallback; the
+directory supplies names, not another rule engine. Review a supported Go ZIP,
+regenerate sorted entry names, keep `Local` separate, and run the timezone,
+config and console tests before updating. Common city names and Chinese region
+labels are small reviewed tables. `x/text v0.21.0`, already in the dependency
+graph, is now direct only for offline CLDR country names in Telegram text;
+there is no new dependency or online translation.
+
+时区目录来自上述 Go ZIP 的完整名称/别名列表，来源摘要和更新方法保存在文件头。
+更新时审阅支持的 Go ZIP、排序名称、单独保留 `Local`，运行时区/配置/界面回归；
+地区规则仍使用标准库及内嵌回退，不另建规则系统。中文常用城市/地域是小型审阅表，
+国家中文名使用既有固定 `x/text` 的离线 CLDR；不联网翻译、不升级依赖。
+
 For a dirty local package, use the ordinary paths:
 
 ```bash
@@ -55,15 +71,16 @@ and passes them to all package, SBOM, and collection jobs. Locally verify the
 helper's output before building; the local command does not create a tag.
 
 Ordinary local DEBs retain the filename
-`noderampart_0.4.0~alpha.6_amd64.deb`; the official entry renames its own output to
-`noderampart_0.4.0-alpha.6_amd64.deb`. Both have native Debian version
-`0.4.0~alpha.6`. Portable public names prevent GitHub's asset-name replacement
-from changing checksum references. The alpha.6 native RPM version is
-`0.4.0-0.alpha.7%{?dist}`; suffixes `.1` through `.6` retain the public
-DEB/RPM ordering rules. `VERSION` selects the alpha.6 candidate; local
+`noderampart_0.4.0~alpha.7_amd64.deb`; the official entry renames its own output to
+`noderampart_0.4.0-alpha.7_amd64.deb`. Both have native Debian version
+`0.4.0~alpha.7`. Portable public names prevent GitHub's asset-name replacement
+from changing checksum references. The alpha.7 native RPM version is
+`0.4.0-0.alpha.8%{?dist}`; suffixes `.1` through `.7` retain the public
+DEB/RPM ordering rules. `VERSION` selects the unreleased alpha.7 candidate; local
 builds do not publish it. The bootstrap default remains published alpha.5,
-with alpha.6 available only through an explicit fixed-version opt-in after
-its assets become public. SBOMs use each package's native version, inspect its final bytes,
+with published alpha.6 available through an explicit fixed-version opt-in.
+Alpha.7 is a candidate without a release/tag; its CI packages are experimental
+preacceptance artifacts, not release-provenance assets. SBOMs use each package's native version, inspect its final bytes,
 and bind the three program digests to those bytes. `--collect` requires the
 complete package/SBOM/buildinfo set; the separate hosted draft step checks the
 actual uploaded names and states after upload. Local checks do not establish
@@ -76,7 +93,7 @@ the downloaded bytes, embedded version/commit and workflow source SHA are
 verified. This subset is not the complete release set. The release workflow
 builds all six runtime packages from its own verified commit and does not
 silently reuse artifacts from another CI run. Record new acceptance against
-the alpha.6 source and actual package hashes; earlier dirty `Commit=unknown`
+the exact candidate source and actual package hashes; earlier dirty `Commit=unknown`
 packages and VM evidence do not certify this candidate.
 
 The ordinary test suite does not require root or packet-capture privileges.
@@ -160,7 +177,7 @@ transition with the checked-out script, then install the reviewed package:
 
 ```bash
 sudo ./scripts/source-to-package.sh --prepare
-sudo apt install ./dist/noderampart_0.4.0~alpha.6_amd64.deb
+sudo apt install ./dist/noderampart_0.4.0~alpha.7_amd64.deb
 sudo /usr/bin/noderampart doctor
 sudo /usr/bin/noderampart status
 ```
@@ -256,3 +273,9 @@ Use an isolated management network and a separate no-NAT traffic network. High-r
 5. DEB/RPM lifecycle matrix and systemd sandbox tests pass.
 6. Changelog, compatibility matrix, known limitations, checksums, SBOM, and provenance are attached.
 7. No release is marked stable until the privileged VM matrix and soak exit criteria are met.
+
+当前 `VERSION` 为未发布 alpha.7 候选；DEB 原生版本 `0.4.0~alpha.7`，RPM
+`0.4.0-0.alpha.8%{?dist}`，排序高于 alpha.6。普通 CI 包用于隔离预验收，
+不具有正式 Release provenance。公开安装仍明确选择已发布 alpha.6。
+候选 schema 12 仅新增消息呈现元数据；配置/API 1、协议 v5 不变。回退需
+匹配旧数据库备份和旧配置/密钥，不能原地降 schema。
