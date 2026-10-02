@@ -11,6 +11,36 @@ The alpha.7 and earlier results below retain their historical scope.
 中文：alpha.8 已公开为非 latest 的预发布版本；公开不代表稳定或生产就绪。
 六平台实网/人工接收、原生 ARM64 与生产仍未验证，漏洞发现和扫描覆盖缺口继续保留。
 
+The limited [post-publication diagnostic increment](RELEASE_VERIFICATION.md#post-publication-diagnostic-increment-2026-10-02)
+identified a conditional sensor diagnostic precision defect in the unchanged
+alpha.8 source: a nanosecond receipt can compare later than the same fully
+committed microsecond watermark and yield `sensor_commit_unavailable` / strict
+exit2. Real pending or missing commits can produce the same reason, so unknown
+must not be ignored or called healthy. A separately authorized product fix is
+needed; none is included here. The original full Debian doctor/health JSON was
+in temporary guest storage and was absent after the new normal start; retained
+check/exit/digest and backup evidence does not establish its unique historical
+cause. Snapshot inspection also requires a safe standalone file with
+invoking-user/root ownership, separately from successful backup verification.
+
+中文：有限增量核验确认 alpha.8 有条件性的 sensor 诊断精度误判，需要独立产品
+修复；真实未提交状态也可能产生相同 reason，不能忽略 unknown 或改称健康。
+原 Debian 完整诊断 JSON 的临时目录已不存在，剩余摘要不能证明原时点唯一成因。
+快照检查的安全归属契约和 backup verify 也须分开；详见上述增量记录。
+
+Fedora44's incremental public Release-script download passed with the frozen
+bytes, but the unmodified installer's public `SHA256SUMS` request remained
+BLOCKED_NETWORK. RPM download, installation, Chinese TUI and runtime checks
+were NOT RUN in this increment. Three new compliant Debian snapshot checks
+were valid; all six new live strict results still returned unknown/exit2 and
+reproduced the precision defect. Both guests ended STOPPED with task resources
+released. These separate results do not establish complete public installation
+coverage or a healthy strict diagnosis.
+
+中文：Fedora44 原公开脚本下载已通过，但公开校验文件获取仍受网络阻塞，后续
+安装/TUI/运行未执行；Debian三次合规副本 valid，六份实时 strict 仍 unknown/2。
+两台最终 STOPPED 并释放资源，不将这些结果解释为全安装矩阵或健康诊断通过。
+
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
 

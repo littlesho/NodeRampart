@@ -823,3 +823,228 @@ branch rules and repository/parent rulesets were empty. **本次按流程检查�
 未强制执行。** Visible workflows/webhooks showed no release-triggered production
 deployment; immutable-release settings were disabled and were not changed.
 Normal documentation review/CI/PR is separate from release-byte verification.
+
+### Post-publication diagnostic increment (2026-10-02)
+
+This increment diagnoses the unchanged published source
+`77ae069b8f00651106b9621a24047b0ad7b4e88d` and its actual release programs.
+Later main documentation commits are not replacement build inputs. It does
+not rebuild, replace or re-sign assets, edit the Release, move the tag or
+change network, product or diagnostic policies.
+
+The original Debian strict result remains **unknown / exit2**, with
+`snapshot_foreign_keys_unavailable` and `sensor_commit_unavailable`. Its full
+doctor/health JSON had been kept in the guest's temporary filesystem. On the
+new normal start that temporary directory was absent; the retained host
+check list, exit codes, original raw SHA256 values and independent persistent
+backup/configuration remain available. A historical raw digest cannot recreate
+missing bytes. This limits reconstruction of the original same-call status,
+snapshot metadata and precise cause; a newly installed process is a separate
+observation, never a replay of that original process.
+
+The snapshot option checks an explicit standalone forensic database, separately
+from live daemon foreign keys and `backup verify`. In the frozen implementation,
+the file must be ordinary, owned by root or the invoking effective UID, have one
+link, have no group/world write permission or SQLite sidecars, and have a
+supported schema; parents must contain no symlinks. The CLI gives this check
+its own two-second deadline. Root's ability to read a service-owned backup does
+not satisfy the inspector's ownership contract. Use a supported consistent
+backup and a new separate, stable, invoking-user/root-owned private copy;
+preserve the original and its sidecars rather than changing its ownership,
+deleting a journal or copying a writing live database. Ordinary SQL integrity/FK
+success cannot substitute for those product file/schema/deadline conditions.
+See the [snapshot contract](STORAGE-BUDGET.md#backups-and-restore).
+
+Independent frozen-source analysis identified a **diagnostic precision defect**
+under explicit same-committed-batch conditions. The receipt map retains the
+batch's nanoseconds; the store persists its watermark through `UnixMicro` and
+reads it back with microsecond precision. `Diagnose` compares the unrounded
+receipt using `After`. For example, a receipt ending `.123456789Z` is later
+than the same completed batch's stored `.123456Z` by 789ns and can produce
+`sensor_commit_unavailable` / strict exit2 despite that complete commit.
+An independent Go time/JSON vector exercised all 1,000 microsecond remainders:
+999 nonzero remainders compared later; the aligned case did not. This was a
+standard-library vector plus source-path analysis, not a rebuilt product or
+historical guest replay.
+
+This does not classify every unavailable commit as a false alarm. Receipt
+capture and durable-watermark queries occur at different times; genuinely
+pending writes, missing/legacy watermarks, incomplete admission and storage
+errors remain distinct. Timestamp proximity without sufficient batch identity
+does not establish a completed session/sequence. Later progressing watermarks
+do not change an earlier unknown result. A separate product repair needs to
+align precision or retain appropriate receipt identity, with regressions for
+same committed batches, real newer pending work, missing/partial commits and
+cross-session state. No such fix is included in this documentation increment.
+
+中文：本次只诊断固定发行源码和实际程序，不重建、换包、补签或修改 Release。
+原 Debian unknown/退出码2 及两个 reason_code 保留。原完整 doctor/health JSON
+位于 guest 临时文件系统，本次正常启动后目录不存在；仍有脱敏检查表、退出码、
+原摘要和持久备份/配置。摘要不能重建原件，新进程也不能冒充原进程复测，因此
+原时点的唯一成因仍有证据缺口。
+
+`--foreign-keys-snapshot` 是独立取证副本接口，和 live 外键及 backup verify
+不同。文件必须归调用者或 root、普通文件、单链接、非组/全员可写、无 SQLite
+sidecar、schema 支持且父路径无符号链接；CLI 内部期限为两秒。root 能读取
+daemon 所有的备份，不代表满足该归属契约。使用受支持的一致备份创建新的安全
+独立副本，保留原件和 sidecar，不修改原归属、删除日志或复制写入中的 live DB。
+
+已确认一个条件性的产品诊断精度问题：同一已提交批次的纳秒 receipt 与微秒
+watermark 作严格 After 比较，可误报 sensor_commit_unavailable/退出码2。
+受控时间向量支持该类别，不证明原记录的唯一原因。真实 pending、缺失/不完整
+提交和存储错误仍须区分；后续推进或某次健康不改判历史，也不证明持续健康。
+修复需独立的产品任务及相应回归，本阶段没有改代码或关闭检查。
+
+#### Debian13: one new same-release process, six fixed samples
+
+Because the original raw JSON was unavailable and the product had already been
+removed, the bounded follow-up installed the previously accepted actual public
+DEB (`a529b2bfa4d9842eaa98af86fc8d5fc5c49d18f8395481b6c0af5aef9a2c8328`).
+This is **NEW_PROCESS_SAME_RELEASE**, not another public-bootstrap test or a
+direct retest of the original process. CLI/daemon commit and raw BUILD_DATE,
+all three installed program hashes, unchanged default configuration and normal
+service identity were checked; no manually trusted UID, auth/sensor setting
+change or real notification target was used.
+
+The plan fixed three rounds of two commands: basic `doctor --strict`, followed
+by `doctor --strict --foreign-keys-snapshot` on a new safe root-owned private
+copy. Only the first four results' actual `auth_window_warmup` caused one
+bounded continuation to the same process's true ready-after plus two batch
+intervals. All six stdout JSONs, stderr, actual process exits, embedded daemon
+states and before/after process/input metadata were retained in persistent
+private evidence. No seventh sample or restart-to-green was taken.
+
+| Sample / mode | Started UTC, 2026-10-02 | Actual strict exit | All abnormal check reasons | Receipt minus selected watermark | Durable sequence | Snapshot check |
+| --- | --- | ---: | --- | ---: | ---: | --- |
+| 1 / basic live | 08:18:47.886208 | 2 | `auth_window_warmup`, `sensor_commit_unavailable` | 167ns | 158 | Not requested |
+| 2 / forensic snapshot | 08:18:47.917107 | 2 | `auth_window_warmup`, `sensor_commit_unavailable` | 167ns | 158 | valid |
+| 3 / basic live | 08:18:50.887389 | 2 | `auth_window_warmup`, `sensor_commit_unavailable` | 768ns | 161 | Not requested |
+| 4 / forensic snapshot | 08:18:50.919345 | 2 | `auth_window_warmup`, `sensor_commit_unavailable` | 768ns | 161 | valid |
+| 5 / basic live | 08:21:11.769490 | 2 | `sensor_commit_unavailable` | 452ns | 302 | Not requested |
+| 6 / forensic snapshot | 08:21:11.840923 | 2 | `sensor_commit_unavailable` | 452ns | 302 | valid |
+
+The 144-second sampling run stayed within its 330-second bound. Process/session
+identity was unchanged; each embedded observation had a complete watermark,
+committed events and notification decisions, no unreadable watermark flag or
+pending derived events, and basic readiness. Watermarks advanced from 158 to
+302; this supports the sampled interval's progress, not historical or sustained
+health. The submicrosecond deltas reproduced the precision defect in this new
+same-release scene. Restart-pending coverage uncertainty and SSH journal
+backfill-limit gaps were also retained, rather than treated as complete history.
+No other abnormal strict check was hidden by unknown's precedence over degraded.
+
+The new online backup was verified through the supported backup interface.
+Its separate root-owned 0600, single-link, sidecar-free copy had identical
+bytes and a safe private parent; all three forensic checks were valid within
+the unchanged two-second product deadline. The service-owned source retained
+its owner and bytes. Direct root inspection of that service-owned file was
+**NOT RUN** as an extra doctor call: its observed nonroot owner does not pass
+the documented root/current-eUID ownership predicate, but that is a source/
+metadata prediction, not a fabricated seventh result. The original historical
+snapshot metadata was not recoverable, so its unique rejection cause remains
+unestablished. Neither these valid copies nor disappearing warmup rewrite the
+original unknown or make the six new strict results healthy.
+
+The private harness initially assumed the duration spelling `5m0s`; the actual
+unchanged default was `5m`. That local assertion failure and original script
+were preserved, equivalent duration/default bytes verified, and only the
+private assumption corrected before any doctor sample. The installation was
+not repeated and the same running process was retained.
+
+中文：旧产品已卸载、原 raw 缺失，本次用已验收的真实发行 DEB 重建一个新进程，
+不是原进程复测或新公开安装测试。预先固定三轮 basic/合规副本各一份，共六份，
+仅根据实际 warmup 和同进程 ready-after 作一次有界续样；没有第七份或重启凑绿。
+六份全部退出2，前四份有两个 reason，后两份仅有 sensor_commit_unavailable；
+微小时间差依次为167/167/768/768/452/452ns，同份水位完整且从158推进到302。
+这是新场景的精度缺陷复现，不等于原历史唯一原因或持续健康。三份安全 root
+独立副本检查 valid，原 service 备份未改归属或字节；没有额外执行 root 对
+service 文件的拒绝测试。restart/SSH backfill 覆盖缺口、全部异常、私有时长
+文本断言失败及修正均保留，不用副本通过或 warmup 消失改判 strict healthy。
+
+#### Fedora44: public script retrieved, checksum stage still blocked
+
+The original failed fetch used the tag's `raw.githubusercontent.com` script
+path, before any installer execution. Its outer 120-second timeout returned
+124; the retained stderr reported curl error 28 after 90 seconds with zero
+body bytes. The final curl process exit and whether its configured retry had
+started are unknown. Those records do not identify DNS, TCP, TLS, IPv6 or CDN
+as the cause, and the original failure remains retained.
+
+The incremental check used the canonical public Release asset URL instead.
+The guest had no inherited proxy configuration; no proxy, network or trust
+settings were added. One anonymous body-download round, with two HTTPS hops
+(GitHub 302 then release-assets 200), returned all 10,329 bytes in 1.184 seconds.
+Both curl processes exited 0, TLS verification succeeded, and measured internal
+retries were zero. The script's SHA256 was
+`f9aee566dc67eba96f2391b333a6d9121c4640be6d52d38860e2da6df240c799`,
+matching the frozen source and independently verified release inventory.
+No GitHub token, cookie, netrc or automatic client configuration participated.
+This success does not prove that the original raw-host path recovered.
+
+The unmodified script was then executed **once** with
+`--version v0.4.0-alpha.8 --no-setup`. It attempted the public `SHA256SUMS`
+on its first GitHub hop, reported curl error 28, and produced no HTTP response
+header. The private bounded observer terminated only its identified curl
+request after that error, preventing unmeasured further retries; it did not
+signal the installer shell or a package-manager transaction. The shell exited
+1. The script configures two retries (at most three transfers per curl call),
+but the actual internal retry count and final curl process exit remain
+**UNKNOWN**. This is **BLOCKED_NETWORK** at the checksum-download stage,
+not proof of a package or product defect. The observed download work totalled
+16.237 seconds within the predeclared 240-second bound; the installer was not
+replayed and no alternate network mode was introduced.
+
+No checksum body or RPM was obtained, DNF did not start, and installed program
+identity, service/schema/UID checks, Chinese PTY cancellation and live diagnosis
+remain **NOT RUN** for this public-bootstrap increment. Previously accepted
+hosted RPM behavior is separate and cannot fill this public-download gap.
+Own installer processes were absent, product paths remained absent, and the
+normal approved soft stop plus a separate status read confirmed **STOPPED**.
+Further installation needs the guest's existing authorized HTTPS route to
+complete the public checksum/package requests; adding a proxy or changing
+network/trust policy would require separate authorization.
+
+中文：原失败在 raw-tag 脚本获取阶段；外层 timeout 退出124 不等于 curl 最终
+退出码，原 stderr 只证明错误28、90秒和零字节，具体网络层及重试进展未知。
+本次从公开 Release 的 canonical 地址匿名下载原脚本成功：一轮两跳，10,329字节、
+SHA一致、TLS校验成功、两次 curl 均退出0且观测重试0；没有新增代理或网络配置。
+原脚本仅执行一次，但下一阶段 SHA256SUMS 的首个 GitHub 请求报错误28且无
+HTTP响应头；观察器仅终止自己的该 curl，shell退出1，实际内部重试数与 curl
+最终退出仍未知。预算240秒内实际约16.237秒，保留 BLOCKED_NETWORK，不重试
+安装、不注入本地包。RPM、依赖安装、中文PTY及服务/身份/schema/运行均 NOT RUN。
+没有遗留安装进程或产品路径，正常软停后独立确认 STOPPED 并释放自有资源。
+
+#### Increment conclusions and remaining scope
+
+| Separate result | Actual conclusion |
+| --- | --- |
+| Published release / original 22-asset identity | REUSED with current read-only fixed-ID/tag/asset checks; no new downloads of the complete set or new signatures |
+| Fedora44 public bootstrap | Script download PASS; public checksum stage BLOCKED_NETWORK; RPM, installation, TUI and runtime NOT RUN |
+| Debian13 forensic snapshot | Original unique rejection cause UNESTABLISHED; three new compliant standalone snapshot checks valid, without rewriting the original unknown |
+| Debian13 live doctor / sensor | Six new strict results unknown/exit2; same-release precision defect reproduced with complete advancing commits, not a health PASS or a repair |
+
+The Debian test objects were removed through the normal product management
+and package-removal paths; original persistent evidence and new consistent
+backup/sample evidence were retained separately. Both guests were normally
+soft-stopped, each STOPPED state independently read, and both task ownership
+claims released. Private parser/assertion failures and their corrections were
+preserved without replaying completed installs, service actions or stops.
+No Release PATCH, tag operation, release rebuild, attestation, infrastructure
+change or production action occurred in this increment. README installation
+examples were not promoted and bootstrap's no-argument default remains alpha.5.
+
+The six real platform APIs/human receipts, native ARM64 and production remain
+NOT RUN. Existing x/text module findings, stripped-symbol and Fedora toolchain
+scan coverage gaps and tool advisories retain their previous scope; no new
+scan or risk acceptance is claimed. Teams acceptance, direct-only native
+notifications, matching-backup rollback and non-atomic purge boundaries remain.
+The diagnostic defect requires a separately authorized product repair; the
+Fedora network gap requires a working authorized route or a separate network
+decision. Neither blocks preserving the already published original release,
+nor justifies a claim of complete installation coverage or production readiness.
+
+中文：发行字节只读核对/复用、Fedora公开安装阻塞、Debian合规副本 valid、
+Debian实时诊断精度缺陷是四项独立结论，不能合并成“全部通过”。两台均清理自有
+对象、保留证据、正常软停并独立确认 STOPPED/释放资源。未修改发行对象、产品、
+网络、权限、治理、安装默认或生产；真实外发、原生 ARM64、安全扫描缺口等继续
+披露。产品修复和新网络权限属于另行授权任务，本次有限增量到此收口。
