@@ -8,6 +8,7 @@ No Go checks, Git writes, package installs, downloads or host actions run here.
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -44,6 +45,20 @@ if name == 'python3' and args[:1] == ['-']:
 if name + ":" + " ".join(args) == os.environ.get("VALIDATION_TEST_FAIL"):
     sys.exit(23)
 '''
+
+
+def workflow_jobs(source):
+    """Read this repository's two-space job headers, without a YAML dependency."""
+    section = source.split("\njobs:\n", 1)[1]
+    headers = list(re.finditer(r"^  ([a-z][a-z0-9_-]*):\s*$", section, re.MULTILINE))
+    jobs = {}
+    for index, header in enumerate(headers):
+        name = header.group(1)
+        if name in jobs:
+            raise ValueError("duplicate workflow job")
+        end = headers[index + 1].start() if index + 1 < len(headers) else len(section)
+        jobs[name] = section[header.end():end]
+    return jobs
 
 
 class ValidationTests(unittest.TestCase):
@@ -83,11 +98,20 @@ class ValidationTests(unittest.TestCase):
         result = self.run_script("validate.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
         commands = self.commands()
-        self.assertIn(["go", ["test", "-count=1", "./..."], None], commands)
-        self.assertIn(["go", ["test", "-race", "-count=1", "-p=2", "./..."], "1"], commands)
-        self.assertIn(["go", ["test", "-count=1", "-coverprofile=coverage.out", "./..."], None], commands)
-        self.assertIn(["go", ["build", "./cmd/..."], "0"], commands)
-        self.assertEqual(commands[-1], ["go", ["run", "golang.org/x/vuln/cmd/govulncheck@v1.7.0", "./..."], None])
+        self.assertEqual(commands, [
+            ["make", ["fmt-check"], None],
+            ["go", ["mod", "verify"], None],
+            ["go", ["vet", "./..."], None],
+            ["go", ["test", "-count=1", "./..."], None],
+            ["go", ["test", "-race", "-count=1", "-p=2", "-timeout=15m", "./..."], "1"],
+            ["go", ["test", "-count=1", "-coverprofile=coverage.out", "./..."], None],
+            ["go", ["build", "./cmd/..."], "0"],
+            *[["python3", ["scripts/" + name], None] for name in (
+                "test-packaging.py", "test-bootstrap.py", "test-release-sbom.py",
+                "test-validation.py", "test-lab-check.py")],
+            ["python3", ["scripts/test-netns.py", "--self-test"], None],
+            ["go", ["run", "golang.org/x/vuln/cmd/govulncheck@v1.7.0", "./..."], None],
+        ])
         self.log.unlink()
         self.env["VALIDATION_TEST_FAIL"] = "go:vet ./..."
         result = self.run_script("validate.sh")
@@ -95,18 +119,67 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(any(row[0] == "go" and row[1][:1] == ["test"] for row in self.commands()))
 
     def test_bounded_race_checks_all_packages_and_propagates_failure(self):
-        self.env["VALIDATION_TEST_FAIL"] = "go:test -race -count=1 -p=2 ./..."
+        self.env["VALIDATION_TEST_FAIL"] = "go:test -race -count=1 -p=2 -timeout=15m ./..."
         result = self.run_script("validate.sh")
         self.assertEqual(result.returncode, 23)
         commands = self.commands()
         race = [row for row in commands if row[0] == "go" and "-race" in row[1]]
-        self.assertEqual(race, [["go", ["test", "-race", "-count=1", "-p=2", "./..."], "1"]])
+        self.assertEqual(race, [["go", ["test", "-race", "-count=1", "-p=2", "-timeout=15m", "./..."], "1"]])
         self.assertEqual(commands[-1], race[0])
-        self.assertFalse(any("-short" in row[1] or "-run" in row[1] for row in commands))
+        self.assertFalse(any(flag in row[1] for row in commands for flag in ("-short", "-run", "-skip")))
         required = (REPO / "scripts/validate.sh").read_text()
-        self.assertNotIn("GOMAXPROCS=", required)
-        self.assertNotIn("-timeout", required)
-        self.assertIn("CGO_ENABLED=1 go test -race -p=2 ./...", (REPO / "Makefile").read_text())
+        for override in ("GOMAXPROCS=", "GORACE=", "GOFLAGS="):
+            self.assertNotIn(override, required)
+        self.assertEqual(required.count("-timeout"), 1)
+        self.assertEqual(required.count("-timeout=15m"), 1)
+
+    def test_make_race_uses_the_same_fixed_package_budget(self):
+        make = shutil.which("make")
+        self.assertIsNotNone(make, "make is required by the validation entry")
+        result = subprocess.run(
+            [make, "-f", str(REPO / "Makefile"), "test-race",
+             "VERSION=0.4.0-alpha.9", "COMMIT=synthetic", "BUILD_DATE=synthetic"],
+            cwd=self.project, env=self.env, capture_output=True, text=True,
+            check=False, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.commands(), [
+            ["go", ["test", "-race", "-p=2", "-timeout=15m", "./..."], "1"]])
+        source = (REPO / "Makefile").read_text()
+        self.assertEqual(source.count("-timeout"), 1)
+        for override in ("GOMAXPROCS=", "GORACE=", "GOFLAGS="):
+            self.assertNotIn(override, source)
+
+    def test_fixed_budget_is_scoped_to_the_selected_workflow_jobs(self):
+        budgets = {
+            "ci.yml": {"safety": None, "test": 30, "build": 15,
+                       "deb-package": 15, "rpm-package": 25},
+            "release.yml": {"safety": None, "validate": 30, "deb": 20,
+                            "rpm": 30, "sbom": 20, "draft": 10},
+            "safety.yml": {"secrets": 5, "fuzz": 10},
+        }
+        for filename, expected in budgets.items():
+            with self.subTest(workflow=filename):
+                source = (REPO / ".github/workflows" / filename).read_text()
+                jobs = workflow_jobs(source)
+                self.assertEqual(set(jobs), set(expected))
+                all_timeouts = []
+                for name, minutes in expected.items():
+                    # Require the job-level indentation as well as the exact
+                    # value; duplicate, variable or added step budgets fail.
+                    lines = re.findall(r"^[ \t]*timeout-minutes:.*$", jobs[name], re.MULTILINE)
+                    wanted = [] if minutes is None else ["    timeout-minutes: " + str(minutes)]
+                    self.assertEqual(lines, wanted, name)
+                    all_timeouts.extend(lines)
+                self.assertEqual(re.findall(r"^[ \t]*timeout-minutes:.*$", source, re.MULTILINE), all_timeouts)
+
+    def test_workflow_budget_reader_distinguishes_jobs_from_steps(self):
+        source = "\njobs:\n  test:\n    timeout-minutes: 30\n    steps:\n      - run: true\n        timeout-minutes: 7\n  build:\n    timeout-minutes: 15\n"
+        jobs = workflow_jobs(source)
+        self.assertEqual(set(jobs), {"test", "build"})
+        self.assertEqual(re.findall(r"^    timeout-minutes:.*$", jobs["test"], re.MULTILINE),
+                         ["    timeout-minutes: 30"])
+        self.assertIn("        timeout-minutes: 7", jobs["test"])
+        self.assertNotIn("timeout-minutes: 15", jobs["test"])
 
     def test_hosted_validation_rejects_wrong_or_changed_source_before_checks(self):
         for condition in ("wrong", "tracked", "untracked"):

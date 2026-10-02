@@ -25,7 +25,36 @@ also reject a checkout that differs from the workflow's full commit.
 The race entry limits simultaneous package processes to two (`-p=2`) so
 independent SQLite-heavy tests do not all compete at once. It still checks
 every package in `./...`, preserves each package's goroutine concurrency and
-default test deadline, and does not set `GOMAXPROCS` or exclude tests.
+does not set `GOMAXPROCS`, `GORACE` or exclude tests. Both the shared entry and
+`make test-race` use a fixed `-timeout=15m`: this is the cumulative budget for
+each race test binary, not for each test function or the entire race command.
+Ordinary and coverage commands retain `-count=1` and their default 10-minute
+test-binary budget.
+
+PR #31's C5 CI reached the default cumulative Store race budget at 600.023s;
+the active test had run for 16s. The preceding main's Store race took 543.600s,
+and the expanded suite has 170 rather than 144 top-level Store tests. This
+evidence supports the authorized finite budget adjustment; it does not establish
+or repair a unique performance root cause, or prove that 900s will suffice.
+The CI `test` and release `validate` jobs each have a separate 30-minute budget
+for preparation and the complete shared entry, including coverage, builds,
+packaging regressions and scanning. Other jobs and steps keep their budgets;
+changing release validation does not trigger or authorize a release.
+
+Product request, retry, SQLite wait, cancellation and explicit test deadlines,
+including the MMDB descendant-exit assertions, are unchanged. A test that uses
+`testing.T.Deadline` or derives a context from the suite deadline would observe
+the later race deadline; this must not be described as an unchanged derived
+deadline. The current suite audit found no `testing.T.Deadline` calls. Tests
+with explicit child-process `-test.timeout` values keep those values.
+Go 1.26.8 also derives its output-drain wait and backup process watchdog from
+the package budget: these change from 60s/660s to 90s/990s for race, while the
+package alarm itself is 900s. After its backup cancellation, Go may wait up to
+another 90s; compilation and package scheduling also sit outside the package
+alarm. These Go-tool guards are distinct from the unchanged product deadlines
+and the outer job budget.
+The task-monitoring boundary is separate and remains unchanged: record PENDING
+and stop at that boundary, even when a 30-minute validation job is still running.
 
 Ordinary local builds/packages accept dirty workspaces and default their existing
 commit declaration to `unknown`. Keep source/artifact digests with local test
