@@ -8,6 +8,8 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
+> **v0.4.0-alpha.9：Unreleased 开发候选。** 新增 QQ Bot、LINE Push、Twilio SMS 和 WhatsApp Cloud 批准模板通知，默认关闭，正在候选验收。付费通知须记录同意、明确确认费用并设置持久有限额度。参见[官方账户渠道](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md)和[alpha.9 验收](docs/ALPHA9_ACCEPTANCE.md)。尚无 alpha.9 tag／Release，下列已发布固定安装示例保持不变。
+
 > **v0.4.0-alpha.8：已公开的非 latest alpha 预发布版本。** [固定发行](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8)新增六个原生渠道，全部默认关闭。参见[设置与平台权限](docs/NOTIFICATION_CHANNELS.zh-CN.md)、[隐私政策](docs/PRIVACY.md)和[用户协议](docs/USER_AGREEMENT.md)。六平台实网/人工接收、原生 ARM64 与生产仍为 **NOT RUN**；已知漏洞发现及扫描覆盖缺口继续披露。
 
 > **alpha.8 分发结果：** 22 项新匿名下载与已验收 hosted draft 同字节，并明确复用其 22 项 provenance / 六项 SPDX 验签结果。Debian 13 显式公开 bootstrap、分步中文设置取消和基础观察通过；strict doctor 仍为 **unknown / 退出码 2**。Fedora 44 公开 bootstrap 为 **BLOCKED_NETWORK**，下载超时且未安装，新设置/运行检查 **NOT RUN**。公开安装矩阵尚未闭环，下列固定安装示例继续保留 alpha.7；省略 `--version` 仍选择 alpha.5。详见[实际公开验收范围](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。

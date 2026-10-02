@@ -121,3 +121,27 @@ agreement; no platform certification is claimed. See [privacy](PRIVACY.md),
 每个可选渠道独立 fail closed。原生直连每次校验 DNS/实际地址，不重定向、不跳过
 TLS、不使用系统代理。固定摘要防提及/格式注入，显式成功判据拒绝缺字段。
 目标切换不能撤回在途请求，重试可能重复，Teams 只证明请求接受；许可不等于平台审批。
+
+## Alpha.9 paid / official account notification boundary
+
+Possible external acceptance followed by timeout, crash or ledger-write failure
+is a side effect, not a safe retry signal. Official intents precede HTTP. Only
+LINE's persisted first-request retry UUID can authorize recovery in its bounded
+window; other unresolved submissions remain `delivery_unknown`. Reserved charges
+are not refunded on ambiguity. Fixed-channel UTC budgets survive target/token
+rotation and clock rollback; they constrain this instance, not all account fees.
+Twilio polling reads only a durable Account/SID. Neither status lookup nor ordinary
+resume reopens POST. Opt-out evidence survives ordinary rotation; supported paid
+ledger restore requires explicit external reconciliation before new sends.
+
+The protected files now contain phone numbers, platform recipient/application
+IDs and account/token credentials. They are not CLI/config/log/metric labels.
+Masked previews and pseudonymized exports limit disclosure; raw platform errors
+are untrusted and never persisted. DNS and connected peers are checked on every
+new direct connection, strict TLS/HTTPS remains mandatory and environment proxies
+are excluded. Templates are bounded approved positional BODY mappings, with no
+free-text fallback. Subscription declarations are not platform approval or proof
+of consent; operators must actually maintain withdrawals and a support route.
+No inbound STOP or delivery callbacks are observed here. Already accepted or
+in-flight messages cannot be recalled locally. Existing vulnerability findings
+and stripped/Fedora scan coverage gaps remain; attestation does not remove them.

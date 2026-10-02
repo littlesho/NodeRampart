@@ -475,7 +475,7 @@ class PackagingTests(unittest.TestCase):
         directory.chmod(0o750)
         sources = ("scripts/uninstall.sh", "packaging/debian/postrm", "scripts/manage-remove.sh")
         paths = []
-        for channel in ("telegram", "privacy", "feishu", "wecom", "discord", "slack", "teams", "google_chat"):
+        for channel in ("telegram", "privacy", "feishu", "wecom", "discord", "slack", "teams", "google_chat", "qqbot", "line", "twilio_sms", "whatsapp_cloud"):
             path = directory / (channel + "-" + "A" * 26 + ".secret")
             self.write(path, "synthetic managed credential")
             path.chmod(0o600)
@@ -496,9 +496,14 @@ class PackagingTests(unittest.TestCase):
         for source in sources:
             self.assertNotEqual(self.run_purge_credential_guard(source).returncode, 0)
         linked.unlink()
-        target.write_text("x" * 8193)
-        for source in sources:
-            self.assertNotEqual(self.run_purge_credential_guard(source).returncode, 0)
+        for target, limit in ((paths[5], 8192), (paths[-1], 16384)):
+            target.write_text("x" * limit)
+            for source in sources:
+                self.assertEqual(self.run_purge_credential_guard(source).returncode, 0)
+            target.write_text("x" * (limit + 1))
+            for source in sources:
+                self.assertNotEqual(self.run_purge_credential_guard(source).returncode, 0)
+            target.write_text("synthetic managed credential")
         self.assert_no_mutations()
 
     def test_purge_guard_runs_again_before_recursive_removal(self):
@@ -637,7 +642,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_public_alpha_suffix_native_versions_keep_release_order(self):
         native_versions = []
-        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8'):
+        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9'):
             with self.subTest(suffix=suffix):
                 version = '0.4.0-alpha' + suffix
                 self.write(self.project / 'VERSION', version + '\n')

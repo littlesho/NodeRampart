@@ -196,3 +196,32 @@ configuration, protected credentials and a schema-12 database backup.
 10000 条/32 MiB。旧超份额队列保留可排空，拒绝/过期可观察。固定 worker/有界租约，
 尝试间隔和厂商等待持久化，不在事务内外发；每渠道独立去重/结果。schema 13 保存
 原生日报启用边界，不补历史，备份/外键校验同步；回退使用匹配旧备份。
+
+## Alpha.9 dispatch records and budget ledger
+
+Database schema14 adds one bounded dispatch record per official outbox message
+(cascade lifetime), four fixed channel-policy rows and UTC-day usage rows bounded
+to 400 days per channel. Outbox capacity remains 10,000 rows / 32 MiB, counting
+both body and frozen payload. The previous eight channels retain 1,250 rows /
+4 MiB shares; the new four have 750 rows / 2 MiB shares. Admission reserves 64
+rows / 256 KiB for each other enabled target. Existing over-share history remains
+retained while further admission is refused and counted. This is a shared global
+bound, not twelve independent global budgets.
+
+Paid defaults reserve at most 20 logical requests per UTC day; Twilio additionally
+40 estimated SMS segments with at most two per notification. Zero prohibits
+sending. Reservations persist before HTTP and remain consumed on uncertainty;
+receipt-write failure cannot refund and requeue. Unknown actual provider price
+is null, not zero. Rotation/report timezone/restart do not grant another allowance.
+Clock rollback and unsafe cross-day paid retries hold rather than bypass the
+ledger. LINE's same logical request retains its UUID/window and reservation.
+
+Supported backup restore places paid channels into reconciliation hold and
+isolates old pending bodies. Explicit reconciliation records a bounded local
+reference and consumes the current day's allowance; future messages become
+eligible under active consent, old uncertainty/opt-out facts remain. The existing
+SQLite journal/synchronous policy is unchanged. Restoring an old disk/database
+cannot prove a remote API never accepted later messages. Old schema13 binaries
+reject schema14; rollback uses matching old DB/config/credential backups, never
+in-place schema downgrade. Backup schema verification and foreign-key checks
+include these new tables and constraints.

@@ -53,11 +53,11 @@ class ValidationTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.project = self.root / "project"
         (self.project / "scripts").mkdir(parents=True)
-        (self.project / "VERSION").write_text("0.4.0-alpha.8\n")
+        (self.project / "VERSION").write_text("0.4.0-alpha.9\n")
         for name in ("validate.sh", "build-release.sh", "release-metadata.sh"):
             shutil.copyfile(REPO / "scripts" / name, self.project / "scripts" / name)
         package = self.project / "scripts/build-deb.sh"
-        package.write_text("#!/bin/sh\nmkdir -p dist\nprintf 'synthetic package\\n' > dist/noderampart_0.4.0~alpha.8_${ARCH}.deb\nprintf 'package fixture reached\\n'\n")
+        package.write_text("#!/bin/sh\nmkdir -p dist\nprintf 'synthetic package\\n' > dist/noderampart_0.4.0~alpha.9_${ARCH}.deb\nprintf 'package fixture reached\\n'\n")
         package.chmod(0o755)
         self.mocks = self.root / "mocks"
         self.mocks.mkdir()
@@ -147,8 +147,8 @@ class ValidationTests(unittest.TestCase):
         self.assertIn("package fixture reached", result.stdout)
         self.assertIn(["git", ["-c", 'safe.directory=' + str(self.project), "ls-files", "--others", "--exclude-standard", "--", ".", ":(exclude)release-input"], None], self.commands())
         self.assertIn(["make", ["build"], None], self.commands())
-        self.assertTrue((self.project / 'dist/noderampart_0.4.0-alpha.8_amd64.deb').is_file())
-        self.assertFalse((self.project / 'dist/noderampart_0.4.0~alpha.8_amd64.deb').exists())
+        self.assertTrue((self.project / 'dist/noderampart_0.4.0-alpha.9_amd64.deb').is_file())
+        self.assertFalse((self.project / 'dist/noderampart_0.4.0~alpha.9_amd64.deb').exists())
 
     def test_source_metadata_is_verified_once_and_has_a_real_commit_date(self):
         self.env['EXPECTED_COMMIT'] = HEAD
@@ -181,7 +181,7 @@ class ValidationTests(unittest.TestCase):
                 self.assertFalse(any(row[0] == 'make' for row in self.commands()))
 
     def test_official_release_preserves_existing_portable_output(self):
-        output = self.project / 'dist/noderampart_0.4.0-alpha.8_amd64.deb'
+        output = self.project / 'dist/noderampart_0.4.0-alpha.9_amd64.deb'
         output.parent.mkdir()
         output.write_bytes(b'retained previous artifact')
         result = self.run_script('build-release.sh', '--deb', 'amd64')
@@ -216,10 +216,10 @@ class ValidationTests(unittest.TestCase):
         self.assertIn('./scripts/build-release.sh --rpm "$RELEASE_ARCH"', rpm_ci)
         self.assertIn('name: noderampart-fedora${{ matrix.fedora }}-${{ matrix.arch }}-rpm', rpm_ci)
         self.assertIn('--check-upload uploaded-release.json uploaded-assets.json', release)
-        self.assertIn('PACKAGE="dist/noderampart_0.4.0-alpha.8_${RELEASE_ARCH}.deb"', release)
-        self.assertIn('PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.9.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"', release)
-        self.assertEqual(release.count('subject-path: dist/release/noderampart_0.4.0-alpha.8_'), 2)
-        self.assertEqual(release.count('subject-path: dist/release/noderampart-0.4.0-0.alpha.9.'), 4)
+        self.assertIn('PACKAGE="dist/noderampart_0.4.0-alpha.9_${RELEASE_ARCH}.deb"', release)
+        self.assertIn('PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.10.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"', release)
+        self.assertEqual(release.count('subject-path: dist/release/noderampart_0.4.0-alpha.9_'), 2)
+        self.assertEqual(release.count('subject-path: dist/release/noderampart-0.4.0-0.alpha.10.'), 4)
 
 
 if __name__ == "__main__":

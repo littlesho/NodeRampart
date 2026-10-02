@@ -73,15 +73,13 @@ DEB output or collected release directory are rejected. The release workflow rea
 and passes them to all package, SBOM, and collection jobs. Locally verify the
 helper's output before building; the local command does not create a tag.
 
-Ordinary local DEBs retain the filename
-`noderampart_0.4.0~alpha.8_amd64.deb`; the clean build entry renames its own output to
-`noderampart_0.4.0-alpha.8_amd64.deb`. Both have native Debian version
-`0.4.0~alpha.8`; local outputs remain candidates even though the separate hosted
-alpha.8 assets are now published. Portable public names prevent GitHub's asset-name replacement
-from changing checksum references. The alpha.8 native RPM version is
-`0.4.0-0.alpha.9%{?dist}`; suffixes `.1` through `.8` retain native
-DEB/RPM ordering rules. `VERSION` identifies alpha.8; sharing that version does
-not identify a local package as a published asset.
+Ordinary local alpha.9 DEBs retain the filename
+`noderampart_0.4.0~alpha.9_amd64.deb`; the clean build entry renames its own output to
+`noderampart_0.4.0-alpha.9_amd64.deb`. Both have Debian version
+`0.4.0~alpha.9`; these are unpublished development candidates. Current RPM is
+`0.4.0-0.alpha.10%{?dist}`; project alpha numbering and RPM Release are distinct.
+Earlier explicit mappings remain fixed. `VERSION` identifies alpha.9 and no
+alpha.9 tag/Release is created by ordinary validation/package builds.
 Published alpha.7 remains `0.4.0~alpha.7` / `0.4.0-0.alpha.8%{?dist}`. The frozen tag/source
 and exact alpha.8 release bytes are recorded in [release verification](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification).
 Ordinary local/CI packages remain experimental artifacts and do not inherit

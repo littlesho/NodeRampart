@@ -81,7 +81,7 @@ purge_native_credentials_guard() {
     [ "$credential_count" -le 128 ] || { echo 'Credentials directory exceeds the managed file limit; inspect it before purging.' >&2; return 1; }
     credential_name=${credential_entry##*/}
     case "$credential_name" in
-      telegram-*.secret|privacy-*.secret|feishu-*.secret|wecom-*.secret|discord-*.secret|slack-*.secret|teams-*.secret|google_chat-*.secret) ;;
+      telegram-*.secret|privacy-*.secret|feishu-*.secret|wecom-*.secret|discord-*.secret|slack-*.secret|teams-*.secret|google_chat-*.secret|qqbot-*.secret|line-*.secret|twilio_sms-*.secret|whatsapp_cloud-*.secret) ;;
       *) echo 'Refusing purge of an unowned credential file; move manually supplied credentials first.' >&2; return 1;;
     esac
     credential_generation=${credential_name#*-}
@@ -90,7 +90,9 @@ purge_native_credentials_guard() {
     [ "${#credential_generation}" -ge 26 ] && [ "${#credential_generation}" -le 128 ] || { echo 'Refusing purge of an unowned credential file.' >&2; return 1; }
     [ ! -L "$credential_entry" ] && [ -f "$credential_entry" ] && [ "$(stat -c '%h:%u:%g:%a' "$credential_entry")" = "1:$credential_uid:$credential_gid:600" ] || { echo 'Refusing purge of a credential file whose ownership or permissions are unsafe.' >&2; return 1; }
     credential_bytes=$(stat -c '%s' "$credential_entry") || return 1
-    [ "$credential_bytes" -le 8192 ] || { echo 'Refusing purge of a credential file outside managed size limits.' >&2; return 1; }
+    credential_max_bytes=8192
+    case "$credential_name" in qqbot-*|line-*|twilio_sms-*|whatsapp_cloud-*) credential_max_bytes=16384;; esac
+    [ "$credential_bytes" -le "$credential_max_bytes" ] || { echo 'Refusing purge of a credential file outside managed size limits.' >&2; return 1; }
   done
 }
 
