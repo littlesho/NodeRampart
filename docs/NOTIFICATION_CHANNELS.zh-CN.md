@@ -1,6 +1,6 @@
-# 原生通知渠道 — alpha.8 开发候选
+# 原生通知渠道 — alpha.8 预发布版本
 
-[English](NOTIFICATION_CHANNELS.md)。本源码为 Unreleased / development candidate，公开安装继续指向已发布 alpha.7；新功能只存在于单独构建和审查的 alpha.8 候选。未声称厂商认证或真实平台验收。参见[验收矩阵](ALPHA8_ACCEPTANCE.md)、[隐私政策](PRIVACY.md)与[用户协议](USER_AGREEMENT.md)。
+[English](NOTIFICATION_CHANNELS.md)。[alpha.8 已公开](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8)，定位为非 latest 的 alpha prerelease。公开与包验证不等于真实平台验收：六平台真实 API 及人工接收确认均仍为 **NOT RUN**，不声称厂商认证。参见[公开分发范围](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)、历史[功能验收矩阵](ALPHA8_ACCEPTANCE.md)、[隐私政策](PRIVACY.md)与[用户协议](USER_AGREEMENT.md)。
 
 ## 通用配置、测试与安全
 

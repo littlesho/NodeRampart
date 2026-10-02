@@ -8,13 +8,15 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
-> **Source development: 0.4.0-alpha.8 (Unreleased).** Six native channels are disabled by default; [setup and platform permissions](docs/NOTIFICATION_CHANNELS.md), [actual acceptance](docs/ALPHA8_ACCEPTANCE.md), [privacy](docs/PRIVACY.md) and [user agreement](docs/USER_AGREEMENT.md). The published installation instructions below remain alpha.7.
+> **v0.4.0-alpha.8 — published, non-latest alpha prerelease.** The [fixed release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) adds six native channels, all disabled by default. Read [setup and platform permissions](docs/NOTIFICATION_CHANNELS.md), [privacy](docs/PRIVACY.md) and [user agreement](docs/USER_AGREEMENT.md). Real vendor APIs / human receipt, native ARM64 and production remain **NOT RUN**; known vulnerability findings and scanner coverage gaps remain disclosed.
 
-> **Release-entry preflight:** candidate source supports explicit alpha.8 only for assets after publication; no-argument default remains alpha.5. The [three-stage preflight](docs/ALPHA8_RELEASE_PREFLIGHT.md) and [proposed notes](docs/RELEASE_NOTES_ALPHA8.en.md) are not a public release or hosted provenance.
+> **Alpha.8 distribution:** 22 new anonymous downloads match the accepted hosted draft and its reused 22 provenance / six SPDX subjects. Debian 13 explicit public bootstrap, separate Chinese setup cancellation and basic observation passed; strict doctor remained **unknown / exit 2**. Fedora 44 public bootstrap is **BLOCKED_NETWORK**: download timed out before installation, so new setup/runtime checks are **NOT RUN**. The pinned example below remains alpha.7 while this public-installation matrix is incomplete; omitting `--version` still selects alpha.5. See the [actual publication scope](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification).
+
+The following alpha.7 and earlier records retain their original evidence:
 
 > **v0.4.0-alpha.7 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) add a searchable report timezone and independent English/Chinese Telegram text. The database upgrades to schema 12; verify a matching backup, preserve earlier configuration/keys separately and install all three matching programs before saving new settings.
 
-> **This distribution:** All 22 anonymous downloads and checksums match the authenticated 22 provenance and six runtime SPDX subjects byte-for-byte. Debian 13/Fedora 44 public bootstrap, setup, basic collection, online backup and cleanup: **PASS**. Both strict doctor snapshots remained **unknown / exit 2**. Current alpha.7 Debian 12/Fedora 43 runtime, native ARM64 and natural SSH recovery remain unvalidated; this is not production readiness. See [this release verification](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
+> **Historical alpha.7 distribution:** All 22 anonymous downloads and checksums match the authenticated 22 provenance and six runtime SPDX subjects byte-for-byte. Debian 13/Fedora 44 public bootstrap, setup, basic collection, online backup and cleanup: **PASS**. Both strict doctor snapshots remained **unknown / exit 2**. Current alpha.7 Debian 12/Fedora 43 runtime, native ARM64 and natural SSH recovery remain unvalidated; this is not production readiness. See [this release verification](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
 
 The following alpha.6 scope is historical and does not prove alpha.7 runtime acceptance:
 
@@ -191,7 +193,7 @@ privacy settings apply; no additional raw addresses or baseline are stored.
 
 HTTPS heartbeat and a single generic JSON Webhook are also available, disabled by default. Configure fixed targets and protected bearer files in Notifications; no port is opened. Heartbeat separates process liveness from functional degradation, while Webhook shares the isolated outbox. [Configuration, identity changes and retry bounds](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook).
 
-## Native channels in the alpha.8 source candidate
+## Native channels in the alpha.8 prerelease
 
 Feishu, WeCom, Discord, Slack, Teams Workflows and Google Chat each support one
 independent target and message language. Configure hidden credentials in
@@ -201,7 +203,8 @@ outbox; no incoming commands, listeners or SDK runtime. Read the
 [English/Chinese operations](docs/NOTIFICATION_CHANNELS.md) for administrator
 requirements, Teams' acceptance boundary, Slack distribution terms, rotation
 and rollback. Real-platform tests require your separately authorized webhook.
-These are candidate source features, not downloadable alpha.8 release assets.
+These features are included in the published alpha.8 assets. Contract/mock
+acceptance does not establish real platform delivery or receiver confirmation.
 
 ## Telegram and local GeoIP
 

@@ -1,4 +1,15 @@
-# `v0.4.0-alpha.7` limitations
+# NodeRampart alpha limitations
+
+Published alpha.8 is a non-latest prerelease. Its independent
+[distribution record](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)
+separates new anonymous downloads and public bootstrap from reused hosted
+runtime evidence. Six real vendor APIs / human receivers, native ARM64 and
+production operation remain NOT RUN. GO-2026-5970 module findings, stripped
+symbol / Fedora Go suffix coverage gaps and tool advisories remain disclosed.
+The alpha.7 and earlier results below retain their historical scope.
+
+中文：alpha.8 已公开为非 latest 的预发布版本；公开不代表稳定或生产就绪。
+六平台实网/人工接收、原生 ARM64 与生产仍未验证，漏洞发现和扫描覆盖缺口继续保留。
 
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
@@ -258,7 +269,7 @@ unprivileged verification subprocess with bounded cancellation and resources.
 This preserves full Verify and paired activation; it does not inherit the
 historical real-MMDB result as acceptance of new program bytes.
 
-## alpha.8 development candidate notification limits
+## alpha.8 prerelease notification limits
 
 Six new adapters are implemented behind default-disabled configuration. One target
 per channel, outbound HTTPS only: no private-message bots, incoming chat, commands,

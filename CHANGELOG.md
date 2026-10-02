@@ -2,12 +2,22 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-## 0.4.0-alpha.8 - Unreleased / development candidate
+## 0.4.0-alpha.8 - 2026-10-02 (UTC)
+
+- Published as a non-latest alpha prerelease at `2026-10-02T05:42:28Z`
+  (`2026-10-02T14:42:28+09:00`, Asia/Tokyo), Release ID `401526101`, from
+  `77ae069b8f00651106b9621a24047b0ad7b4e88d`. Hosted release run
+  `36960260337`, attempt 1, was not repeated. All 22 fresh anonymous downloads
+  match the accepted hosted draft and its already verified 22 provenance / six
+  runtime SPDX subjects. See the independent
+  [publication record](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)
+  for actual installation scope, evidence reuse and remaining limits.
 
 - Repair bootstrap explicit alpha.8 selection (DEB ~alpha.8 / RPM 0.alpha.9),
   retaining the alpha.5 default and all older mappings. Missing/unpublished assets
   fail closed. Add controlled regressions and an independent three-stage release
-  preflight; proposed notes and local candidates are not a public release.
+  preflight; its historical proposed notes and local candidates do not inherit
+  the published hosted assets' provenance.
 - Keep metadata regressions free of real fixture tags while checking source
   commit dates, annotated-tag peeling and mismatched/empty source rejection.
 - Add six original outbound-only native senders: Feishu custom group robots,
@@ -26,9 +36,15 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
   activation boundaries. Preserve schema 12 data and backups; rollback requires
   the matching older database, configuration and credentials, never in-place
   downgrade. Configuration/API 1 and sensor protocol 5 remain unchanged.
-- Candidate project `0.4.0-alpha.8` maps to DEB `0.4.0~alpha.8` and RPM
-  `0.4.0-0.alpha.9%{?dist}`. Public installation/defaults continue to select
-  existing releases. No tag, Release, latest change or production deployment.
+- Project `0.4.0-alpha.8` maps to DEB `0.4.0~alpha.8` and RPM
+  `0.4.0-0.alpha.9%{?dist}`. Explicit alpha.8 installation uses the published
+  assets; the no-argument bootstrap default remains alpha.5. Publication changed
+  the same draft's visibility without moving its tag or replacing assets.
+- Six real platform APIs / human receivers and native ARM64 remain NOT RUN.
+  GO-2026-5970 remains in the x/text dependency graph; the recorded source
+  import/reachability scope, stripped-binary and Fedora Go suffix scan gaps,
+  and build/scan tool advisories remain disclosed. This is not stable or
+  production-ready, and publication does not remove those findings.
 - See [actual acceptance and limitations](docs/ALPHA8_ACCEPTANCE.md),
   [channel operations](docs/NOTIFICATION_CHANNELS.md), [privacy](docs/PRIVACY.md)
   and [user agreement](docs/USER_AGREEMENT.md). Real-platform delivery and

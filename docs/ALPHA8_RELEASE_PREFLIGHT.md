@@ -1,5 +1,11 @@
 # alpha.8 release preflight / 发布预验收
 
+Subsequent status, 2026-10-02: alpha.8 is published as a non-latest prerelease
+from `77ae069b8f00651106b9621a24047b0ad7b4e88d`; see the separate
+[publication record](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification).
+The no-tag preflight and authorization boundaries below retain their original
+stage scope. They do not retroactively prove hosted or public distribution.
+
 This is the **LOCAL PRE-RELEASE CANDIDATE** stage. It does not create a tag,
 Release/draft, release asset or attestation. [English proposed notes](RELEASE_NOTES_ALPHA8.en.md)
 and [中文拟用说明](RELEASE_NOTES_ALPHA8.zh-CN.md) are unpublished text, not a Release object.

@@ -55,7 +55,8 @@ ARCH=amd64 COMMIT=unknown ./scripts/build-rpm.sh
 
 A clean local/CI candidate requires a reviewed clean commit and exact metadata.
 An official release separately requires its matching tag and publication workflow;
-alpha.8 is Unreleased and this task does not create either.
+published alpha.8 has a separate frozen source and hosted asset set. Local
+build commands below do not create a tag or inherit release provenance.
 Read and verify its metadata before setting the exact values for every build:
 
 ```bash
@@ -75,15 +76,18 @@ helper's output before building; the local command does not create a tag.
 Ordinary local DEBs retain the filename
 `noderampart_0.4.0~alpha.8_amd64.deb`; the clean build entry renames its own output to
 `noderampart_0.4.0-alpha.8_amd64.deb`. Both have native Debian version
-`0.4.0~alpha.8`; these are candidate files, not published download assets. Portable public names prevent GitHub's asset-name replacement
+`0.4.0~alpha.8`; local outputs remain candidates even though the separate hosted
+alpha.8 assets are now published. Portable public names prevent GitHub's asset-name replacement
 from changing checksum references. The alpha.8 native RPM version is
 `0.4.0-0.alpha.9%{?dist}`; suffixes `.1` through `.8` retain native
-DEB/RPM ordering rules. `VERSION` selects the alpha.8 development candidate.
+DEB/RPM ordering rules. `VERSION` identifies alpha.8; sharing that version does
+not identify a local package as a published asset.
 Published alpha.7 remains `0.4.0~alpha.7` / `0.4.0-0.alpha.8%{?dist}`. The frozen tag/source
-and exact release bytes are recorded in [release verification](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
+and exact alpha.8 release bytes are recorded in [release verification](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification).
 Ordinary local/CI packages remain experimental artifacts and do not inherit
 release provenance merely by sharing a version or source tree. Bootstrap still
-defaults to alpha.5; select published alpha.7 explicitly. SBOMs use each package's native version, inspect its final bytes,
+defaults to alpha.5. The alpha.8 public-bootstrap matrix remains incomplete;
+see the publication record before selecting it. SBOMs use each package's native version, inspect its final bytes,
 and bind the three program digests to those bytes. `--collect` requires the
 complete package/SBOM/buildinfo set; the separate hosted draft step checks the
 actual uploaded names and states after upload. Local checks do not establish
@@ -277,10 +281,11 @@ Use an isolated management network and a separate no-NAT traffic network. High-r
 6. Changelog, compatibility matrix, known limitations, checksums, SBOM, and provenance are attached.
 7. No release is marked stable until the privileged VM matrix and soak exit criteria are met.
 
-当前 `VERSION` 为未发布 alpha.8 development candidate；DEB 原生版本
+当前 `VERSION` 为 alpha.8；其 hosted prerelease 已独立公开，DEB 原生版本
 `0.4.0~alpha.8`，RPM `0.4.0-0.alpha.9%{?dist}`，排序高于已发布 alpha.7。普通 local/CI 包仍是独立候选，
-相同版本或源码树不使其继承正式 Release provenance。公开安装明确选择 alpha.7；
-冻结来源、发布日期及验收范围见[发布核验](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)。
+相同版本或源码树不使其继承正式 Release provenance。alpha.8 公开安装矩阵尚未闭环，
+无参数默认仍 alpha.5；冻结来源、发布日期及验收范围见
+[发布核验](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。
 schema 13 扩展固定渠道约束及原生日报启用边界，保留 schema 12 消息呈现元数据；
 配置/API 1、协议 v5 不变。回退需
 匹配旧数据库备份和旧配置/密钥，不能原地降 schema。
@@ -296,9 +301,10 @@ are not official release provenance, even when clean and exactly commit-stamped.
 
 ## alpha.8 no-tag release preflight
 
-Follow [the scoped preflight](ALPHA8_RELEASE_PREFLIGHT.md). Candidate source now
-supports explicit alpha.8, while default alpha.5 and public alpha.7 instructions
-remain. Obtain source metadata once as data; retain empty-value rejection, clean
+The [scoped preflight](ALPHA8_RELEASE_PREFLIGHT.md) retains its historical no-tag
+stage. Source supports explicit alpha.8, now separately published; the default
+remains alpha.5. For a future authorized local candidate, obtain source metadata
+once as data; retain empty-value rejection, clean
 source and matching COMMIT/BUILD_DATE across all six packages and pairs. Collect
 exactly22 files locally; the external manifest includes SHA256SUMS itself, whose
 contents cover only the other21 files. Do not run release.yml or create any tag

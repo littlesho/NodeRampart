@@ -1,13 +1,16 @@
 # Verify a NodeRampart release
 
-This document describes published `v0.4.0-alpha.7` and retains alpha.6 and
-earlier release records. Examples pin alpha.7; frozen bootstrap still defaults
-to alpha.5. The published tag resolves to `d164978433b5e49d68d310cf8d6f5819b855e2e0`;
-source/build tools target DEB `0.4.0~alpha.7` and RPM `0.4.0-0.alpha.8`.
-Historical releases require their own frozen source/tools and byte identities.
+This document describes published `v0.4.0-alpha.8` and retains all earlier
+release records. Examples pin alpha.8; frozen bootstrap still defaults to
+alpha.5. Its lightweight tag resolves to
+`77ae069b8f00651106b9621a24047b0ad7b4e88d`; DEB is `0.4.0~alpha.8` and RPM is
+`0.4.0-0.alpha.9.fc43/fc44`. The source's original BUILD_DATE remains
+`2026-10-01T23:59:34+08:00`; publication time is separate. Historical releases
+require their own frozen source/tools and byte identities.
 
-本指南面向已发布 alpha.7，保留 alpha.6 及更早版本记录。示例明确指定 alpha.7，
-bootstrap 默认仍为 alpha.5。候选 CI 包和旧版本证明不能替代本次冻结发行字节。
+本指南面向已公开的非 latest alpha.8 prerelease，保留所有历史发行记录。示例明确
+指定 alpha.8，bootstrap 默认仍为 alpha.5。当前 main 文档提交不改变上述发行源或
+包字节；候选 CI 包和旧版本证明不能替代本次冻结发行字节。
 
 The release workflow creates a draft for a maintainer to inspect; local workflow
 edits and tests neither publish a release nor prove that hosted checks ran.
@@ -47,12 +50,12 @@ The runtime matrix is Debian `amd64`/`arm64` and Fedora 43/44
 asset and has no runtime SBOM. `bootstrap.sh`, `release.json` and `SHA256SUMS`
 complete the download set.
 
-For alpha.7, public DEB names are
-`noderampart_0.4.0-alpha.7_ARCH.deb`, with native Debian version
-`0.4.0~alpha.7`. RPM names contain `0.4.0-0.alpha.8.fc43` or
-`0.4.0-0.alpha.8.fc44`; the source RPM uses Fedora 44. SBOM/buildinfo names,
+For alpha.8, public DEB names are
+`noderampart_0.4.0-alpha.8_ARCH.deb`, with native Debian version
+`0.4.0~alpha.8`. RPM names contain `0.4.0-0.alpha.9.fc43` or
+`0.4.0-0.alpha.9.fc44`; the source RPM uses Fedora 44. SBOM/buildinfo names,
 checksums and attestations bind the final public filename and actual bytes.
-The [alpha.7 distribution record](#alpha7-publication-and-distribution-verification)
+The [alpha.8 distribution record](#alpha8-publication-and-distribution-verification)
 identifies the actual hosted run, source and measured native acceptance; the
 format description alone is not runtime proof.
 
@@ -96,26 +99,27 @@ with artifact attestation support. Select the full commit SHA from the release
 source you have reviewed; do not treat a value downloaded beside the package as
 independent evidence of the expected source.
 
-The example selects published `v0.4.0-alpha.7`, whose reviewed source is
-`d164978433b5e49d68d310cf8d6f5819b855e2e0`. Confirm that identity against the
+The example selects published `v0.4.0-alpha.8`, whose reviewed source is
+`77ae069b8f00651106b9621a24047b0ad7b4e88d`. Confirm that identity against the
 public source before using it as an expected value. Missing statements cannot
 pass verification; do not substitute another release's attestations.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.7 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.8 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.7_amd64.deb
-EXPECTED_COMMIT='d164978433b5e49d68d310cf8d6f5819b855e2e0'
+PACKAGE=noderampart_0.4.0-alpha.8_amd64.deb
+EXPECTED_COMMIT='77ae069b8f00651106b9621a24047b0ad7b4e88d'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.7 \
+  --source-ref refs/tags/v0.4.0-alpha.8 \
   --source-digest "$EXPECTED_COMMIT" \
+  --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
 
@@ -123,8 +127,9 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.7 \
+  --source-ref refs/tags/v0.4.0-alpha.8 \
   --source-digest "$EXPECTED_COMMIT" \
+  --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document/v2.3 \
   --deny-self-hosted-runners
 
@@ -132,11 +137,16 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.7 \
+  --source-ref refs/tags/v0.4.0-alpha.8 \
   --source-digest "$EXPECTED_COMMIT" \
+  --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
 ```
+
+The CLI may use your existing GitHub login; its download command alone does not
+prove anonymous access. The publication record below identifies the separate
+clean-client anonymous test.
 
 Replace `PACKAGE` with the exact package for your distribution and architecture.
 Keep checksum failures, missing attestations and provenance mismatches as
@@ -150,7 +160,7 @@ it does not perform these GitHub attestation checks automatically.
 ## Maintainer draft verification
 
 The following procedure applies before publication of a future candidate;
-alpha.7 is already published. Select that candidate’s independently reviewed
+alpha.8 is already published. Select that candidate’s independently reviewed
 version and source identity. A local candidate can be built without a tag using
 `EXPECTED_COMMIT=<full-main-SHA> ./scripts/release-metadata.sh` and passing its
 `commit` and source-commit `build_date` to `build-release.sh`. Do not substitute
@@ -606,3 +616,210 @@ strict 快照均 unknown/退出码 2：Debian 13 为 `auth_window_warmup` 与
 NOT RUN。后续真实提交水位推进不改变原 strict 快照。默认仍 alpha.5，明确选 alpha.7 并分开运行 setup，
 不宣称管道交互路径、真实外发、原生 ARM64 或自然 SSH 恢复链通过。旧 alpha.6
 发行历史、资产及 C 包内文档字节不变；本次纯文档更新不重新发行安装包。
+
+## Alpha8 publication and distribution verification
+
+### Fixed public identity
+
+[v0.4.0-alpha.8](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8)
+was published as an alpha prerelease at **2026-10-02T05:42:28Z**
+(**2026-10-02T14:42:28+09:00**, Asia/Tokyo), numeric Release ID **401526101**.
+The original lightweight tag's ref object is a commit, with no separate
+annotated tag object:
+
+| Identity | Frozen value |
+| --- | --- |
+| Release source / tag commit | `77ae069b8f00651106b9621a24047b0ad7b4e88d` |
+| Source tree | `2e9d194173efa97b757dc19dba35999038f2d7ea` |
+| BUILD_DATE, original source string | `2026-10-01T23:59:34+08:00` |
+| Hosted workflow | [release.yml run 36960260337, attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/36960260337/attempts/1) |
+| Workflow event / ref | `push` / `refs/tags/v0.4.0-alpha.8` |
+| Project / DEB | `0.4.0-alpha.8` / `0.4.0~alpha.8` |
+| RPM | `0.4.0-0.alpha.9.fc43/fc44` |
+| Config / API / sensor / DB | 1 / 1 / 5 / 13 |
+
+The existing numeric-ID draft was published once with explicit original tag,
+full source, `draft=false`, `prerelease=true`, `make_latest="false"`. Immediate
+readback preserved all 22 original asset IDs, names, sizes and SHA256 values.
+Latest returned HTTP 404 before and after publication; alpha.8 was not made
+latest. Publication did not rerun the release workflow, create or move a tag,
+replace/upload assets, resign statements, change repository governance or deploy
+production. Later main documentation differs from the frozen release source;
+no package or tag snapshot was updated to include this record.
+
+### Anonymous bytes and proof reuse
+
+All **22 new anonymous downloads** passed, including exact original names,
+lengths and SHA256 against the independently retained hosted draft inventory.
+Anonymous public Release-ID/tag metadata and the web page were accessible.
+The first direct download round failed on TCP connections; three completed
+files and the failed request journal were retained. One separate round using
+the existing administrator's local HTTPS CONNECT proxy passed all 22 files.
+No GitHub Authorization, cookie, netrc or automatic client configuration was
+used; default CA and destination hostname checks remained enabled. No network,
+proxy, DNS, hosts or TLS configuration was changed. Proxy administrator/system
+CA trust remains part of that test; local direct-IP checks do not constrain
+proxy DNS. This download path does not alter native notifications' direct-only
+transport.
+
+`SHA256SUMS` covers exactly **21** files, excluding itself; the independent
+inventory includes all **22**. All six runtime package/SPDX/buildinfo pairs,
+release.json's exact source/version/original date, and bootstrap's bytes against
+the frozen source passed. The source RPM, package contents, all 18 actual
+program identities and ARM64 static inspection retain their prior hosted
+acceptance by identical package bytes; they were not rebuilt here.
+
+The original **22 provenance + six runtime-package SPDX cryptographic
+verifications** were explicitly **REUSED**, with **zero new verifier calls**.
+Every new anonymous file digest was independently connected to the actual
+previously verified subject and preserved complete validation JSON/exit-0
+receipt. The strict policy binds repository `littlesho/NodeRampart`, signer
+workflow `littlesho/NodeRampart/.github/workflows/release.yml`, source-ref
+`refs/tags/v0.4.0-alpha.8`, source-digest and signer-digest both equal to the
+full frozen source above, GitHub Actions issuer/certificate identity and
+hosted-runner identity, run **36960260337 / attempt 1**. Predicates are
+`https://slsa.dev/provenance/v1` and `https://spdx.dev/Document/v2.3`.
+Each SPDX subject is its corresponding runtime package, and its signed
+predicate matches the downloaded SPDX document semantically, including
+package/program digests. Same-release checksums alone were not treated as
+independent proof. Signatures establish workflow statements, not zero
+vulnerabilities, human delivery or production readiness.
+
+### Public original-name asset inventory
+
+The following digests were independently frozen before publication and matched
+by new anonymous downloads; asset IDs and bytes remained unchanged.
+
+| Asset ID | Original filename | Bytes | SHA256 |
+| ---: | --- | ---: | --- |
+| 604745222 | `SHA256SUMS` | 2353 | `f6e811894939b2864fce4c5b0f13040608c7e3cf57bd2ceb9cc8c2e70cff4806` |
+| 604745220 | `bootstrap.sh` | 10329 | `f9aee566dc67eba96f2391b333a6d9121c4640be6d52d38860e2da6df240c799` |
+| 604745221 | `noderampart-0.4.0-0.alpha.9.fc43.aarch64.rpm` | 11972111 | `c05d807d9f1c5a1790f553786265d3e9b19986bfbcd7eb56bfb6faa18f0bffe7` |
+| 604745219 | `noderampart-0.4.0-0.alpha.9.fc43.aarch64.rpm.buildinfo.json` | 5546 | `5410037d8e12bae644e125cea674269f127cb2e5e7ca25d50492139200e5139a` |
+| 604745218 | `noderampart-0.4.0-0.alpha.9.fc43.aarch64.rpm.spdx.json` | 60715 | `95b048a574c9ac258549add763d9a8865cce2ffbb96363d2d20cb52f18424779` |
+| 604745229 | `noderampart-0.4.0-0.alpha.9.fc43.x86_64.rpm` | 12887178 | `0e6e70c4b2d567608aed7e311cd8013449e968516ce0d831b23fd4af0d87f091` |
+| 604745239 | `noderampart-0.4.0-0.alpha.9.fc43.x86_64.rpm.buildinfo.json` | 5539 | `f51f5ec166692da30d6f4e41311106cf5d424353d8aedd296161c0d2e0eb6695` |
+| 604745238 | `noderampart-0.4.0-0.alpha.9.fc43.x86_64.rpm.spdx.json` | 60675 | `df1024691d442aa9af269c32f7bee05e003c5f8151a7e878679c6dd84136d42b` |
+| 604745240 | `noderampart-0.4.0-0.alpha.9.fc44.aarch64.rpm` | 11972111 | `b64c6cd60d5a6487666ceaacd05d310eb1a3911eeb297323c56507459cd6d510` |
+| 604745249 | `noderampart-0.4.0-0.alpha.9.fc44.aarch64.rpm.buildinfo.json` | 5546 | `b49f31baa6059a858eaa29a5cf4c3ccaf6485287e5bdf9d4259aa05d713e73ef` |
+| 604745250 | `noderampart-0.4.0-0.alpha.9.fc44.aarch64.rpm.spdx.json` | 60715 | `21c533e74a63f0c12405e73d179cfc6794f393a745f66c0c71f2745ae812aa3b` |
+| 604745248 | `noderampart-0.4.0-0.alpha.9.fc44.src.rpm` | 31667610 | `0e55916a3330bedd2022a9db16d855bb3d8aa8e5ab8dc2db38883af4e8646ff2` |
+| 604745254 | `noderampart-0.4.0-0.alpha.9.fc44.x86_64.rpm` | 12887178 | `1076d5a6e7219c1da26467916f6d90add912c7be0391a87ab4e83489e997e4a7` |
+| 604745262 | `noderampart-0.4.0-0.alpha.9.fc44.x86_64.rpm.buildinfo.json` | 5539 | `6b9966d7aba83b6e3c177dcb832ee70ee913cb6360b04e61cc897d3ed25d31aa` |
+| 604745263 | `noderampart-0.4.0-0.alpha.9.fc44.x86_64.rpm.spdx.json` | 60675 | `7b2f218935dae19d98823e3e8a67e5b86c0dcf0cb9cdbb9db8423d041fa1ef87` |
+| 604745264 | `noderampart_0.4.0-alpha.8_amd64.deb` | 12469540 | `a529b2bfa4d9842eaa98af86fc8d5fc5c49d18f8395481b6c0af5aef9a2c8328` |
+| 604745272 | `noderampart_0.4.0-alpha.8_amd64.deb.buildinfo.json` | 7294 | `1e4313e13e4d89a10ec9d4db41ab4ffd5af2dd998420715e871f347122afdf82` |
+| 604745273 | `noderampart_0.4.0-alpha.8_amd64.deb.spdx.json` | 65232 | `cbf283426f943e189aa66dd057ed7e0445a55e02eac7a190fee2b8c4e1e1647d` |
+| 604745286 | `noderampart_0.4.0-alpha.8_arm64.deb` | 11513494 | `95b7083d86ad2e4dbc19fd5a15a4befe21aafd47c5ebf50e9564d9fd0422da37` |
+| 604745297 | `noderampart_0.4.0-alpha.8_arm64.deb.buildinfo.json` | 7300 | `027969a173aafb5acfd35cd7a2626490063196e5e2eedd67422390d2050b1409` |
+| 604745296 | `noderampart_0.4.0-alpha.8_arm64.deb.spdx.json` | 65232 | `1104f2effd8c11b9ee6db72652a63670426652b13ef36ff7062921cfb1f371f2` |
+| 604745317 | `release.json` | 297 | `6e5b2580d116b1e7d022cdfd53c79ab68bf1082cf6c2a97e46c8ddcb5be3dd90` |
+
+### Installation and reused behavior
+
+| Scope | Debian13 amd64 | Fedora44 x86_64 |
+| --- | --- | --- |
+| New anonymous guest bootstrap fetch | PASS, direct HTTPS; exact frozen script SHA | BLOCKED_NETWORK, curl timeout; 120-second bound / exit124 |
+| Actual public `--version v0.4.0-alpha.8 --no-setup` | PASS; script fetched public checksums/DEB and apt installed it | NOT RUN; script was not verified or executed |
+| Actual package/program source and bytes | PASS; M/raw BUILD_DATE and all three installed hashes | NOT RUN in this increment; prior hosted results REUSED |
+| Separate real Chinese PTY setup | PASS, 16 observed frames; six empty hidden disabled forms cancelled | NOT RUN |
+| Configuration / credentials / notifications | PASS, exact unchanged defaults; eight disabled targets / zero outbox | NOT RUN; no product installed |
+| Real daemon identity, schema13/FK, online backup, advancing collection | PASS; nonroot UID, CapEff0 and NoNewPrivs | NOT RUN |
+| Strict doctor | **unknown / exit2**, not strict PASS | NOT RUN, no installed program |
+| Own cleanup, approved soft stop and independent claim release | PASS, STOPPED | PASS, STOPPED / no product installed |
+
+The Debian script was downloaded inside the guest and checked against both the
+frozen source and anonymously verified asset before execution. Its unchanged
+installer downloaded the actual public same-release checksum and DEB; no local
+package or credential was injected. The installer removed its temporary DEB
+normally, so a separate retained outer-package hash in the guest is not claimed.
+Its verification and all three installed payload hashes bind the observed
+installation to the independently accepted DEB. Chinese setup entered no secret
+and selected no Continue/Save/Test; config and file lists remained byte-identical.
+The initial private terminal capture's OSC8 parser failed despite an actual
+Chinese welcome; that failure/raw evidence was preserved, configuration/process
+state reconciled, and only the private parser was corrected before a separate
+successful PTY run. Installation was not replayed or product checks weakened.
+Strict doctor retained `snapshot_foreign_keys_unavailable` and
+`sensor_commit_unavailable`; direct backup SQL integrity/FK and later advancing
+watermarks passed separately, without rewriting that unknown snapshot.
+
+Fedora's bounded anonymous script fetch failed before installation. No local
+package injection, guest proxy configuration, network/TLS/DNS change or retry
+of release publication was used to bypass it. The Release remains publicly
+available, but the required two-system public-bootstrap matrix is **incomplete**.
+README retains the prior alpha.7 pinned installation example instead of promoting
+alpha.8 as a fully verified public installation path. Fedora requires a future
+successful public-bootstrap increment under the same approved network/lab scope;
+this result authorizes no infrastructure modification or automatic withdrawal.
+Both guests were normally stopped and independently confirmed **STOPPED**;
+exclusive claims were released, and earlier private evidence was preserved.
+This scope was reconciled at `2026-10-02T06:16:28Z`
+(`2026-10-02T15:16:28+09:00`, Asia/Tokyo).
+
+中文：公开已发生；22 项匿名字节闭环通过，不等于所有安装路径通过。Debian13 的
+实际公开安装、真实中文六表单取消、服务身份、schema13、基础观察和清理通过，
+strict doctor 仍为 unknown/退出码2。Fedora44 下载超时，公开 bootstrap 为
+BLOCKED_NETWORK，安装/TUI/服务新增项为 NOT RUN，未改网络或用本地包替代。
+两台均正常停机、独立确认 STOPPED 并释放资源；公开安装矩阵尚未闭环，README
+保留 alpha.7 的原安装示例，不将新路径标成已全面验证。
+
+The prior exact hosted amd64/x86_64 packages passed installation, start, source
+identity, schema13/integrity, real daemon UID, protected credential reading,
+optional-channel failure isolation and owned removal on Debian12/13 and
+Fedora43/44. Those results are **REUSED**, not four new public-bootstrap tests.
+The prior actual alpha.7→alpha.8 upgrade preserved data/configuration/queues,
+language/timezone, targets, TTL and cooldown; the matching deployed-backup
+rollback/rollforward evidence is reused only for its unchanged relevant payload,
+scripts and dependencies. Schema13 rollback requires the matching old database,
+configuration and credentials offline; no in-place downgrade is supported.
+Sensor has no version CLI: source binding uses actual package/installed bytes
+and startup records, without inventing a full runtime commit command.
+
+### Remaining limits and safety evidence
+
+Six platform API tests and human receiver confirmation remain **NOT RUN**;
+native ARM64 and production operation are **NOT RUN**. Teams supports only the
+administrator-permitted Anyone secret-URL / Adaptive Card workflow and confirms
+request acceptance; OAuth/Entra-only modes remain unsupported. Native senders
+connect directly without environment proxy. Standalone/DEB programs are
+loader-free static, whereas RPM retains PIE/system-loader behavior. Purge is
+not an atomic rollback of installation. Slack service/distribution terms,
+administrator permission and message permissions remain separate from MIT;
+no vendor or Marketplace certification is claimed.
+
+The product module graph retains `golang.org/x/text v0.21.0` and
+[GO-2026-5970](https://pkg.go.dev/vuln/GO-2026-5970), fixed in `v0.39.0`.
+The official record was rechecked before publication and unchanged. Recorded
+source analysis of all three commands × Linux amd64/arm64 × static/RPM PIE
+flags found no affected unicode/norm import or reachable affected source symbol
+in that scope; this does not close binary coverage gaps. All 18 unchanged
+hosted program bytes retain their original scan outputs against the database
+observed at `2026-10-01T20:24:15Z`. Stripped inputs expose no package-symbol list;
+312 raw GO-2026-5970 fields across the 12 CLI/daemon programs are conservative
+scanner expansion, not observed compiled affected symbols or an unconditional
+false-positive dismissal. Fedora's actual `go1.26.8-X:nodwarf5` suffix leaves
+standard-library matching **UNKNOWN** in pinned govulncheck v1.7.0.
+
+The hosted-stage Syft v1.51.1 executable scan retained **22 advisory records**
+(including GO-2026-6505 / GO-2026-6597); govulncheck itself retained **two x/mod
+module-only records**. These are recorded scan counts for those actual tools,
+not permanent totals or product exploitability conclusions. The bounded offline
+SBOM invocation, unchanged inputs and scoped advisory-precondition review were
+reused; no new Syft generation or 18-program rescan is claimed. The explicit
+maintainer publication authorization accepts only these disclosed limits for
+this fixed alpha candidate. It does not mean vulnerabilities are repaired,
+scanning is complete, unknown risks accepted or production approved.
+
+Historical exceptions remain: two earlier local fixture tags outside the
+preflight authority were cleaned and the fixture tests corrected; the draft
+notes stage used two PATCH requests after the first changed its internal tag
+association, with the second restoring the original same-ID association.
+Original request/response records and the correction were preserved. This phase
+did not create fixture tags and does not claim the whole history was anomaly-free.
+
+Read-only governance observation: main branch protection was false, effective
+branch rules and repository/parent rulesets were empty. **本次按流程检查，但服务器
+未强制执行。** Visible workflows/webhooks showed no release-triggered production
+deployment; immutable-release settings were disabled and were not changed.
+Normal documentation review/CI/PR is separate from release-byte verification.

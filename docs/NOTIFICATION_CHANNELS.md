@@ -1,6 +1,6 @@
-# Native notification channels — alpha.8 development candidate
+# Native notification channels — alpha.8 prerelease
 
-[简体中文](NOTIFICATION_CHANNELS.zh-CN.md). This source is unreleased. Install instructions still select published alpha.7; these features require a separately built/reviewed alpha.8 candidate. No vendor certification or real platform acceptance is claimed. See [acceptance](ALPHA8_ACCEPTANCE.md), [privacy](PRIVACY.md) and [user agreement](USER_AGREEMENT.md).
+[简体中文](NOTIFICATION_CHANNELS.zh-CN.md). [Alpha.8 is published](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) as a non-latest alpha prerelease. Publication and package verification do not establish real platform acceptance: all six vendor API tests and human receipt confirmations remain **NOT RUN**. No vendor certification is claimed. See the [publication scope](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification), historical [feature acceptance](ALPHA8_ACCEPTANCE.md), [privacy](PRIVACY.md) and [user agreement](USER_AGREEMENT.md).
 
 ## Common operation
 
