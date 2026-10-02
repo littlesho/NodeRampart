@@ -157,6 +157,13 @@ func TestRestoreRehearsalMigratesHistoricalCopyAndCleansOnlyOwnedOutputs(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A real schema-7 fixture has none of the schema-14 dispatch or budget tables.
+	// Fixture construction is not a production downgrade facility.
+	for _, query := range []string{`DROP TABLE notification_dispatch`, `DROP TABLE official_budget_usage`, `DROP TABLE official_channel_policy`} {
+		if _, err := db.Exec(query); err != nil {
+			t.Fatal(err)
+		}
+	}
 	for _, query := range []string{`ALTER TABLE notification_outbox DROP COLUMN language`, `ALTER TABLE notification_outbox DROP COLUMN presentation_timezone`, `DROP INDEX event_notifications_message_idx`, `DROP TABLE event_notifications`, `CREATE TABLE event_notifications (event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE, notification_id TEXT NOT NULL DEFAULT '', decision TEXT NOT NULL CHECK(decision IN ('queued','merged','silenced','ineligible','rejected')), silence_id TEXT NOT NULL DEFAULT '', recorded_at INTEGER NOT NULL)`, `CREATE INDEX event_notifications_message_idx ON event_notifications(notification_id)`, `DROP TABLE sensor_watermarks`, `DROP TABLE sensor_commit_state`, `ALTER TABLE report_snapshots DROP COLUMN document_json`, `DROP TABLE notification_targets`, `ALTER TABLE notification_outbox DROP COLUMN channel`, `ALTER TABLE notification_outbox DROP COLUMN isolated_at`, `DELETE FROM schema_migrations WHERE version>7`} {
 		if _, err := db.Exec(query); err != nil {
 			t.Fatal(err)

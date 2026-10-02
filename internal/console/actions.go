@@ -142,7 +142,12 @@ func (u *ui) incidents() {
 	u.actionMenu("Events and incidents", "事件与 Incident", []string{"incident_list", "incident_show", "timeline"}, u.home)
 }
 func (u *ui) notifications() {
-	u.actionMenu("Notification channels", "通知渠道", []string{"telegram_setup", "notify_status", "notify_list", "notify_test", "notify_retry", "notify_quarantine", "notify_discard_isolated", "notify_resume", "silence_list", "silence_add", "silence_remove", "feishu_setup", "wecom_setup", "discord_setup", "slack_setup", "teams_setup", "google_chat_setup", "notification_help"}, u.home)
+	ids := []string{"telegram_setup", "notify_status", "notify_list", "notify_test", "notify_retry", "notify_quarantine", "notify_discard_isolated", "notify_resume", "silence_list", "silence_add", "silence_remove", "feishu_setup", "wecom_setup", "discord_setup", "slack_setup", "teams_setup", "google_chat_setup", "notification_help"}
+	for _, channel := range config.OfficialChannelNames() {
+		ids = append(ids, channel+"_setup", channel+"_credentials", channel+"_subscription")
+	}
+	ids = append(ids, "notify_preview", "notify_reconcile_paid")
+	u.actionMenu("Notification channels", "通知渠道", ids, u.home)
 }
 func (u *ui) geo() {
 	u.actionMenu("Local GeoIP", "本地 GeoIP", []string{"geo_status", "geo_download", "geo_refresh", "geo_schedule"}, u.home)
@@ -181,7 +186,8 @@ func (u *ui) openAction(id string, back func()) {
 		u.priceProvider(back)
 		return
 	}
-	if (id == "telegram_setup" || nativeSetupChannel(id) != "") && !u.loaded {
+	channel, _ := officialUIActionChannel(id)
+	if (id == "telegram_setup" || nativeSetupChannel(id) != "" || channel != "") && !u.loaded {
 		u.background(u.tr("Load notification settings", "加载通知设置"), func(ctx context.Context) func() {
 			snapshot, err := u.backend.Load(ctx)
 			return func() {
@@ -208,6 +214,9 @@ func (u *ui) actionForm(a action, back func()) {
 	clearers := []func(){}
 	for _, definition := range a.params {
 		param := definition
+		if channel, operation := officialUIActionChannel(a.id); channel != "" && operation == "setup" {
+			param.value = officialParameterValue(u.snapshot.Config.Notifications.OfficialChannels()[channel], param.key, param.value)
+		}
 		if channel := nativeSetupChannel(a.id); channel != "" {
 			n := u.snapshot.Config.Notifications.NativeChannels()[channel]
 			switch param.key {
@@ -243,7 +252,13 @@ func (u *ui) actionForm(a action, back func()) {
 				}
 			}
 			labels := append([]string(nil), param.choices...)
-			if (a.id == "telegram_setup" || nativeSetupChannel(a.id) != "") && param.key == "language" {
+			channel, _ := officialUIActionChannel(a.id)
+			if channel != "" {
+				for i, value := range param.choices {
+					labels[i] = officialChoiceLabel(param.key, value, u.lang)
+				}
+			}
+			if (a.id == "telegram_setup" || nativeSetupChannel(a.id) != "" || channel != "") && param.key == "language" {
 				labels = []string{"English", "简体中文"}
 			}
 			if nativeSetupChannel(a.id) != "" && (param.key == "credential_action" || param.key == "secret_action") {
@@ -255,6 +270,9 @@ func (u *ui) actionForm(a action, back func()) {
 			if param.key == "channel" {
 				for i, name := range param.choices {
 					if brand, ok := nativeBrands[name]; ok {
+						labels[i] = brand
+					}
+					if brand, ok := officialBrands[name]; ok {
 						labels[i] = brand
 					}
 				}
@@ -282,6 +300,9 @@ func (u *ui) actionForm(a action, back func()) {
 			limit := 4096
 			if param.secret && param.key != "url" {
 				limit = 512
+			}
+			if channel, operation := officialUIActionChannel(a.id); channel != "" && operation == "credentials" && param.secret {
+				limit = 4096
 			}
 			input.SetAcceptanceFunc(func(text string, _ rune) bool { return len(text) <= limit })
 			form.AddFormItem(input)
@@ -327,6 +348,14 @@ func clearArguments(args map[string]string) {
 }
 
 func (u *ui) prepareAction(a action, args map[string]string, back func()) {
+	if a.id == "notify_preview" {
+		u.showOfficialPreview(a, args, back)
+		return
+	}
+	if a.id == "notify_test" && config.IsPaidOfficialChannel(args["channel"]) {
+		u.previewPaidTest(a, args, back)
+		return
+	}
 	if nativeSetupChannel(a.id) != "" {
 		u.reviewNativeAction(a, args, back)
 		return
@@ -371,8 +400,9 @@ func (u *ui) executeAction(a action, args map[string]string, back func()) {
 			secrets = append(secrets, args[p.key])
 		}
 	}
-	nativeOperation := (a.id == "notify_test" || a.id == "notify_discard_isolated") && config.IsNativeChannel(args["channel"])
-	protectedFailure := sensitive || nativeOperation || a.id == "geo_download" || a.id == "geo_refresh"
+	nativeOperation := (a.id == "notify_test" || a.id == "notify_discard_isolated" || a.id == "notify_reconcile_paid") && (config.IsNativeChannel(args["channel"]) || config.IsOfficialChannel(args["channel"]))
+	officialChannel, _ := officialUIActionChannel(a.id)
+	protectedFailure := sensitive || nativeOperation || officialChannel != "" || a.id == "geo_download" || a.id == "geo_refresh"
 	language := u.lang
 	secretFailure := u.tr("The operation failed or was cancelled. Check the entered credentials, connectivity and local permissions. Secret values are not shown.", "操作失败或已取消。请检查凭据、网络连接与本机权限；不会显示凭据内容。")
 	secretSuccess := u.tr("Settings were applied successfully. Use the status menu to inspect the result. No secret values are displayed.", "设置已成功应用。可在状态菜单查看结果；不会显示凭据内容。")
@@ -386,10 +416,13 @@ func (u *ui) executeAction(a action, args map[string]string, back func()) {
 			if nativeOperation {
 				text = nativeActionFailure(err, language)
 			}
+			if officialChannel != "" {
+				text = notificationText([2]string{"The local settings could not be applied or were cancelled. Inspect consent, budgets, protected credentials and service state. No test was sent automatically.", "本地设置无法应用或已取消。请检查同意依据、额度、受保护凭据与服务状态；未自动发送测试。"}, language)
+			}
 			if diagnostic, ok := geoValidationFailure(a.id, err, language); ok {
 				text = diagnostic
 			}
-		} else if sensitive {
+		} else if sensitive || officialChannel != "" {
 			text = secretSuccess
 		}
 		for _, value := range secrets {

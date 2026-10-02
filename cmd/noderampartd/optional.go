@@ -17,6 +17,7 @@ import (
 type optionalDependencies struct {
 	geo       *enrich.Resolver
 	native    map[string]notify.Sender
+	official  map[string]notify.Sender
 	webhook   notify.Sender
 	heartbeat notify.HeartbeatSender
 	sender    notify.Sender
@@ -32,7 +33,7 @@ func loadOptional(cfg config.Config) (optionalDependencies, error) {
 }
 
 func loadOptionalAt(cfg config.Config, configDir string) (optionalDependencies, error) {
-	d := optionalDependencies{failures: map[string]string{}, native: map[string]notify.Sender{}}
+	d := optionalDependencies{failures: map[string]string{}, native: map[string]notify.Sender{}, official: map[string]notify.Sender{}}
 	for _, path := range []string{cfg.Geo.CityMMDB, cfg.Geo.ASNMMDB} {
 		if err := checkOptionalFile(path, false); err != nil {
 			return d, fmt.Errorf("unsafe GeoIP resource: %w", err)
@@ -83,6 +84,23 @@ func loadOptionalAt(cfg config.Config, configDir string) (optionalDependencies, 
 			d.failures[channel] = channel + "_credentials_unavailable"
 		} else {
 			d.native[channel] = sender
+		}
+	}
+	for _, channel := range config.OfficialChannelNames() {
+		setting := cfg.Notifications.OfficialChannels()[channel]
+		if !setting.Enabled {
+			continue
+		}
+		parent := filepath.Dir(setting.CredentialFile)
+		if configDir != "" && parent != configDir && parent != filepath.Join(configDir, "secrets") {
+			d.failures[channel] = channel + "_credentials_unavailable"
+			continue
+		}
+		sender, err := notify.NewOfficial(channel, setting)
+		if err != nil {
+			d.failures[channel] = channel + "_credentials_unavailable"
+		} else {
+			d.official[channel] = sender
 		}
 	}
 	if cfg.Heartbeat.Enabled {

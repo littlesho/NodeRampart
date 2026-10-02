@@ -62,6 +62,9 @@ func (a *App) notificationTargets() []notificationTarget {
 	for _, channel := range config.NativeChannelNames() {
 		targets = append(targets, notificationTarget{channel, a.options.NativeDestinations[channel], a.options.Config.Notifications.NativeChannels()[channel].Enabled})
 	}
+	for _, channel := range config.OfficialChannelNames() {
+		targets = append(targets, notificationTarget{channel, a.options.OfficialDestinations[channel], a.options.Config.Notifications.OfficialChannels()[channel].Enabled})
+	}
 	return targets
 }
 

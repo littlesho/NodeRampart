@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/littlesho/NodeRampart/internal/config"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -86,6 +87,10 @@ func (u *ui) configGroup(key string) {
 }
 
 func (u *ui) editField(f field) {
+	if officialSubscriptionField(f.path) {
+		u.output(u.tr(f.en, f.zh), u.tr(f.helpEN, f.helpZH), u.configuration)
+		return
+	}
 	if f.path == "reports.timezone" {
 		u.editTimezone(f)
 		return
@@ -159,7 +164,7 @@ func (u *ui) saveConfiguration() {
 		u.output(u.tr("Configuration", "功能配置"), u.tr("There are no effective changes.", "没有实际修改。"), u.configuration)
 		return
 	}
-	if u.baseline.Notifications != u.snapshot.Config.Notifications || u.baseline.Privacy.NotificationIP != u.snapshot.Config.Privacy.NotificationIP {
+	if !reflect.DeepEqual(u.baseline.Notifications, u.snapshot.Config.Notifications) || u.baseline.Privacy.NotificationIP != u.snapshot.Config.Privacy.NotificationIP {
 		diff += "\n\n" + u.tr("Receiver or uncertain credential changes keep older messages isolated; stricter privacy isolates older bodies. Retention is the default. Use Notifications to inspect or explicitly discard isolated bodies for a selected channel; active and sent history are preserved.", "更换收件人或无法确认身份的凭据会保留隔离旧消息；收紧通知隐私也会隔离旧正文。默认保留，可在通知菜单检查或显式丢弃所选通道的隔离正文；保留活动队列与已发送历史。")
 	}
 	pages, truncated := outputPages(diff)

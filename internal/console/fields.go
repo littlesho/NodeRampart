@@ -135,6 +135,12 @@ func setField(cfg *config.Config, path, text string) error {
 	if path == "schema_version" {
 		return errors.New("schema version is read-only")
 	}
+	if officialSubscriptionField(path) {
+		if text == fieldText(cfg, path) {
+			return nil
+		}
+		return errors.New("record or revoke recipient consent through the subscription menu / 请通过订阅菜单记录或撤销接收者同意")
+	}
 	v, err := configValue(cfg, path)
 	if err != nil {
 		return err

@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -597,6 +598,27 @@ func (m *Manager) preflight(cfg config.Config) error {
 			return errors.New(channel + " credentials or official webhook target are invalid / 凭据或官方 Webhook 目标无效")
 		}
 	}
+	for _, channel := range config.OfficialChannelNames() {
+		c := cfg.Notifications.OfficialChannels()[channel]
+		if !c.Enabled && (!m.sandbox || c.CredentialFile == "") {
+			continue
+		}
+		managedDir := filepath.Dir(m.ConfigPath)
+		credentialDir := filepath.Dir(c.CredentialFile)
+		if credentialDir != managedDir && credentialDir != filepath.Join(managedDir, "secrets") {
+			return errors.New("official credentials must remain in the managed configuration directory / 官方渠道凭据须位于托管配置目录")
+		}
+		if !c.Enabled {
+			continue
+		}
+		credential, err := m.readOfficialCredential(channel, c.CredentialFile)
+		if err != nil {
+			return err
+		}
+		if err := config.ValidateOfficialCredentialPolicy(channel, c, credential); err != nil {
+			return err
+		}
+	}
 	if cfg.Privacy.NotificationIP == "hash" || cfg.Privacy.StoreIP == "hash" {
 		if m.daemonReadable(cfg.Privacy.HashKeyFile, true) != nil {
 			return errors.New("privacy hash key must be daemon-owned 0600; use Generate privacy key")
@@ -697,6 +719,15 @@ func (m *Manager) Save(ctx context.Context, snapshot console.Snapshot) (string, 
 		return "", err
 	}
 	defer release()
+	current, err := m.Load(ctx)
+	if err != nil {
+		return "", err
+	}
+	for _, channel := range config.OfficialChannelNames() {
+		if !reflect.DeepEqual(current.Config.Notifications.OfficialChannels()[channel].Subscription, snapshot.Config.Notifications.OfficialChannels()[channel].Subscription) {
+			return "", errors.New("change subscriptions through explicit consent or revoke actions / 请通过明确同意或撤销操作修改订阅")
+		}
+	}
 	return m.saveLocked(ctx, snapshot)
 }
 

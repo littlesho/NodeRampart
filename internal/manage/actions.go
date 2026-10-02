@@ -66,6 +66,9 @@ func (m *Manager) Action(ctx context.Context, action string, input map[string]st
 	if config.IsNativeChannel(strings.TrimSuffix(action, "_setup")) && strings.HasSuffix(action, "_setup") || action == "native_setup" {
 		mutates[action] = true
 	}
+	if channel, _ := officialActionChannel(action); channel != "" {
+		mutates[action] = true
+	}
 	if mutates[action] {
 		release, err := m.lock()
 		if err != nil {
@@ -75,6 +78,9 @@ func (m *Manager) Action(ctx context.Context, action string, input map[string]st
 		if err := ensureDirectory(filepath.Dir(m.ConfigPath), 0o750, m.daemonGID); err != nil {
 			return "", err
 		}
+	}
+	if channel, operation := officialActionChannel(action); channel != "" {
+		return m.official(ctx, channel, operation, input)
 	}
 	switch action {
 	case "evidence_export":
@@ -224,7 +230,7 @@ func (m *Manager) query(ctx context.Context, action string, input map[string]str
 		return "", err
 	}
 	switch action {
-	case "notify_test", "notify_discard_isolated":
+	case "notify_test", "notify_discard_isolated", "notify_preview":
 		channel := input["channel"]
 		if channel == "" {
 			channel = "telegram"
@@ -232,7 +238,18 @@ func (m *Manager) query(ctx context.Context, action string, input map[string]str
 		if !config.IsNotificationChannel(channel) {
 			return "", errors.New("select a supported notification channel / 请选择支持的通知渠道")
 		}
-		args = api.NotifyChannelArgs{Channel: channel}
+		if input["confirm_paid"] != "" && input["confirm_paid"] != "yes" && input["confirm_paid"] != "no" {
+			return "", errors.New("paid test confirmation must be yes or no / 付费测试确认须为是或否")
+		}
+		if action == "notify_test" && config.IsPaidOfficialChannel(channel) && (input["confirm_paid"] != "yes" || len(input["preview_id"]) != 64 || !regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(input["preview_id"])) {
+			return "", errors.New("paid test requires an explicit charge confirmation and current preview / 付费测试须明确确认费用与当前预览")
+		}
+		args = api.NotifyChannelArgs{Channel: channel, ConfirmPaid: input["confirm_paid"] == "yes", PreviewID: input["preview_id"]}
+	case "notify_reconcile_paid":
+		if !config.IsPaidOfficialChannel(input["channel"]) || input["confirm"] != "RECONCILE" {
+			return "", errors.New("select a paid channel and explicitly confirm RECONCILE / 请选择付费渠道并明确输入 RECONCILE")
+		}
+		args = api.OfficialReconcileArgs{Channel: input["channel"], EvidenceRef: input["evidence_ref"], Confirm: true}
 	case "status", "doctor", "report_now", "notify_status", "alerts_status":
 	case "retention":
 		var before int64
@@ -424,7 +441,11 @@ func (m *Manager) newSecret(kind string, data []byte) (string, error) {
 		return "", err
 	}
 	path := filepath.Join(dir, kind+"-"+rand.Text()+".secret")
-	if err := writeFile(path, bytes.NewReader(data), 8192, 0o600, m.daemonUID, m.daemonGID, false); err != nil {
+	limit := int64(8192)
+	if config.IsOfficialChannel(kind) {
+		limit = int64(config.MaxOfficialCredentialBytes)
+	}
+	if err := writeFile(path, bytes.NewReader(data), limit, 0o600, m.daemonUID, m.daemonGID, false); err != nil {
 		return "", err
 	}
 	return path, nil

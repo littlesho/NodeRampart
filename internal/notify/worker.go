@@ -54,6 +54,11 @@ func (w *Worker) process(ctx context.Context) error {
 		return errors.New("notification sender target identity unavailable")
 	}
 	now := time.Now().UTC()
+	if sender, ok := w.Sender.(officialDispatchSender); ok {
+		if err := w.processOfficialPolls(ctx, sender, destination, now); err != nil {
+			return err
+		}
+	}
 	messages, err := w.Store.PendingDestination(ctx, now, 20, destination)
 	if err != nil {
 		return err
@@ -73,6 +78,18 @@ func (w *Worker) process(ctx context.Context) error {
 			return err
 		}
 		if !eligible {
+			continue
+		}
+		if _, official := w.Sender.(officialDispatchSender); official {
+			interval := time.Duration(0)
+			if limited, ok := w.Sender.(interface{ MinimumInterval() time.Duration }); ok {
+				interval = limited.MinimumInterval()
+			}
+			// Begin performs target/policy/pacing checks and commits the intent.
+			// The immediate send check subsequently requires that durable intent.
+			if err := w.processOfficialMessage(ctx, message, interval); err != nil {
+				return err
+			}
 			continue
 		}
 		allowed, err := w.Store.NotificationDeliveryAllowed(ctx, message.ID, destination)

@@ -219,6 +219,15 @@ func upgradeKeyDependencies(cfg config.Config) error {
 			return errors.New(channel + " credentials are missing, unsafe or invalid; credentials are not included in backups / 凭据缺失、不安全或无效；备份不包含凭据")
 		}
 	}
+	for _, channel := range config.OfficialChannelNames() {
+		c := cfg.Notifications.OfficialChannels()[channel]
+		if !c.Enabled {
+			continue
+		}
+		if _, err := notify.NewOfficial(channel, c); err != nil {
+			return errors.New(channel + " credentials are missing, unsafe or invalid; credentials are not included in backups / 凭据缺失、不安全或无效；备份不包含凭据")
+		}
+	}
 	if cfg.Heartbeat.Enabled {
 		if _, err := readFile(cfg.Heartbeat.CredentialFile, 512, true, -1); err != nil {
 			return errors.New("Enabled heartbeat credentials are missing or unsafe; they are not included in backups.")

@@ -24,6 +24,8 @@ type Scheduler struct {
 	Destinations        []string
 	NotificationPrivacy string
 	NativeLanguages     map[string]string
+	OfficialNotifiers   map[string]OfficialPreparer
+	Hostname            string
 	TelegramLanguage    string
 	Logger              *slog.Logger
 	BackfillDays        int
@@ -87,7 +89,7 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 	if s.Destination != "" {
 		destinations = append(destinations, s.Destination)
 	}
-	if len(destinations) > 8 {
+	if len(destinations) > 12 {
 		return fmt.Errorf("too many report notification targets")
 	}
 	generated := map[string]bool{}
@@ -160,14 +162,14 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 		} else if strings.HasPrefix(destination, "webhook:") {
 			channel = "webhook"
 		}
-		if candidate := strings.SplitN(destination, ":", 2)[0]; config.IsNativeChannel(candidate) {
+		if candidate := strings.SplitN(destination, ":", 2)[0]; config.IsNativeChannel(candidate) || config.IsOfficialChannel(candidate) {
 			channel = candidate
 			language, err = notificationLanguage(s.NativeLanguages[channel])
 			if err != nil {
 				return err
 			}
 		}
-		if config.IsNativeChannel(channel) {
+		if config.IsNativeChannel(channel) || config.IsOfficialChannel(channel) {
 			activated, err := s.Store.NotificationTargetActivatedAt(ctx, channel, destination)
 			if err != nil {
 				return err
@@ -177,7 +179,7 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 			}
 		}
 		var notificationBody string
-		if config.IsNativeChannel(channel) {
+		if config.IsNativeChannel(channel) || config.IsOfficialChannel(channel) {
 			notificationBody, err = NativeNotificationBody(snapshot, language)
 		} else if channel == "telegram" {
 			notificationBody, err = NotificationBodyLocalized(snapshot, language)
@@ -187,7 +189,14 @@ func (s *Scheduler) checkPrevious(ctx context.Context, now time.Time) error {
 		if err != nil {
 			return err
 		}
-		inserted, err := s.Store.Enqueue(ctx, store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "daily:" + date + ":" + destination, Channel: channel, PrivacyMode: s.NotificationPrivacy, Destination: destination, Body: notificationBody, Language: language, Timezone: timezone})
+		message := store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "daily:" + date + ":" + destination, Channel: channel, PrivacyMode: s.NotificationPrivacy, Destination: destination, Body: notificationBody, Language: language, Timezone: timezone}
+		if config.IsOfficialChannel(channel) {
+			message, err = prepareOfficialDaily(snapshot, s.Hostname, language, destination, s.NotificationPrivacy, timezone, s.OfficialNotifiers[channel])
+			if err != nil {
+				return err
+			}
+		}
+		inserted, err := s.Store.Enqueue(ctx, message)
 		if err != nil {
 			targetErrors = append(targetErrors, fmt.Errorf("%s daily notification admission failed: %w", channel, err))
 			continue

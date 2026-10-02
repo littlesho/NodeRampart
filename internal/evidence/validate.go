@@ -34,7 +34,7 @@ func (b Bundle) Validate() error {
 	}
 	for _, events := range [][]Event{b.Events, b.RelatedSSH} {
 		for _, e := range events {
-			if len(e.Deliveries) > 8 {
+			if len(e.Deliveries) > 12 {
 				return bad
 			}
 			if e.Alert != nil && e.Alert.Validate(e.Kind) != nil {
@@ -133,9 +133,9 @@ func safeValue(v reflect.Value, field string) bool {
 		case "Decision":
 			return s == category(s, "legacy", "queued", "merged", "silenced", "ineligible", "rejected")
 		case "Channel":
-			return s == "" || s == category(s, "telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat")
+			return s == "" || s == category(s, "telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat", "qqbot", "line", "twilio_sms", "whatsapp_cloud")
 		case "State":
-			return s == category(s, "running", "degraded", "disabled", "conflicting", "sent", "accepted", "silenced", "ineligible", "rejected", "history_unavailable", "expired", "quarantined", "sending", "pending", "isolated", "discarded", "paused", "incident_active", "no_active_incident", "milestone_recorded", "no_milestone_recorded")
+			return s == category(s, "running", "degraded", "disabled", "conflicting", "sent", "accepted", "silenced", "ineligible", "rejected", "history_unavailable", "expired", "quarantined", "sending", "pending", "isolated", "discarded", "paused", "delivery_unknown", "blocked", "queued", "delivered", "undelivered", "failed", "opted_out", "incident_active", "no_active_incident", "milestone_recorded", "no_milestone_recorded")
 		case "Dataset":
 			return s == dataset(s)
 		case "Reason":

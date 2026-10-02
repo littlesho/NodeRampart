@@ -123,7 +123,7 @@ func run(arguments []string) error {
 			"events":   {"list": "events_list", "show": "events_show", "timeline": "events_timeline"},
 			"incident": {"list": "incident_list", "show": "incident_show"},
 			"report":   {"now": "report_now", "list": "report_list", "show": "report_show", "export": "report_export", "trend": "report_trend", "forecast": "report_forecast", "backfill": "report_backfill"},
-			"notify":   {"test": "notify_test", "status": "notify_status", "list": "notify_list", "retry": "notify_retry", "quarantine": "notify_quarantine", "discard-isolated": "notify_discard_isolated", "resume": "notify_resume", "resume-destination": "notify_resume"},
+			"notify":   {"test": "notify_test", "preview": "notify_preview", "reconcile-paid": "notify_reconcile_paid", "status": "notify_status", "list": "notify_list", "retry": "notify_retry", "quarantine": "notify_quarantine", "discard-isolated": "notify_discard_isolated", "resume": "notify_resume", "resume-destination": "notify_resume"},
 			"backup":   {"create": "backup_create", "verify": "backup_verify", "restore": "backup_restore"},
 		}
 		name, ok := commands[arguments[0]][arguments[1]]
@@ -170,7 +170,8 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 	var days int
 	var offset int
 	var retentionBefore int64
-	var dataset, channel string
+	var dataset, channel, previewID string
+	var confirmPaid bool
 	switch name {
 	case "retention":
 		flags.StringVar(&start, "since", now.Add(-7*24*time.Hour).UTC().Format(time.RFC3339Nano), "inclusive affected-data period start; maximum 400 days")
@@ -233,10 +234,18 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 		flags.StringVar(&options.Format, "format", "text", "json, text, or html")
 	case "notify_resume":
 		flags.StringVar(&destination, "destination", "", "destination to resume")
+	case "notify_reconcile_paid":
+		flags.StringVar(&channel, "channel", "", "twilio_sms or whatsapp_cloud")
+		flags.StringVar(&reason, "evidence-ref", "", "bounded local receipt and budget reconciliation evidence ID")
+		flags.BoolVar(&confirmPaid, "confirm", false, "confirm manual reconciliation; old uncertain messages remain held")
 	case "backup_create":
 		flags.StringVar(&output, "output", "", "new backup path under the daemon state backups directory")
-	case "notify_test", "notify_discard_isolated":
-		flags.StringVar(&channel, "channel", "telegram", "telegram, webhook, feishu, wecom, discord, slack, teams or google_chat; default telegram")
+	case "notify_test", "notify_preview", "notify_discard_isolated":
+		flags.StringVar(&channel, "channel", "telegram", "one of the twelve notification channels; default telegram")
+		if name == "notify_test" {
+			flags.BoolVar(&confirmPaid, "confirm-paid", false, "explicitly confirm paid submission, still subject to subscription and budget")
+			flags.StringVar(&previewID, "preview-id", "", "exact current paid test preview ID from notify preview")
+		}
 	case "status", "alerts_status", "notify_status", "notify_silence_list":
 	default:
 		return options, usageError()
@@ -247,11 +256,14 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 	var args any = struct{}{}
 	invalid := errors.New("invalid or missing command argument")
 	switch name {
-	case "notify_test", "notify_discard_isolated":
+	case "notify_test", "notify_preview", "notify_discard_isolated":
 		if !config.IsNotificationChannel(channel) {
 			return options, invalid
 		}
-		args = api.NotifyChannelArgs{Channel: channel}
+		if (confirmPaid || previewID != "") && !config.IsPaidOfficialChannel(channel) || previewID != "" && (len(previewID) != 64 || strings.IndexFunc(previewID, func(r rune) bool { return !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') }) >= 0) {
+			return options, invalid
+		}
+		args = api.NotifyChannelArgs{Channel: channel, ConfirmPaid: confirmPaid, PreviewID: previewID}
 	case "retention":
 		from, e1 := time.Parse(time.RFC3339Nano, start)
 		to, e2 := time.Parse(time.RFC3339Nano, end)
@@ -342,6 +354,13 @@ func parseCommand(arguments []string, name string, now time.Time) (commandOption
 			return options, invalid
 		}
 		args = api.DestinationArgs{Destination: destination}
+	case "notify_reconcile_paid":
+		if !config.IsPaidOfficialChannel(channel) || !confirmPaid || len(reason) == 0 || len(reason) > 128 || strings.Contains(reason, "..") || strings.IndexFunc(reason, func(r rune) bool {
+			return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("._:-", r))
+		}) >= 0 {
+			return options, invalid
+		}
+		args = api.OfficialReconcileArgs{Channel: channel, EvidenceRef: reason, Confirm: true}
 	case "backup_create":
 		if !cleanLocalPath(output) {
 			return options, invalid
@@ -448,7 +467,7 @@ func printJSON(output io.Writer, value any) error {
 }
 
 func usageError() error {
-	return errors.New("usage: noderampart {tui|setup|assets update|version|config test|doctor|status|health|alerts status|retention|metrics export|upgrade preflight/rehearse|threshold preview/feedback|evidence export|events list/show/timeline|incident list/show|report now/list/show/backfill|replay anonymize/compare|notify test/status/list/retry/quarantine/discard-isolated/resume|notify silence add/list/remove|backup create/verify/restore} [flags]")
+	return errors.New("usage: noderampart {tui|setup|assets update|version|config test|doctor|status|health|alerts status|retention|metrics export|upgrade preflight/rehearse|threshold preview/feedback|evidence export|events list/show/timeline|incident list/show|report now/list/show/backfill|replay anonymize/compare|notify preview/test/status/list/retry/quarantine/discard-isolated/resume/reconcile-paid|notify silence add/list/remove|backup create/verify/restore} [flags]")
 }
 
 // Explicit validation may inspect enabled credentials, but never resolves DNS
@@ -471,5 +490,5 @@ func validateNativeReferences(cfg config.Config, path string) error {
 			return errors.New(channel + " protected credentials are unavailable, unsafe or invalid")
 		}
 	}
-	return nil
+	return validateOfficialReferences(cfg, dir)
 }

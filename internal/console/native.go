@@ -12,9 +12,9 @@ import (
 
 var nativeBrands = map[string]string{"feishu": "Feishu", "wecom": "WeCom", "discord": "Discord", "slack": "Slack", "teams": "Microsoft Teams Workflows", "google_chat": "Google Chat"}
 
-var deliveryFailurePattern = regexp.MustCompile(`^(Telegram|Webhook|Feishu|WeCom|Discord|Slack|Teams workflow|Google Chat) (delivery failed|retry interval requires destination resume) \(HTTP ([0-9]{1,3}), API (-?[0-9]{1,10})\)$`)
-var deliveryResponsePattern = regexp.MustCompile(`^(Telegram|Webhook|Feishu|WeCom|Discord|Slack|Teams workflow|Google Chat) response invalid \(HTTP ([0-9]{1,3})\)$`)
-var deliveryPayloadPattern = regexp.MustCompile(`^(Telegram|Webhook|Feishu|WeCom|Discord|Slack|Teams workflow|Google Chat) payload invalid$`)
+var deliveryFailurePattern = regexp.MustCompile(`^(Telegram|Webhook|Feishu|WeCom|Discord|Slack|Teams workflow|Google Chat|QQ Bot|LINE|Twilio SMS|WhatsApp Cloud) (delivery failed|retry interval requires destination resume) \(HTTP ([0-9]{1,3}), API (-?[0-9]{1,10})\)$`)
+var deliveryResponsePattern = regexp.MustCompile(`^(Telegram|Webhook|Feishu|WeCom|Discord|Slack|Teams workflow|Google Chat|QQ Bot|LINE|Twilio SMS|WhatsApp Cloud) response invalid \(HTTP ([0-9]{1,3})\)$`)
+var deliveryPayloadPattern = regexp.MustCompile(`^(Telegram|Webhook|Feishu|WeCom|Discord|Slack|Teams workflow|Google Chat|QQ Bot|LINE|Twilio SMS|WhatsApp Cloud) payload invalid$`)
 
 var notificationTexts = map[string][2]string{
 	"selected notification sender is disabled or unavailable":              {"The selected channel is disabled or unavailable. Inspect its protected credentials and delivery status.", "所选渠道已停用或不可用。请检查受保护凭据与投递状态。"},
@@ -45,6 +45,14 @@ func notificationText(label [2]string, language string) string {
 // Map only fixed product categories and tightly bounded numeric protocol codes.
 // Unknown errors never serve as an English-to-Chinese translation source.
 func notificationResultLabel(key, value, language string) string {
+	if label, ok := officialNotificationTexts[value]; ok {
+		return notificationText(label, language)
+	}
+	if key == "dispatch_state" || key == "provider_state" || key == "provider_delivery_status" {
+		if label, ok := officialDispatchLabels[value]; ok {
+			return notificationText(label, language)
+		}
+	}
 	if label, ok := notificationTexts[value]; ok {
 		return notificationText(label, language)
 	}
@@ -52,8 +60,19 @@ func notificationResultLabel(key, value, language string) string {
 		if brand, ok := nativeBrands[value]; ok {
 			return brand
 		}
+		if brand, ok := officialBrands[value]; ok {
+			return brand
+		}
 	}
 	for channel, brand := range nativeBrands {
+		if value == channel+"_credentials_unavailable" {
+			return notificationText([2]string{brand + " protected credentials unavailable or unsafe", brand + " 受保护凭据不可用或不安全"}, language)
+		}
+		if key == "name" && value == channel+"_worker" {
+			return notificationText([2]string{brand + " delivery worker", brand + " 投递工作线程"}, language)
+		}
+	}
+	for channel, brand := range officialBrands {
 		if value == channel+"_credentials_unavailable" {
 			return notificationText([2]string{brand + " protected credentials unavailable or unsafe", brand + " 受保护凭据不可用或不安全"}, language)
 		}

@@ -119,6 +119,46 @@ func openManagedFile(path string, maximum int64, secret bool, allowedUID int) (*
 		return nil, stat, err
 	}
 	defer parent.Close()
+	return openManagedFileAt(parent, path, maximum, secret, allowedUID)
+}
+
+// Credential reads validate every pinned parent before opening the file. Root
+// sticky public ancestors allow private test/source checkouts, while the final
+// managed directory and all ordinary ancestors reject shared write access.
+func openManagedCredentialFile(path string, maximum int64, allowedUID int) (*os.File, unix.Stat_t, error) {
+	var stat unix.Stat_t
+	if !cleanPath(path) {
+		return nil, stat, errors.New("invalid managed credential path")
+	}
+	fd, err := unix.Open("/", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return nil, stat, errors.New("managed credential directory is unavailable")
+	}
+	parts := strings.Split(strings.TrimPrefix(filepath.Dir(path), "/"), "/")
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+		next, openErr := unix.Openat(fd, part, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+		_ = unix.Close(fd)
+		if openErr != nil {
+			return nil, stat, errors.New("managed credential directory is unsafe")
+		}
+		fd = next
+		var parentStat unix.Stat_t
+		if unix.Fstat(fd, &parentStat) != nil || parentStat.Uid != 0 && parentStat.Uid != uint32(os.Geteuid()) && parentStat.Uid != uint32(allowedUID) ||
+			parentStat.Mode&0o022 != 0 && !(i < len(parts)-1 && parentStat.Uid == 0 && parentStat.Mode&unix.S_ISVTX != 0) {
+			_ = unix.Close(fd)
+			return nil, stat, errors.New("managed credential directory is unsafe")
+		}
+	}
+	parent := os.NewFile(uintptr(fd), "managed-credential-directory")
+	defer parent.Close()
+	return openManagedFileAt(parent, path, maximum, false, allowedUID)
+}
+
+func openManagedFileAt(parent *os.File, path string, maximum int64, secret bool, allowedUID int) (*os.File, unix.Stat_t, error) {
+	var stat unix.Stat_t
 	fd, err := unix.Openat(int(parent.Fd()), filepath.Base(path), unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC|unix.O_NONBLOCK, 0)
 	if err != nil {
 		if errors.Is(err, unix.ENOENT) {
