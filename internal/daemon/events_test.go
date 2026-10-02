@@ -5,6 +5,7 @@ package daemon
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -163,7 +164,14 @@ func TestEventQueueBoundsAndDurableLoss(t *testing.T) {
 				t.Fatal("byte limit did not precede count limit")
 			}
 			dropped := a.eventIngest.Dropped
-			a.flushEvents(context.Background())
+			// A bounded flush can retain loss when event writes use its deadline.
+			// Exercise fixed timer-style retry passes before checking durability.
+			for pass := 0; pass < 3; pass++ {
+				a.flushEvents(context.Background())
+				if a.eventIngest.Dropped != dropped {
+					t.Fatal("retry changed the queue-loss total")
+				}
+			}
 			gaps, err := a.options.Store.CoverageGaps(context.Background(), now.Add(-time.Second), now.Add(time.Minute), 100)
 			if err != nil {
 				t.Fatal(err)
@@ -177,6 +185,66 @@ func TestEventQueueBoundsAndDurableLoss(t *testing.T) {
 				t.Fatal("retry duplicated loss accounting")
 			}
 		})
+	}
+}
+
+func TestEventQueueLossSurvivesDeadlineAndRetry(t *testing.T) {
+	a := eventTestApp(t)
+	now := time.Now().UTC()
+	a.queueEvent(model.Event{ID: "evt_pending_deadline", ObservedAt: now, Kind: "port_scan", Severity: model.SeverityMedium})
+	a.noteEventLoss(eventCapacity, now)
+	dropped := a.eventIngest.Dropped
+	pending := a.eventIngest.Pending
+	if dropped != 1 || pending != 1 {
+		t.Fatal("deadline fixture did not retain one event and one loss")
+	}
+	first := append([]byte(nil), a.pendingEvents[0].data...)
+
+	// A real competing SQLite writer holds the first flush until its caller's
+	// deadline expires. Release is synchronized to cancellation, not scheduling.
+	lockDB, err := sql.Open("sqlite", a.options.Config.Paths.Database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lockDB.Close()
+	lockDB.SetMaxOpenConns(1)
+	if _, err := lockDB.Exec("BEGIN IMMEDIATE"); err != nil {
+		t.Fatal(err)
+	}
+	defer lockDB.Exec("ROLLBACK")
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	lockReleased := make(chan error, 1)
+	go func() {
+		<-ctx.Done()
+		_, err := lockDB.Exec("ROLLBACK")
+		lockReleased <- err
+	}()
+	a.flushEvents(ctx)
+	if err := <-lockReleased; err != nil {
+		t.Fatal(err)
+	}
+	if ctx.Err() != context.DeadlineExceeded || a.eventIngest.Dropped != dropped || a.eventIngest.UnrecordedDropped != dropped || a.eventIngest.Pending != pending || !bytes.Equal(first, a.pendingEvents[0].data) {
+		t.Fatal("deadline lost pending events or changed the queue-loss total")
+	}
+	loss := a.eventLosses[eventCapacity]
+	if !loss.active || uint64(loss.count) != dropped || !loss.start.Equal(now) || !loss.end.Equal(now) {
+		t.Fatal("deadline changed pending loss evidence")
+	}
+	gaps, err := a.options.Store.CoverageGaps(context.Background(), now.Add(-time.Second), now.Add(time.Minute), 100)
+	if err != nil || len(gaps) != 0 {
+		t.Fatalf("blocked flush unexpectedly persisted loss: %#v, error=%v", gaps, err)
+	}
+
+	a.flushEvents(context.Background())
+	gaps, err = a.options.Store.CoverageGaps(context.Background(), now.Add(-time.Second), now.Add(time.Minute), 100)
+	if err != nil || len(gaps) != 1 || gaps[0].Reason != "event_queue_capacity" || gaps[0].Count != dropped || a.eventIngest.Dropped != dropped || a.eventIngest.UnrecordedDropped != 0 || a.eventIngest.Pending != 0 || a.eventLosses[eventCapacity].active {
+		t.Fatalf("fresh flush did not persist precise queue loss: %#v, error=%v", gaps, err)
+	}
+	a.flushEvents(context.Background())
+	gaps, err = a.options.Store.CoverageGaps(context.Background(), now.Add(-time.Second), now.Add(time.Minute), 100)
+	if err != nil || len(gaps) != 1 || gaps[0].Count != dropped || a.eventIngest.Dropped != dropped || a.eventIngest.UnrecordedDropped != 0 {
+		t.Fatal("retry duplicated or forgot durable loss accounting")
 	}
 }
 

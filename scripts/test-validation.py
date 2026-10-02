@@ -84,7 +84,7 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         commands = self.commands()
         self.assertIn(["go", ["test", "-count=1", "./..."], None], commands)
-        self.assertIn(["go", ["test", "-race", "-count=1", "./..."], "1"], commands)
+        self.assertIn(["go", ["test", "-race", "-count=1", "-p=2", "./..."], "1"], commands)
         self.assertIn(["go", ["test", "-count=1", "-coverprofile=coverage.out", "./..."], None], commands)
         self.assertIn(["go", ["build", "./cmd/..."], "0"], commands)
         self.assertEqual(commands[-1], ["go", ["run", "golang.org/x/vuln/cmd/govulncheck@v1.7.0", "./..."], None])
@@ -93,6 +93,20 @@ class ValidationTests(unittest.TestCase):
         result = self.run_script("validate.sh")
         self.assertEqual(result.returncode, 23)
         self.assertFalse(any(row[0] == "go" and row[1][:1] == ["test"] for row in self.commands()))
+
+    def test_bounded_race_checks_all_packages_and_propagates_failure(self):
+        self.env["VALIDATION_TEST_FAIL"] = "go:test -race -count=1 -p=2 ./..."
+        result = self.run_script("validate.sh")
+        self.assertEqual(result.returncode, 23)
+        commands = self.commands()
+        race = [row for row in commands if row[0] == "go" and "-race" in row[1]]
+        self.assertEqual(race, [["go", ["test", "-race", "-count=1", "-p=2", "./..."], "1"]])
+        self.assertEqual(commands[-1], race[0])
+        self.assertFalse(any("-short" in row[1] or "-run" in row[1] for row in commands))
+        required = (REPO / "scripts/validate.sh").read_text()
+        self.assertNotIn("GOMAXPROCS=", required)
+        self.assertNotIn("-timeout", required)
+        self.assertIn("CGO_ENABLED=1 go test -race -p=2 ./...", (REPO / "Makefile").read_text())
 
     def test_hosted_validation_rejects_wrong_or_changed_source_before_checks(self):
         for condition in ("wrong", "tracked", "untracked"):

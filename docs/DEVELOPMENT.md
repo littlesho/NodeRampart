@@ -22,6 +22,11 @@ tools or network checks are not treated as success. Run a package's targeted
 tests while iterating, then this entry for the final candidate. Hosted checks
 also reject a checkout that differs from the workflow's full commit.
 
+The race entry limits simultaneous package processes to two (`-p=2`) so
+independent SQLite-heavy tests do not all compete at once. It still checks
+every package in `./...`, preserves each package's goroutine concurrency and
+default test deadline, and does not set `GOMAXPROCS` or exclude tests.
+
 Ordinary local builds/packages accept dirty workspaces and default their existing
 commit declaration to `unknown`. Keep source/artifact digests with local test
 evidence. `scripts/build-release.sh` requires a clean checkout and an exact full
