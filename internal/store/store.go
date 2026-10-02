@@ -33,8 +33,8 @@ const (
 	maxPendingOutboxBytes    = 32 << 20
 	// Include all identities and retained isolated/quarantined bodies in a
 	// channel's share, so credential rotation cannot bypass this bound.
-	maxChannelOutboxMessages = maxPendingOutboxMessages / MaxNotificationChannels
-	maxChannelOutboxBytes    = maxPendingOutboxBytes / MaxNotificationChannels
+	maxChannelOutboxMessages = 1250
+	maxChannelOutboxBytes    = 4 << 20
 	maxAuthKeysPerHour       = 65_536
 	maxTrafficKeysPerHour    = 16_384
 )
@@ -263,6 +263,11 @@ func (s *Store) migrate(ctx context.Context) error {
 	}
 	if version < 13 {
 		if err := migrateV13(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if version < 14 {
+		if err := migrateV14(ctx, tx); err != nil {
 			return err
 		}
 	}
@@ -601,7 +606,7 @@ func recordBatchHealth(ctx context.Context, db executor, batch protocol.Batch) e
 
 type OutboxMessage struct {
 	// Secondary links event deliveries admitted in the same transaction. The
-	// chain contains at most eight distinct, explicitly configured channels.
+	// chain contains at most twelve distinct, explicitly configured channels.
 	Secondary   *OutboxMessage `json:"secondary,omitempty"`
 	ID          string
 	DedupeKey   string
@@ -615,6 +620,22 @@ type OutboxMessage struct {
 	Body        string
 	Attempts    int
 	NextAttempt time.Time
+	ExpiresAt   time.Time
+	// Official channels freeze a credential-free request before admission.
+	LogicalKind       string
+	AdmissionFailure  string `json:"-"`
+	SemanticPayload   string `json:"-"`
+	FrozenPayload     string `json:"-"`
+	EstimatedSegments int
+	Encoding          string
+	RetryKey          string `json:"-"`
+	FirstAttemptAt    time.Time
+	DispatchState     string
+	DispatchAttempt   int
+	ProviderID        string `json:"-"`
+	PollAttempts      int
+	NextPoll          time.Time
+	PollDeadline      time.Time
 }
 
 var ErrOutboxFull = errors.New("notification outbox capacity reached")
@@ -659,6 +680,9 @@ func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, erro
 	if len(message.Destination) > 128 || (message.Channel != "" && (!notificationChannel(message.Channel) || !validNotificationTarget(message.Channel, message.Destination))) {
 		return false, errors.New("outbox target is invalid")
 	}
+	if err := validateOfficialMessage(message); err != nil {
+		return false, err
+	}
 	if len(message.Body) > 4096 {
 		return false, errors.New("outbox message exceeds conservative delivery byte limit")
 	}
@@ -672,14 +696,14 @@ func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, erro
 	if exists == 1 {
 		return false, nil
 	}
-	var pendingCount, pendingBytes, channelCount, channelBytes int64
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0),
- COALESCE(SUM(channel=?),0),COALESCE(SUM(CASE WHEN channel=? THEN LENGTH(CAST(body AS BLOB)) ELSE 0 END),0)
- FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL`, message.Channel, message.Channel).Scan(&pendingCount, &pendingBytes, &channelCount, &channelBytes); err != nil {
+	usage, err := outboxAdmissionUsage(ctx, tx, message.Channel)
+	if err != nil {
 		return false, err
 	}
-	if pendingCount >= maxPendingOutboxMessages || pendingBytes+int64(len(message.Body)) > maxPendingOutboxBytes ||
-		message.Channel != "" && (channelCount >= maxChannelOutboxMessages || channelBytes+int64(len(message.Body)) > maxChannelOutboxBytes) {
+	messageLimit, byteLimit := channelOutboxLimits(message.Channel)
+	bytes := int64(len(message.Body) + len(message.FrozenPayload))
+	if usage.count+1 > maxPendingOutboxMessages-usage.reservedCount || usage.bytes+bytes > maxPendingOutboxBytes-usage.reservedBytes ||
+		message.Channel != "" && (usage.channelCount >= int64(messageLimit) || usage.channelBytes+bytes > int64(byteLimit)) {
 		if _, err := tx.ExecContext(ctx, `UPDATE notification_counters SET rejected=MIN(rejected,9223372036854775806)+1 WHERE id=1`); err != nil {
 			return false, err
 		}
@@ -706,6 +730,11 @@ func enqueue(ctx context.Context, tx *sql.Tx, message OutboxMessage) (bool, erro
 	if err != nil {
 		return false, err
 	}
+	if count == 1 {
+		if err := insertOfficialIntent(ctx, tx, message); err != nil {
+			return false, err
+		}
+	}
 	return count == 1, nil
 }
 
@@ -728,11 +757,13 @@ func (s *Store) pendingDestination(ctx context.Context, now time.Time, count int
 	if count < 1 || count > 100 {
 		count = 20
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id, dedupe_key, channel, destination, body, attempts, next_attempt,language,presentation_timezone
-		FROM notification_outbox AS o WHERE sent_at IS NULL AND quarantined_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL AND expires_at > ? AND next_attempt <= ?
+	rows, err := s.db.QueryContext(ctx, `SELECT o.id,o.dedupe_key,o.channel,o.destination,o.body,o.attempts,o.next_attempt,o.language,o.presentation_timezone,o.expires_at,
+ COALESCE(d.logical_kind,''),COALESCE(d.frozen_payload,''),COALESCE(d.estimated_segments,0),COALESCE(d.encoding,''),COALESCE(d.state,''),COALESCE(d.retry_key,''),COALESCE(d.first_attempt_at,0),COALESCE(d.dispatch_attempt,0),COALESCE(d.provider_id,''),COALESCE(d.poll_attempts,0),COALESCE(d.next_poll,0),COALESCE(d.poll_deadline,0)
+		FROM notification_outbox AS o LEFT JOIN notification_dispatch d ON d.notification_id=o.id WHERE sent_at IS NULL AND quarantined_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL AND expires_at > ? AND next_attempt <= ?
  AND (channel='' OR EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=1))
  AND (lease_until IS NULL OR lease_until<=?)
  AND NOT EXISTS (SELECT 1 FROM notification_cooldowns c WHERE c.destination=o.destination AND c.until_at>?)
+ AND NOT EXISTS(SELECT 1 FROM notification_dispatch d WHERE d.notification_id=o.id AND d.state NOT IN ('prepared','retry_ready'))
  AND (?='' OR o.destination=?)
  ORDER BY next_attempt, created_at, id LIMIT ?`, now.UnixMilli(), now.UnixMilli(), now.UnixMilli(), now.UnixMilli(), destination, destination, count)
 	if err != nil {
@@ -742,11 +773,21 @@ func (s *Store) pendingDestination(ctx context.Context, now time.Time, count int
 	var messages []OutboxMessage
 	for rows.Next() {
 		var message OutboxMessage
-		var next int64
-		if err := rows.Scan(&message.ID, &message.DedupeKey, &message.Channel, &message.Destination, &message.Body, &message.Attempts, &next, &message.Language, &message.Timezone); err != nil {
+		var next, expires, first, pollNext, pollEnd int64
+		if err := rows.Scan(&message.ID, &message.DedupeKey, &message.Channel, &message.Destination, &message.Body, &message.Attempts, &next, &message.Language, &message.Timezone, &expires, &message.LogicalKind, &message.FrozenPayload, &message.EstimatedSegments, &message.Encoding, &message.DispatchState, &message.RetryKey, &first, &message.DispatchAttempt, &message.ProviderID, &message.PollAttempts, &pollNext, &pollEnd); err != nil {
 			return nil, err
 		}
 		message.NextAttempt = time.UnixMilli(next).UTC()
+		message.ExpiresAt = time.UnixMilli(expires).UTC()
+		if first > 0 {
+			message.FirstAttemptAt = time.UnixMilli(first).UTC()
+		}
+		if pollNext > 0 {
+			message.NextPoll = time.UnixMilli(pollNext).UTC()
+		}
+		if pollEnd > 0 {
+			message.PollDeadline = time.UnixMilli(pollEnd).UTC()
+		}
 		messages = append(messages, message)
 	}
 	return messages, rows.Err()
@@ -774,6 +815,13 @@ func (s *Store) MarkSentWithCooldown(ctx context.Context, id string, now time.Ti
 		return err
 	}
 	defer tx.Rollback()
+	var official bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM notification_dispatch WHERE notification_id=?)`, id).Scan(&official); err != nil {
+		return err
+	}
+	if official {
+		return errors.New("official notifications require a durable acceptance receipt")
+	}
 	result, err := tx.ExecContext(ctx, `UPDATE notification_outbox SET sent_at=?, last_error='',lease_until=NULL WHERE id=? AND sent_at IS NULL`, now.UnixMilli(), id)
 	if err != nil {
 		return err

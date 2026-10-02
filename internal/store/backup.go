@@ -83,7 +83,7 @@ func RestoreBackup(ctx context.Context, source, target string) (BackupInfo, erro
 		return BackupInfo{}, err
 	}
 	defer db.Close()
-	return snapshotInto(ctx, db, target, 0)
+	return snapshotIntoMode(ctx, db, target, 0, true)
 }
 
 func openReadOnlySnapshot(path string) (*sql.DB, error) {
@@ -275,6 +275,11 @@ func verifySnapshotSchema(ctx context.Context, db *sql.DB) (int, error) {
 	if version >= 13 {
 		tables["notification_targets"] += " activated_at"
 	}
+	if version >= 14 {
+		tables["notification_dispatch"] = "notification_id logical_kind frozen_payload estimated_segments encoding state retry_key first_attempt_at last_attempt_at uncertain_attempt dispatch_attempt provider_id accepted_at budget_day provider_state platform_segments platform_price price_unit poll_attempts next_poll poll_deadline poll_lease_until reason http_status api_error_code"
+		tables["official_channel_policy"] = "channel enabled consented_at purpose evidence_ref basis_id notification_types revoked cost_confirmed daily_message_limit daily_segment_limit max_segments optout_at optout_basis_id restore_hold reconciliation_ref clock_highwater budget_day_highwater pruned_budget_days"
+		tables["official_budget_usage"] = "channel utc_day logical_messages estimated_segments"
+	}
 	if version >= 10 {
 		tables["sensor_watermarks"] = "session_id interface sequence sent_at_us committed_at events_complete notifications_complete complete reason sequence_gaps duplicates health_json"
 		tables["sensor_commit_state"] = "id retired_before_us"
@@ -324,6 +329,10 @@ func verifySnapshotSchema(ctx context.Context, db *sql.DB) (int, error) {
 }
 
 func snapshotInto(ctx context.Context, db *sql.DB, target string, minimumFree int64) (BackupInfo, error) {
+	return snapshotIntoMode(ctx, db, target, minimumFree, false)
+}
+
+func snapshotIntoMode(ctx context.Context, db *sql.DB, target string, minimumFree int64, restored bool) (BackupInfo, error) {
 	output, err := createSnapshotTarget(target)
 	if err != nil {
 		return BackupInfo{}, err
@@ -348,6 +357,11 @@ func snapshotInto(ctx context.Context, db *sql.DB, target string, minimumFree in
 	}
 	if _, err := db.ExecContext(ctx, `VACUUM INTO ?`, output.sqlitePath()); err != nil {
 		return BackupInfo{}, fmt.Errorf("create consistent backup: %w", err)
+	}
+	if restored {
+		if err := markRestoredOfficialHold(ctx, output.sqlitePath()); err != nil {
+			return BackupInfo{}, err
+		}
 	}
 	info, err := verifySnapshot(ctx, output.sqlitePath())
 	if err != nil {

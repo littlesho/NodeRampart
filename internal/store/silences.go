@@ -101,6 +101,9 @@ func (s *Store) AddSilence(ctx context.Context, rule Silence, now time.Time) (Si
  (SELECT id FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL AND expires_at>? AND `+silenceMessageMatch+`)`, append([]any{rule.ID, now.UnixMilli()}, args...)...); err != nil {
 		return result, err
 	}
+	if _, err := tx.ExecContext(ctx, `UPDATE notification_dispatch SET frozen_payload='' WHERE notification_id IN(SELECT id FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL AND expires_at>? AND `+silenceMessageMatch+`)`, append([]any{now.UnixMilli()}, args...)...); err != nil {
+		return result, err
+	}
 	updateArgs := append([]any{now.UnixMilli(), now.UnixMilli()}, args...)
 	if _, err := tx.ExecContext(ctx, `UPDATE notification_outbox SET suppressed_at=?,body='' WHERE sent_at IS NULL AND suppressed_at IS NULL AND expires_at>? AND `+silenceMessageMatch, updateArgs...); err != nil {
 		return result, err

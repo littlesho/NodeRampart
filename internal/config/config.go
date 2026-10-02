@@ -128,15 +128,19 @@ type GeoConfig struct {
 }
 
 type NotificationsConfig struct {
-	Telegram    TelegramConfig      `json:"telegram"`
-	Webhook     WebhookConfig       `json:"webhook"`
-	Feishu      NativeChannelConfig `json:"feishu"`
-	WeCom       NativeChannelConfig `json:"wecom"`
-	Discord     NativeChannelConfig `json:"discord"`
-	Slack       NativeChannelConfig `json:"slack"`
-	Teams       NativeChannelConfig `json:"teams"`
-	GoogleChat  NativeChannelConfig `json:"google_chat"`
-	MergeWindow Duration            `json:"merge_window"`
+	Telegram      TelegramConfig        `json:"telegram"`
+	Webhook       WebhookConfig         `json:"webhook"`
+	Feishu        NativeChannelConfig   `json:"feishu"`
+	WeCom         NativeChannelConfig   `json:"wecom"`
+	Discord       NativeChannelConfig   `json:"discord"`
+	Slack         NativeChannelConfig   `json:"slack"`
+	Teams         NativeChannelConfig   `json:"teams"`
+	GoogleChat    NativeChannelConfig   `json:"google_chat"`
+	QQBot         OfficialChannelConfig `json:"qqbot"`
+	LINE          OfficialChannelConfig `json:"line"`
+	TwilioSMS     OfficialChannelConfig `json:"twilio_sms"`
+	WhatsAppCloud OfficialChannelConfig `json:"whatsapp_cloud"`
+	MergeWindow   Duration              `json:"merge_window"`
 }
 
 type TelegramConfig struct {

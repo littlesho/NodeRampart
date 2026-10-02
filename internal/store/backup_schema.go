@@ -276,6 +276,15 @@ func schemaTokens(definition string) ([]schemaToken, error) {
 
 func downgradeSnapshotSchemaReference(ctx context.Context, db *sql.DB, version int) error {
 	var statements []string
+	if version < 14 {
+		statements = append(statements, `DROP TABLE notification_dispatch`, `DROP TABLE official_budget_usage`, `DROP TABLE official_channel_policy`, `DROP INDEX event_notifications_message_idx`, `ALTER TABLE event_notifications RENAME TO event_notifications_v14`,
+			`CREATE TABLE event_notifications (event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+ channel TEXT NOT NULL DEFAULT 'telegram' CHECK(channel IN (`+historicalV13ChannelsSQL+`)),
+ notification_id TEXT NOT NULL DEFAULT '', decision TEXT NOT NULL CHECK(decision IN ('queued','merged','silenced','ineligible','rejected')),
+ silence_id TEXT NOT NULL DEFAULT '', recorded_at INTEGER NOT NULL, PRIMARY KEY(event_id,channel))`,
+			`INSERT INTO event_notifications SELECT event_id,channel,notification_id,decision,silence_id,recorded_at FROM event_notifications_v14 WHERE channel IN (`+historicalV13ChannelsSQL+`)`,
+			`DROP TABLE event_notifications_v14`, `CREATE INDEX event_notifications_message_idx ON event_notifications(notification_id)`)
+	}
 	if version < 13 {
 		statements = append(statements, `ALTER TABLE notification_targets DROP COLUMN activated_at`, `DROP INDEX event_notifications_message_idx`, `ALTER TABLE event_notifications RENAME TO event_notifications_v13`,
 			`CREATE TABLE event_notifications (event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,

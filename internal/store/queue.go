@@ -126,7 +126,7 @@ func (s *Store) RetryNotification(ctx context.Context, id string, now time.Time)
 	defer release()
 
 	result, err := s.db.ExecContext(ctx, `UPDATE notification_outbox SET attempts=0, quarantined_at=NULL, lease_until=NULL, merge_until=0, next_attempt=?, last_error=''
- WHERE id=? AND sent_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL AND (lease_until IS NULL OR lease_until<=?) AND expires_at>?`, now.UnixMilli(), id, now.UnixMilli(), now.UnixMilli())
+ WHERE id=? AND sent_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL AND (lease_until IS NULL OR lease_until<=?) AND expires_at>? AND NOT EXISTS(SELECT 1 FROM notification_dispatch d WHERE d.notification_id=id AND d.state NOT IN ('prepared','retry_ready'))`, now.UnixMilli(), id, now.UnixMilli(), now.UnixMilli())
 	if err != nil {
 		return err
 	}
@@ -152,6 +152,12 @@ func (s *Store) ExpireNotifications(ctx context.Context, now time.Time) error {
 		return err
 	}
 	defer tx.Rollback()
+	if err := recoverOfficialIntents(ctx, tx, now); err != nil {
+		return err
+	}
+	if err := expireOfficialPolls(ctx, tx, now); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `UPDATE notification_counters SET expired=MIN(expired,9223372036854775807-(SELECT COUNT(*) FROM notification_outbox WHERE sent_at IS NULL AND expires_at<=?))+(SELECT COUNT(*) FROM notification_outbox WHERE sent_at IS NULL AND expires_at<=?) WHERE id=1`, now.UnixMilli(), now.UnixMilli()); err != nil {
 		return err
 	}
@@ -201,7 +207,7 @@ type DestinationCooldown struct {
 func (s *Store) QueueStatus(ctx context.Context, now time.Time) (QueueStatus, error) {
 	status := QueueStatus{MaxMessages: maxPendingOutboxMessages, MaxBytes: maxPendingOutboxBytes}
 	var oldest, sent int64
-	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0), COALESCE(SUM(quarantined_at IS NOT NULL),0), COALESCE(MIN(created_at),0) FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL AND expires_at>?`, now.UnixMilli()).Scan(&status.Pending, &status.PendingBytes, &status.Quarantined, &oldest)
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM(LENGTH(CAST(o.body AS BLOB))+COALESCE(LENGTH(CAST(d.frozen_payload AS BLOB)),0)),0), COALESCE(SUM(quarantined_at IS NOT NULL),0), COALESCE(MIN(created_at),0) FROM notification_outbox o LEFT JOIN notification_dispatch d ON d.notification_id=o.id WHERE sent_at IS NULL AND suppressed_at IS NULL AND expires_at>?`, now.UnixMilli()).Scan(&status.Pending, &status.PendingBytes, &status.Quarantined, &oldest)
 	if err != nil {
 		return status, err
 	}
@@ -221,10 +227,10 @@ func (s *Store) QueueStatus(ctx context.Context, now time.Time) (QueueStatus, er
 		status.LastSent = time.UnixMilli(sent).UTC()
 	}
 	// One bounded aggregate avoids scanning retained bodies once per channel.
-	channelRows, err := s.db.QueryContext(ctx, `SELECT channel,COUNT(*),COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0),
+	channelRows, err := s.db.QueryContext(ctx, `SELECT o.channel,COUNT(*),COALESCE(SUM(LENGTH(CAST(o.body AS BLOB))+COALESCE(LENGTH(CAST(d.frozen_payload AS BLOB)),0)),0),
  COALESCE(SUM(isolated_at IS NOT NULL),0),COALESCE(SUM(quarantined_at IS NOT NULL),0)
- FROM notification_outbox WHERE channel IN (`+notificationChannelsSQL+`) AND sent_at IS NULL AND suppressed_at IS NULL AND expires_at>?
- GROUP BY channel LIMIT ?`, now.UnixMilli(), MaxNotificationChannels)
+ FROM notification_outbox o LEFT JOIN notification_dispatch d ON d.notification_id=o.id WHERE o.channel IN (`+notificationChannelsSQL+`) AND sent_at IS NULL AND suppressed_at IS NULL AND expires_at>?
+ GROUP BY o.channel LIMIT ?`, now.UnixMilli(), MaxNotificationChannels)
 	if err != nil {
 		return status, err
 	}
@@ -248,7 +254,8 @@ func (s *Store) QueueStatus(ctx context.Context, now time.Time) (QueueStatus, er
 	status.Channels = make([]ChannelQueueStatus, 0, MaxNotificationChannels)
 	for _, channel := range notificationChannels {
 		entry := channels[channel]
-		entry.Channel, entry.MaxMessages, entry.MaxBytes = channel, maxChannelOutboxMessages, maxChannelOutboxBytes
+		entry.Channel = channel
+		entry.MaxMessages, entry.MaxBytes = channelOutboxLimits(channel)
 		status.Channels = append(status.Channels, entry)
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT destination, until_at FROM notification_cooldowns WHERE until_at>? ORDER BY destination LIMIT 100`, now.UnixMilli())
@@ -296,16 +303,24 @@ func (s *Store) ResumeDestination(ctx context.Context, destination string) error
 }
 
 type NotificationInfo struct {
-	ID          string    `json:"id"`
-	Channel     string    `json:"channel,omitempty"`
-	Destination string    `json:"destination"`
-	State       string    `json:"state"`
-	Attempts    int       `json:"attempts"`
-	Bytes       int       `json:"bytes"`
-	CreatedAt   time.Time `json:"created_at_utc"`
-	NextAttempt time.Time `json:"next_attempt_utc"`
-	ExpiresAt   time.Time `json:"expires_at_utc"`
-	LastError   string    `json:"last_error,omitempty"`
+	DispatchState    string    `json:"dispatch_state,omitempty"`
+	FirstAttemptAt   time.Time `json:"first_attempt_at_utc,omitzero"`
+	HTTPStatus       int       `json:"http_status"`
+	APIErrorCode     int       `json:"api_error_code"`
+	ID               string    `json:"id"`
+	Channel          string    `json:"channel,omitempty"`
+	Destination      string    `json:"destination"`
+	State            string    `json:"state"`
+	Attempts         int       `json:"attempts"`
+	Bytes            int       `json:"bytes"`
+	CreatedAt        time.Time `json:"created_at_utc"`
+	NextAttempt      time.Time `json:"next_attempt_utc"`
+	ExpiresAt        time.Time `json:"expires_at_utc"`
+	LastError        string    `json:"last_error,omitempty"`
+	ProviderState    string    `json:"provider_delivery_status,omitempty"`
+	PlatformSegments *int      `json:"platform_segments"`
+	PlatformPrice    *string   `json:"platform_price"`
+	PriceUnit        string    `json:"price_unit,omitempty"`
 }
 
 // Notifications excludes message bodies and destination credentials. Pagination
@@ -314,8 +329,8 @@ func (s *Store) Notifications(ctx context.Context, beforeID string, count int) (
 	if count < 1 || count > 100 || len(beforeID) > 128 {
 		return nil, errors.New("invalid notification query")
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id,channel,destination,CASE WHEN sent_at IS NOT NULL THEN CASE WHEN channel='teams' THEN 'accepted' ELSE 'sent' END WHEN suppressed_at IS NOT NULL THEN CASE WHEN isolated_at IS NOT NULL THEN 'discarded' ELSE 'silenced' END WHEN expires_at<=? THEN 'expired' WHEN isolated_at IS NOT NULL THEN 'isolated' WHEN quarantined_at IS NOT NULL THEN 'quarantined' WHEN EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=0) THEN 'paused' ELSE 'pending' END,
- attempts,LENGTH(CAST(body AS BLOB)),created_at,next_attempt,expires_at,last_error FROM notification_outbox o WHERE (?='' OR id<?) ORDER BY id DESC LIMIT ?`, time.Now().UTC().UnixMilli(), beforeID, beforeID, count)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,channel,destination,CASE WHEN sent_at IS NOT NULL THEN CASE WHEN channel IN ('teams','qqbot','line','twilio_sms','whatsapp_cloud') THEN 'accepted' ELSE 'sent' END WHEN suppressed_at IS NOT NULL THEN CASE WHEN isolated_at IS NOT NULL THEN 'discarded' ELSE 'silenced' END WHEN expires_at<=? THEN 'expired' WHEN isolated_at IS NOT NULL THEN 'isolated' WHEN EXISTS(SELECT 1 FROM notification_dispatch d WHERE d.notification_id=o.id AND d.state='delivery_unknown') THEN 'delivery_unknown' WHEN EXISTS(SELECT 1 FROM notification_dispatch d WHERE d.notification_id=o.id AND d.state='blocked') THEN 'blocked' WHEN quarantined_at IS NOT NULL THEN 'quarantined' WHEN EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=0) THEN 'paused' WHEN EXISTS(SELECT 1 FROM notification_dispatch d WHERE d.notification_id=o.id AND d.state='in_flight') THEN 'in_flight' ELSE 'pending' END,
+ attempts,LENGTH(CAST(body AS BLOB))+COALESCE((SELECT LENGTH(CAST(frozen_payload AS BLOB)) FROM notification_dispatch d WHERE d.notification_id=o.id),0),created_at,next_attempt,expires_at,last_error,COALESCE((SELECT provider_state FROM notification_dispatch d WHERE d.notification_id=o.id),''),(SELECT platform_segments FROM notification_dispatch d WHERE d.notification_id=o.id),(SELECT platform_price FROM notification_dispatch d WHERE d.notification_id=o.id),COALESCE((SELECT price_unit FROM notification_dispatch d WHERE d.notification_id=o.id),''),COALESCE((SELECT http_status FROM notification_dispatch d WHERE d.notification_id=o.id),0),COALESCE((SELECT api_error_code FROM notification_dispatch d WHERE d.notification_id=o.id),0),COALESCE((SELECT state FROM notification_dispatch d WHERE d.notification_id=o.id),''),COALESCE((SELECT first_attempt_at FROM notification_dispatch d WHERE d.notification_id=o.id),0) FROM notification_outbox o WHERE (?='' OR id<?) ORDER BY id DESC LIMIT ?`, time.Now().UTC().UnixMilli(), beforeID, beforeID, count)
 	if err != nil {
 		return nil, err
 	}
@@ -323,9 +338,12 @@ func (s *Store) Notifications(ctx context.Context, beforeID string, count int) (
 	result := []NotificationInfo{}
 	for rows.Next() {
 		var n NotificationInfo
-		var created, next, expires int64
-		if err := rows.Scan(&n.ID, &n.Channel, &n.Destination, &n.State, &n.Attempts, &n.Bytes, &created, &next, &expires, &n.LastError); err != nil {
+		var created, next, expires, first int64
+		if err := rows.Scan(&n.ID, &n.Channel, &n.Destination, &n.State, &n.Attempts, &n.Bytes, &created, &next, &expires, &n.LastError, &n.ProviderState, &n.PlatformSegments, &n.PlatformPrice, &n.PriceUnit, &n.HTTPStatus, &n.APIErrorCode, &n.DispatchState, &first); err != nil {
 			return nil, err
+		}
+		if first > 0 {
+			n.FirstAttemptAt = time.UnixMilli(first).UTC()
 		}
 		n.CreatedAt = time.UnixMilli(created).UTC()
 		n.NextAttempt = time.UnixMilli(next).UTC()

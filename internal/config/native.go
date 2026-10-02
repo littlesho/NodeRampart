@@ -30,7 +30,7 @@ func IsNativeChannel(name string) bool {
 }
 
 func IsNotificationChannel(name string) bool {
-	return name == "telegram" || name == "webhook" || IsNativeChannel(name)
+	return name == "telegram" || name == "webhook" || IsNativeChannel(name) || IsOfficialChannel(name)
 }
 
 func NativeChannelLanguage(c NativeChannelConfig) string {
@@ -68,6 +68,9 @@ func defaultNotifications() NotificationsConfig {
 	n := NotificationsConfig{Telegram: TelegramConfig{Language: "en", TokenFile: "/etc/noderampart/telegram.token", Timeout: Duration{10 * time.Second}}, Webhook: WebhookConfig{CredentialFile: "/etc/noderampart/webhook.token", Timeout: Duration{10 * time.Second}}, MergeWindow: Duration{10 * time.Minute}}
 	for _, name := range NativeChannelNames() {
 		_ = n.SetNativeChannel(name, NativeChannelConfig{CredentialFile: "/etc/noderampart/" + name + ".credential.json", Language: "en", Timeout: Duration{10 * time.Second}})
+	}
+	for _, name := range OfficialChannelNames() {
+		_ = n.SetOfficialChannel(name, DefaultOfficialChannel(name))
 	}
 	return n
 }
