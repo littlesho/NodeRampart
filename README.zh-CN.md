@@ -8,13 +8,15 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
-> **源码开发版本：0.4.0-alpha.8（Unreleased）。** 新六渠道默认关闭，参见[设置与平台权限](docs/NOTIFICATION_CHANNELS.zh-CN.md)、[实际验收](docs/ALPHA8_ACCEPTANCE.md)、[隐私政策](docs/PRIVACY.md)和[用户协议](docs/USER_AGREEMENT.md)。以下公开安装仍使用已发布 alpha.7，不提供未发布 alpha.8 下载。
+> **v0.4.0-alpha.8：已公开的非 latest alpha 预发布版本。** [固定发行](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8)新增六个原生渠道，全部默认关闭。参见[设置与平台权限](docs/NOTIFICATION_CHANNELS.zh-CN.md)、[隐私政策](docs/PRIVACY.md)和[用户协议](docs/USER_AGREEMENT.md)。六平台实网/人工接收、原生 ARM64 与生产仍为 **NOT RUN**；已知漏洞发现及扫描覆盖缺口继续披露。
 
-> **发布入口预验收：** 候选源码支持显式 alpha.8，资产公开后方可下载安装；无参数默认仍 alpha.5。见[三阶段预验收](docs/ALPHA8_RELEASE_PREFLIGHT.md)与[拟用说明](docs/RELEASE_NOTES_ALPHA8.zh-CN.md)，不代表公开发行或 hosted provenance。
+> **alpha.8 分发结果：** 22 项新匿名下载与已验收 hosted draft 同字节，并明确复用其 22 项 provenance / 六项 SPDX 验签结果。Debian 13 显式公开 bootstrap、分步中文设置取消和基础观察通过；strict doctor 仍为 **unknown / 退出码 2**。Fedora 44 公开 bootstrap 为 **BLOCKED_NETWORK**，下载超时且未安装，新设置/运行检查 **NOT RUN**。公开安装矩阵尚未闭环，下列固定安装示例继续保留 alpha.7；省略 `--version` 仍选择 alpha.5。详见[实际公开验收范围](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。
+
+以下 alpha.7 及更早记录保留原有证据范围：
 
 > **v0.4.0-alpha.7：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) 新增可搜索的报告时区及独立中英 Telegram 正文。数据库升级为 schema 12；升级前验证匹配备份并分别保护旧配置/密钥，先安装三个匹配程序再保存新配置。
 
-> **本次分发验收：** 22 项匿名下载及校验和通过，与已认证的 22 项 provenance、6 项 runtime SPDX 完全同字节。Debian 13/Fedora 44 公开 bootstrap、setup、基础采集、在线备份和清理：**PASS**。两台 strict 诊断快照仍为 **unknown / 退出码 2**。当前 alpha.7 的 Debian 12/Fedora 43 运行、真实 ARM64 和自然 SSH 恢复链仍未验收，不代表生产就绪。见[本次发布核验](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)。
+> **历史 alpha.7 分发验收：** 22 项匿名下载及校验和通过，与已认证的 22 项 provenance、6 项 runtime SPDX 完全同字节。Debian 13/Fedora 44 公开 bootstrap、setup、基础采集、在线备份和清理：**PASS**。两台 strict 诊断快照仍为 **unknown / 退出码 2**。当前 alpha.7 的 Debian 12/Fedora 43 运行、真实 ARM64 和自然 SSH 恢复链仍未验收，不代表生产就绪。见[本次发布核验](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)。
 
 以下 alpha.6 范围保留为历史记录，不替代 alpha.7 运行证明：
 
@@ -270,6 +272,6 @@ SSH 会话没有终端时，可用 ssh -t 分配终端，或使用原有的非�
 
 已发布 alpha.6 产物附有 Go 依赖 SBOM 与匹配的 GitHub 来源证明，验证步骤见[发布验证](docs/RELEASE_VERIFICATION.md)。包内 README 与许可证保持冻结发布源码的快照；之后的文档更新不替换安装包字节，也不代表包中安装了完整离线手册。
 
-## alpha.8 源码候选的原生通知
+## alpha.8 预发布版本的原生通知
 
-飞书、企业微信、Discord、Slack、Teams Workflows 与 Google Chat 各支持一个独立目标和中英文消息语言。在**通知渠道**隐藏输入凭据，经预览应用后，另行选择明确渠道发送测试。既有可通知事件、恢复及短日报复用持久 outbox，没有入站命令、监听端口或厂商 SDK 运行依赖。管理员前提、Teams 接受边界、Slack 分发条款、轮换、队列隔离和回退见[完整中文操作说明](docs/NOTIFICATION_CHANNELS.zh-CN.md)。真实外发需用户自行创建并明确授权测试 Webhook；本段不是 alpha.8 发布包安装说明。
+飞书、企业微信、Discord、Slack、Teams Workflows 与 Google Chat 各支持一个独立目标和中英文消息语言。在**通知渠道**隐藏输入凭据，经预览应用后，另行选择明确渠道发送测试。既有可通知事件、恢复及短日报复用持久 outbox，没有入站命令、监听端口或厂商 SDK 运行依赖。管理员前提、Teams 接受边界、Slack 分发条款、轮换、队列隔离和回退见[完整中文操作说明](docs/NOTIFICATION_CHANNELS.zh-CN.md)。这些功能已包含于公开 alpha.8 包。真实外发需用户自行创建并明确授权测试 Webhook；mock 通过不等于真实平台投递或人工接收验收。

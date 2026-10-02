@@ -1,5 +1,11 @@
 # alpha.8 acceptance — Unreleased / development candidate
 
+后续状态（2026-10-02）：alpha.8 已作为非 latest 的 alpha prerelease 公开，来源为
+`77ae069b8f00651106b9621a24047b0ad7b4e88d`。独立的
+[公开分发记录](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)
+说明实际公开包、匿名下载和安装验收；以下标题、源码候选、未发布措辞及各阶段结果
+保留其当时事实，不追溯改成发行包证据。
+
 核验日期：2026-10-01。指定开发基线
 `529b6bd1592b132da4ab8154bbd07d92882a59fe`（alpha.7），开发分支
 `feat/alpha8-notification-webhooks`，[PR #27](https://github.com/littlesho/NodeRampart/pull/27)。
