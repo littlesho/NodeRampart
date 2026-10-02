@@ -91,3 +91,5 @@ schema 13 事务化扩展事件渠道 CHECK 并保存原生日报启用边界；
 手工 `*.credential.json` 或 `secrets/slack-user.secret` 等不是产品创建的凭据；purge 会拒绝，须先移出产品目录。手工凭据修改应原子替换后重启；推荐使用隐藏设置中的管理轮换。尝试间隔（包括失败）为企业微信三秒、其他原生渠道一秒；显式操作员 resume 可清除冷却，普通重启/重新启用不会。
 
 原生包 purge 前应备份配置、数据库和凭据。管理卸载命令先检查未知凭据，再移除包；直接 `dpkg --purge` 可能在 postrm 拒绝未知凭据前已删除包拥有的 conffile，因此失败不保证安装完全未变。未知凭据本身仍保留。
+
+[alpha.9 的 QQ Bot／LINE Push／Twilio SMS／WhatsApp 模板账户渠道](OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md)为未发布开发候选，另有订阅、费用与发送意图规则；本文六个 Webhook 契约保持不变。

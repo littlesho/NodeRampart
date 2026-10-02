@@ -151,6 +151,9 @@ func TestEightChannelsEventAndRecoveryAdmissionIndependent(t *testing.T) {
 		}
 	}
 	for _, target := range a.notificationTargets() {
+		if !target.enabled {
+			continue
+		}
 		pending, err := a.options.Store.PendingDestination(ctx, at.Add(time.Minute), 20, target.destination)
 		if err != nil || len(pending) != 2 {
 			t.Fatalf("%s independent admission: %d %v", target.channel, len(pending), err)
@@ -161,6 +164,9 @@ func TestEightChannelsEventAndRecoveryAdmissionIndependent(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, target := range a.notificationTargets() {
+		if !target.enabled {
+			continue
+		}
 		pending, err := a.options.Store.PendingDestination(ctx, at.Add(time.Minute), 20, target.destination)
 		want := 2
 		if target.channel == "feishu" {

@@ -41,7 +41,7 @@ func schemaTwelveFixture(t *testing.T, oversized bool) string {
 		}
 	}
 	// Use the published v11/v12 table DDL independently of the new migration.
-	for _, statement := range []string{
+	for _, statement := range append(schemaThirteenDowngradeFixture(), []string{
 		`ALTER TABLE notification_targets DROP COLUMN activated_at`,
 		`DROP INDEX event_notifications_message_idx`,
 		`ALTER TABLE event_notifications RENAME TO fixture_current_decisions`,
@@ -53,7 +53,7 @@ func schemaTwelveFixture(t *testing.T, oversized bool) string {
 		`DROP TABLE fixture_current_decisions`,
 		`CREATE INDEX event_notifications_message_idx ON event_notifications(notification_id)`,
 		`DELETE FROM schema_migrations WHERE version>12`,
-	} {
+	}...) {
 		if _, err := s.db.Exec(statement); err != nil {
 			t.Fatal(err)
 		}
@@ -82,7 +82,7 @@ func TestNativeChannelSchemaMigrationPreservesQueuesTargetsAndPresentation(t *te
  (SELECT COUNT(*) FROM notification_cooldowns) FROM notification_outbox WHERE id='msg_retained_telegram'`).Scan(&version, &decisions, &targets, &pending, &attempts, &body, &language, &timezone, &cooldowns); err != nil {
 		t.Fatal(err)
 	}
-	if version != 13 || decisions != 2 || targets != 2 || pending != 2 || attempts != 1 || body != "合成摘要 · retained" || language != "zh" || timezone != "Asia/Shanghai|+08:00" || cooldowns != 1 {
+	if version != schemaVersion || decisions != 2 || targets != 2 || pending != 2 || attempts != 1 || body != "合成摘要 · retained" || language != "zh" || timezone != "Asia/Shanghai|+08:00" || cooldowns != 1 {
 		t.Fatal("schema migration changed retained state", version, decisions, targets, pending, attempts, body, language, timezone, cooldowns)
 	}
 	for _, channel := range nativeTestChannels {
@@ -94,7 +94,7 @@ func TestNativeChannelSchemaMigrationPreservesQueuesTargetsAndPresentation(t *te
 		t.Fatal("unbounded channel accepted")
 	}
 	backup := filepath.Join(t.TempDir(), "thirteen.db")
-	if info, err := s.Backup(ctx, backup); err != nil || info.SchemaVersion != 13 {
+	if info, err := s.Backup(ctx, backup); err != nil || info.SchemaVersion != schemaVersion {
 		t.Fatal(info, err)
 	}
 	restoredPath := filepath.Join(t.TempDir(), "restored.db")

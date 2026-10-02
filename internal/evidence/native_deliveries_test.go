@@ -35,6 +35,10 @@ func TestEvidenceNativePartialSuccessAndRekeyedDeliveryIdentities(t *testing.T) 
 	}
 	b.Events[0].Deliveries = append(b.Events[0].Deliveries, b.Events[0].Deliveries...)
 	b.Events[0].Deliveries = append(b.Events[0].Deliveries, b.Events[0].Deliveries...)
+	if b.Validate() != nil {
+		t.Fatal("twelve bounded deliveries rejected")
+	}
+	b.Events[0].Deliveries = append(b.Events[0].Deliveries, b.Events[0].Deliveries[0])
 	if b.Validate() == nil {
 		t.Fatal("unbounded delivery array accepted")
 	}

@@ -261,7 +261,13 @@ func TestNativeChannelQuotaIsolationAndConcurrentAdmission(t *testing.T) {
 		t.Fatal("target rotation evaded quota", ok, err)
 	}
 	event, _ := alertFixture("partial", "inc_partial", "start")
-	if err := s.InsertEventNotification(ctx, event, nativeTestChain(nativeTestChannels, event.ID)); err != nil {
+	messages := nativeTestChain(nativeTestChannels, event.ID)
+	// Use the same fixture clock for scheduling and the later pending query.
+	// Concurrent admission may take longer than the query's one-second offset.
+	for message := messages; message != nil; message = message.Secondary {
+		message.NextAttempt = now
+	}
+	if err := s.InsertEventNotification(ctx, event, messages); err != nil {
 		t.Fatal(err)
 	}
 	var rejected, queued int
@@ -291,6 +297,40 @@ func TestNativeChannelQuotaIsolationAndConcurrentAdmission(t *testing.T) {
 		pending, err := s.PendingDestination(ctx, now.Add(time.Second), 20, nativeTestTarget(channel, "A"))
 		if err != nil || len(pending) != 1 {
 			t.Fatal("selected-channel discard affected another channel", channel, pending, err)
+		}
+	}
+}
+
+func TestNativeChannelDiscardPreservesOtherChannelsSchedule(t *testing.T) {
+	s := budgetStore(t)
+	ctx := context.Background()
+	for _, channel := range nativeTestChannels {
+		nativeTestPolicy(t, s, channel, "A", "prefix", true)
+	}
+	scheduledAt := time.Now().UTC().Truncate(time.Millisecond).Add(time.Hour)
+	event, _ := alertFixture("scheduled", "inc_scheduled", "start")
+	messages := nativeTestChain(nativeTestChannels, event.ID)
+	for message := messages; message != nil; message = message.Secondary {
+		message.NextAttempt = scheduledAt
+	}
+	if err := s.InsertEventNotification(ctx, event, messages); err != nil {
+		t.Fatal(err)
+	}
+	nativeTestPolicy(t, s, "feishu", "B", "prefix", true)
+	if count, err := s.DiscardIsolatedNotifications(ctx, "feishu", time.Now().UTC()); err != nil || count != 1 {
+		t.Fatal("selected-channel discard failed", count, err)
+	}
+	for message := messages.Secondary; message != nil; message = message.Secondary {
+		destination := nativeTestTarget(message.Channel, "A")
+		if pending, err := s.PendingDestination(ctx, scheduledAt.Add(-time.Millisecond), 20, destination); err != nil || len(pending) != 0 {
+			t.Fatal("discard released another channel before its schedule", message.Channel, pending, err)
+		}
+		pending, err := s.PendingDestination(ctx, scheduledAt, 20, destination)
+		if err != nil || len(pending) != 1 {
+			t.Fatal("discard lost another channel at its schedule", message.Channel, pending, err)
+		}
+		if pending[0].ID != message.ID || pending[0].Body != message.Body || pending[0].Language != message.Language || pending[0].Timezone != message.Timezone || !pending[0].NextAttempt.Equal(scheduledAt) {
+			t.Fatal("discard changed another channel's saved message", message.Channel, pending[0])
 		}
 	}
 }

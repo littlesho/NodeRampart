@@ -19,3 +19,35 @@ NodeRampart 在操作者自己的 Linux 主机运行，观察报文头/流量汇
 不读取 Slack/Google/Teams 聊天历史，不发现私信、联系人或入站聊天。厂商响应只在边界内用于回执分类后丢弃，不存储/记录厂商原文或秘密 URL。提供商与接收方有自己的隐私、保留期、数据地域及管理员政策；本项目不能删除远端消息、判断已读或控制厂商保留期。在途请求可能在停用后完成。原生渠道仅直连，旧渠道代理把代理加入凭据/数据的信任范围。
 
 用户可在已审阅本地管理流程控制开关、语言、隐私，检查队列、擦除选定隔离未发正文，并在厂商撤销目标。[存储政策](STORAGE-BUDGET.md)和[通知说明](NOTIFICATION_CHANNELS.zh-CN.md)说明默认保留期/限额。普通卸载保留数据，只有明确支持的 purge 删除固定产品数据；备份/远端副本另行处理。隐私修改不能撤回已发送数据。分享伪名化证据前应自查；GitHub 问题公开，机密漏洞依 SECURITY.md 报告，禁止附真实秘密/报告。组织、数据主体和收件权限由操作者取得；源码不提供这些授权、不代接受条款。商业分发/托管方应制定自己的准确政策并取得必要许可。
+
+## Alpha.9 development addition / 开发候选增补
+
+The additional official QQ/LINE/Twilio/Meta channels keep application/account IDs,
+sender/recipient identifiers (including phone numbers), tokens and secrets in
+protected local credential snapshots. Active consent records keep a local time,
+purpose, selected notification types and bounded evidence identifier; no consent
+file is collected. The database retains credential-free frozen request content,
+intent/unknown/acceptance state, protected provider receipt IDs needed for specific
+status queries, local quota reservations and nullable platform segment/price
+observations. Ordinary UI/errors/exports mask recipient identifiers or project
+fresh pseudonyms. Phone numbers are not anonymized by publishing a bare hash.
+
+When explicitly enabled, providers process the recipient, bounded summary or
+approved template parameters and their own account/billing metadata. Twilio
+specific-message GETs inspect that accepted request only. No contacts, inbound
+chat, SMS/WhatsApp replies, STOP or read callback is collected. Operators must
+maintain actual consent/withdrawal and support routes; local revoke suppresses
+unsent messages but cannot recall accepted copies. Third-party retention,
+regional transfer and charges depend on the user's account/platform contract.
+No real paid/platform tests are performed by ordinary CI, setup or status. See
+[the account-channel guide](OFFICIAL_NOTIFICATION_CHANNELS.md).
+
+新增 QQ／LINE／Twilio／Meta 渠道的应用／账户、发送身份、收件 ID／手机号、token
+与 secret 放在受保护本地快照。订阅只记录本地时间、用途、通知类型和有界依据
+编号，不采集同意文件。数据库保存无凭据的冻结请求、意图／未知／受理状态、
+特定状态查询必需的受保护 provider 回执 ID、额度预留及可空平台分段／费用。
+普通界面／错误／导出遮罩或生成新伪名，不公开手机号的裸哈希。明确启用后平台
+处理收件地址、摘要／批准模板参数及自己的计费数据。本程序不采集联系人、入站
+聊天、短信／WhatsApp 回复、STOP 或已读回调；操作者维护真实同意／撤回与支持，
+本地撤销不撤回远端副本。跨境、保留和收费依实际账户协议，普通 CI／设置／状态
+不发真实或付费消息。

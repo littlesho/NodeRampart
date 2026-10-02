@@ -32,6 +32,8 @@ cmd/noderampart/metrics.go
 cmd/noderampart/metrics_test.go
 cmd/noderampart/native_config_test.go
 cmd/noderampart/notification_cli_test.go
+cmd/noderampart/official.go
+cmd/noderampart/official_test.go
 cmd/noderampart/output.go
 cmd/noderampart/replay.go
 cmd/noderampart/replay_test.go
@@ -51,11 +53,14 @@ docs/ALERTS_EVIDENCE.md
 docs/ALPHA6_ACCEPTANCE.md
 docs/ALPHA8_ACCEPTANCE.md
 docs/ALPHA8_RELEASE_PREFLIGHT.md
+docs/ALPHA9_ACCEPTANCE.md
 docs/ALPHA_LIMITATIONS.md
 docs/ARCHITECTURE.md
 docs/DEVELOPMENT.md
 docs/NOTIFICATION_CHANNELS.md
 docs/NOTIFICATION_CHANNELS.zh-CN.md
+docs/OFFICIAL_NOTIFICATION_CHANNELS.md
+docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md
 docs/PRIVACY.md
 docs/RELEASE_NOTES_ALPHA8.en.md
 docs/RELEASE_NOTES_ALPHA8.zh-CN.md
@@ -123,6 +128,10 @@ internal/config/native_test.go
 internal/config/native_url.go
 internal/config/native_url_test.go
 internal/config/notification_identity_test.go
+internal/config/official.go
+internal/config/official_credentials.go
+internal/config/official_fields.go
+internal/config/official_test.go
 internal/config/outbound.go
 internal/config/outbound_test.go
 internal/config/storage_test.go
@@ -139,6 +148,9 @@ internal/console/fields.go
 internal/console/geo_validation_test.go
 internal/console/native.go
 internal/console/native_test.go
+internal/console/official.go
+internal/console/official_results.go
+internal/console/official_test.go
 internal/console/prices.go
 internal/console/reliability_test.go
 internal/console/results.go
@@ -188,6 +200,9 @@ internal/daemon/native_notifications.go
 internal/daemon/native_notifications_test.go
 internal/daemon/notification_binding_test.go
 internal/daemon/notification_language_test.go
+internal/daemon/official_control.go
+internal/daemon/official_notifications.go
+internal/daemon/official_notifications_test.go
 internal/daemon/outbound_test.go
 internal/daemon/readiness.go
 internal/daemon/readiness_test.go
@@ -256,6 +271,9 @@ internal/manage/manager_test.go
 internal/manage/native.go
 internal/manage/native_recovery_test.go
 internal/manage/native_test.go
+internal/manage/official.go
+internal/manage/official_fields.go
+internal/manage/official_test.go
 internal/manage/prices.go
 internal/manage/reliability_test.go
 internal/manage/report.go
@@ -284,6 +302,17 @@ internal/notify/native.go
 internal/notify/native_outbox_test.go
 internal/notify/native_test.go
 internal/notify/notify_test.go
+internal/notify/official.go
+internal/notify/official_contract_test.go
+internal/notify/official_format.go
+internal/notify/official_integration_test.go
+internal/notify/official_line.go
+internal/notify/official_prepare.go
+internal/notify/official_qq.go
+internal/notify/official_sms.go
+internal/notify/official_test.go
+internal/notify/official_twilio.go
+internal/notify/official_whatsapp.go
 internal/notify/target_test.go
 internal/notify/telegram.go
 internal/notify/telegram_test.go
@@ -294,6 +323,8 @@ internal/notify/testdata/native_events_en.golden
 internal/notify/testdata/native_events_zh.golden
 internal/notify/worker.go
 internal/notify/worker_native_pacing_test.go
+internal/notify/worker_official.go
+internal/notify/worker_official_test.go
 internal/notify/worker_test.go
 internal/privacy/boundaries_test.go
 internal/privacy/privacy.go
@@ -331,6 +362,8 @@ internal/report/notification.go
 internal/report/notification_localized_test.go
 internal/report/notification_native.go
 internal/report/notification_native_test.go
+internal/report/notification_official.go
+internal/report/notification_official_test.go
 internal/report/notification_summary_test.go
 internal/report/regression_test.go
 internal/report/report.go
@@ -401,6 +434,7 @@ internal/store/migration_v11_test.go
 internal/store/migration_v12.go
 internal/store/migration_v13.go
 internal/store/migration_v13_test.go
+internal/store/migration_v14.go
 internal/store/migration_v3.go
 internal/store/migration_v4.go
 internal/store/migration_v4_test.go
@@ -418,6 +452,8 @@ internal/store/monitor_state_test.go
 internal/store/native_channels_test.go
 internal/store/notification_targets.go
 internal/store/notification_targets_test.go
+internal/store/official_dispatch.go
+internal/store/official_dispatch_test.go
 internal/store/presentation.go
 internal/store/presentation_test.go
 internal/store/query_bounds_test.go

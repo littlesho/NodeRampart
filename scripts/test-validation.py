@@ -8,6 +8,7 @@ No Go checks, Git writes, package installs, downloads or host actions run here.
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -46,6 +47,20 @@ if name + ":" + " ".join(args) == os.environ.get("VALIDATION_TEST_FAIL"):
 '''
 
 
+def workflow_jobs(source):
+    """Read this repository's two-space job headers, without a YAML dependency."""
+    section = source.split("\njobs:\n", 1)[1]
+    headers = list(re.finditer(r"^  ([a-z][a-z0-9_-]*):\s*$", section, re.MULTILINE))
+    jobs = {}
+    for index, header in enumerate(headers):
+        name = header.group(1)
+        if name in jobs:
+            raise ValueError("duplicate workflow job")
+        end = headers[index + 1].start() if index + 1 < len(headers) else len(section)
+        jobs[name] = section[header.end():end]
+    return jobs
+
+
 class ValidationTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="noderampart-validation-")
@@ -53,11 +68,11 @@ class ValidationTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.project = self.root / "project"
         (self.project / "scripts").mkdir(parents=True)
-        (self.project / "VERSION").write_text("0.4.0-alpha.8\n")
+        (self.project / "VERSION").write_text("0.4.0-alpha.9\n")
         for name in ("validate.sh", "build-release.sh", "release-metadata.sh"):
             shutil.copyfile(REPO / "scripts" / name, self.project / "scripts" / name)
         package = self.project / "scripts/build-deb.sh"
-        package.write_text("#!/bin/sh\nmkdir -p dist\nprintf 'synthetic package\\n' > dist/noderampart_0.4.0~alpha.8_${ARCH}.deb\nprintf 'package fixture reached\\n'\n")
+        package.write_text("#!/bin/sh\nmkdir -p dist\nprintf 'synthetic package\\n' > dist/noderampart_0.4.0~alpha.9_${ARCH}.deb\nprintf 'package fixture reached\\n'\n")
         package.chmod(0o755)
         self.mocks = self.root / "mocks"
         self.mocks.mkdir()
@@ -83,16 +98,88 @@ class ValidationTests(unittest.TestCase):
         result = self.run_script("validate.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
         commands = self.commands()
-        self.assertIn(["go", ["test", "-count=1", "./..."], None], commands)
-        self.assertIn(["go", ["test", "-race", "-count=1", "./..."], "1"], commands)
-        self.assertIn(["go", ["test", "-count=1", "-coverprofile=coverage.out", "./..."], None], commands)
-        self.assertIn(["go", ["build", "./cmd/..."], "0"], commands)
-        self.assertEqual(commands[-1], ["go", ["run", "golang.org/x/vuln/cmd/govulncheck@v1.7.0", "./..."], None])
+        self.assertEqual(commands, [
+            ["make", ["fmt-check"], None],
+            ["go", ["mod", "verify"], None],
+            ["go", ["vet", "./..."], None],
+            ["go", ["test", "-count=1", "./..."], None],
+            ["go", ["test", "-race", "-count=1", "-p=2", "-timeout=15m", "./..."], "1"],
+            ["go", ["test", "-count=1", "-coverprofile=coverage.out", "./..."], None],
+            ["go", ["build", "./cmd/..."], "0"],
+            *[["python3", ["scripts/" + name], None] for name in (
+                "test-packaging.py", "test-bootstrap.py", "test-release-sbom.py",
+                "test-validation.py", "test-lab-check.py")],
+            ["python3", ["scripts/test-netns.py", "--self-test"], None],
+            ["go", ["run", "golang.org/x/vuln/cmd/govulncheck@v1.7.0", "./..."], None],
+        ])
         self.log.unlink()
         self.env["VALIDATION_TEST_FAIL"] = "go:vet ./..."
         result = self.run_script("validate.sh")
         self.assertEqual(result.returncode, 23)
         self.assertFalse(any(row[0] == "go" and row[1][:1] == ["test"] for row in self.commands()))
+
+    def test_bounded_race_checks_all_packages_and_propagates_failure(self):
+        self.env["VALIDATION_TEST_FAIL"] = "go:test -race -count=1 -p=2 -timeout=15m ./..."
+        result = self.run_script("validate.sh")
+        self.assertEqual(result.returncode, 23)
+        commands = self.commands()
+        race = [row for row in commands if row[0] == "go" and "-race" in row[1]]
+        self.assertEqual(race, [["go", ["test", "-race", "-count=1", "-p=2", "-timeout=15m", "./..."], "1"]])
+        self.assertEqual(commands[-1], race[0])
+        self.assertFalse(any(flag in row[1] for row in commands for flag in ("-short", "-run", "-skip")))
+        required = (REPO / "scripts/validate.sh").read_text()
+        for override in ("GOMAXPROCS=", "GORACE=", "GOFLAGS="):
+            self.assertNotIn(override, required)
+        self.assertEqual(required.count("-timeout"), 1)
+        self.assertEqual(required.count("-timeout=15m"), 1)
+
+    def test_make_race_uses_the_same_fixed_package_budget(self):
+        make = shutil.which("make")
+        self.assertIsNotNone(make, "make is required by the validation entry")
+        result = subprocess.run(
+            [make, "-f", str(REPO / "Makefile"), "test-race",
+             "VERSION=0.4.0-alpha.9", "COMMIT=synthetic", "BUILD_DATE=synthetic"],
+            cwd=self.project, env=self.env, capture_output=True, text=True,
+            check=False, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.commands(), [
+            ["go", ["test", "-race", "-p=2", "-timeout=15m", "./..."], "1"]])
+        source = (REPO / "Makefile").read_text()
+        self.assertEqual(source.count("-timeout"), 1)
+        for override in ("GOMAXPROCS=", "GORACE=", "GOFLAGS="):
+            self.assertNotIn(override, source)
+
+    def test_fixed_budget_is_scoped_to_the_selected_workflow_jobs(self):
+        budgets = {
+            "ci.yml": {"safety": None, "test": 30, "build": 15,
+                       "deb-package": 15, "rpm-package": 25},
+            "release.yml": {"safety": None, "validate": 30, "deb": 20,
+                            "rpm": 30, "sbom": 20, "draft": 10},
+            "safety.yml": {"secrets": 5, "fuzz": 10},
+        }
+        for filename, expected in budgets.items():
+            with self.subTest(workflow=filename):
+                source = (REPO / ".github/workflows" / filename).read_text()
+                jobs = workflow_jobs(source)
+                self.assertEqual(set(jobs), set(expected))
+                all_timeouts = []
+                for name, minutes in expected.items():
+                    # Require the job-level indentation as well as the exact
+                    # value; duplicate, variable or added step budgets fail.
+                    lines = re.findall(r"^[ \t]*timeout-minutes:.*$", jobs[name], re.MULTILINE)
+                    wanted = [] if minutes is None else ["    timeout-minutes: " + str(minutes)]
+                    self.assertEqual(lines, wanted, name)
+                    all_timeouts.extend(lines)
+                self.assertEqual(re.findall(r"^[ \t]*timeout-minutes:.*$", source, re.MULTILINE), all_timeouts)
+
+    def test_workflow_budget_reader_distinguishes_jobs_from_steps(self):
+        source = "\njobs:\n  test:\n    timeout-minutes: 30\n    steps:\n      - run: true\n        timeout-minutes: 7\n  build:\n    timeout-minutes: 15\n"
+        jobs = workflow_jobs(source)
+        self.assertEqual(set(jobs), {"test", "build"})
+        self.assertEqual(re.findall(r"^    timeout-minutes:.*$", jobs["test"], re.MULTILINE),
+                         ["    timeout-minutes: 30"])
+        self.assertIn("        timeout-minutes: 7", jobs["test"])
+        self.assertNotIn("timeout-minutes: 15", jobs["test"])
 
     def test_hosted_validation_rejects_wrong_or_changed_source_before_checks(self):
         for condition in ("wrong", "tracked", "untracked"):
@@ -147,8 +234,8 @@ class ValidationTests(unittest.TestCase):
         self.assertIn("package fixture reached", result.stdout)
         self.assertIn(["git", ["-c", 'safe.directory=' + str(self.project), "ls-files", "--others", "--exclude-standard", "--", ".", ":(exclude)release-input"], None], self.commands())
         self.assertIn(["make", ["build"], None], self.commands())
-        self.assertTrue((self.project / 'dist/noderampart_0.4.0-alpha.8_amd64.deb').is_file())
-        self.assertFalse((self.project / 'dist/noderampart_0.4.0~alpha.8_amd64.deb').exists())
+        self.assertTrue((self.project / 'dist/noderampart_0.4.0-alpha.9_amd64.deb').is_file())
+        self.assertFalse((self.project / 'dist/noderampart_0.4.0~alpha.9_amd64.deb').exists())
 
     def test_source_metadata_is_verified_once_and_has_a_real_commit_date(self):
         self.env['EXPECTED_COMMIT'] = HEAD
@@ -181,7 +268,7 @@ class ValidationTests(unittest.TestCase):
                 self.assertFalse(any(row[0] == 'make' for row in self.commands()))
 
     def test_official_release_preserves_existing_portable_output(self):
-        output = self.project / 'dist/noderampart_0.4.0-alpha.8_amd64.deb'
+        output = self.project / 'dist/noderampart_0.4.0-alpha.9_amd64.deb'
         output.parent.mkdir()
         output.write_bytes(b'retained previous artifact')
         result = self.run_script('build-release.sh', '--deb', 'amd64')
@@ -216,10 +303,10 @@ class ValidationTests(unittest.TestCase):
         self.assertIn('./scripts/build-release.sh --rpm "$RELEASE_ARCH"', rpm_ci)
         self.assertIn('name: noderampart-fedora${{ matrix.fedora }}-${{ matrix.arch }}-rpm', rpm_ci)
         self.assertIn('--check-upload uploaded-release.json uploaded-assets.json', release)
-        self.assertIn('PACKAGE="dist/noderampart_0.4.0-alpha.8_${RELEASE_ARCH}.deb"', release)
-        self.assertIn('PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.9.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"', release)
-        self.assertEqual(release.count('subject-path: dist/release/noderampart_0.4.0-alpha.8_'), 2)
-        self.assertEqual(release.count('subject-path: dist/release/noderampart-0.4.0-0.alpha.9.'), 4)
+        self.assertIn('PACKAGE="dist/noderampart_0.4.0-alpha.9_${RELEASE_ARCH}.deb"', release)
+        self.assertIn('PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.10.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"', release)
+        self.assertEqual(release.count('subject-path: dist/release/noderampart_0.4.0-alpha.9_'), 2)
+        self.assertEqual(release.count('subject-path: dist/release/noderampart-0.4.0-0.alpha.10.'), 4)
 
 
 if __name__ == "__main__":

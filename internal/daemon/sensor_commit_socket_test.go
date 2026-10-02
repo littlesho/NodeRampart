@@ -208,6 +208,7 @@ func TestSensorSocketStorageFailureAndDerivedEventsPartialACK(t *testing.T) {
 	b := socketSensorBatch("lab0", 100*time.Millisecond, 1)
 	b.SessionID = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	b.Sequence = 1
+	fixtureSentAt := b.SentAt
 	eventTestBudget(t, a, true)
 	if err := protocol.WriteFrame(conn, b); err != nil {
 		t.Fatal(err)
@@ -227,6 +228,9 @@ func TestSensorSocketStorageFailureAndDerivedEventsPartialACK(t *testing.T) {
 	b = socketSensorBatch("lab0", 100*time.Millisecond, 0)
 	b.SessionID = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	b.Sequence = 2
+	// The synthetic measurement timeline is independent of database scheduling.
+	// Match the declared 100ms interval even when the rejected commit takes longer.
+	b.SentAt = fixtureSentAt.Add(100 * time.Millisecond)
 	for source := 0; source < 128; source++ {
 		for port := 1; port <= 2; port++ {
 			b.Flows = append(b.Flows, protocol.Flow{Direction: model.DirectionInbound, RemoteIP: fmt.Sprintf("198.18.0.%d", source), Protocol: "tcp", LocalPort: uint16(port), RemotePort: 4242, TCPFlags: 2, Packets: 1, Bytes: 60})

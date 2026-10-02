@@ -37,6 +37,7 @@ type Options struct {
 	Config                  config.Config
 	ConfigDirectory         string
 	nativeActivatedAt       map[string]time.Time
+	officialActivatedAt     map[string]time.Time
 	Store                   *store.Store
 	Geo                     *enrich.Resolver
 	Notifier                notify.Sender
@@ -45,6 +46,8 @@ type Options struct {
 	WebhookDestination      string
 	NativeNotifiers         map[string]notify.Sender
 	NativeDestinations      map[string]string
+	OfficialNotifiers       map[string]notify.Sender
+	OfficialDestinations    map[string]string
 	HeartbeatSender         notify.HeartbeatSender
 	Billing                 *billing.Profile
 	StorePrivacy            *privacy.Transformer
@@ -126,6 +129,8 @@ type Status struct {
 	SensorPeer           ipc.Peer                         `json:"sensor_peer"`
 	Batches              uint64                           `json:"batches"`
 	NativeChannels       map[string]bool                  `json:"native_channels"`
+	OfficialChannels     map[string]bool                  `json:"official_channels"`
+	OfficialPolicies     []store.OfficialChannelStatus    `json:"official_policies"`
 	WebhookEnabled       bool                             `json:"webhook_enabled"`
 	HeartbeatEnabled     bool                             `json:"heartbeat_enabled"`
 	TelegramEnabled      bool                             `json:"telegram_enabled"`
@@ -192,6 +197,9 @@ func New(options Options) (*App, error) {
 		return nil, err
 	}
 	if err := configureNativeTargets(&options); err != nil {
+		return nil, err
+	}
+	if err := configureOfficialTargets(&options); err != nil {
 		return nil, err
 	}
 	if options.Logger == nil {
@@ -367,6 +375,7 @@ func (a *App) Run(ctx context.Context) error {
 		}
 	}
 	a.startNativeWorkers(ctx, child, start)
+	a.startOfficialWorkers(ctx, child, start)
 	if a.options.Config.Heartbeat.Enabled && a.options.HeartbeatSender != nil {
 		start("heartbeat", "starting", false, func() error { return a.runHeartbeat(child) })
 	} else {
@@ -387,6 +396,7 @@ func (a *App) Run(ctx context.Context) error {
 			destinations = append(destinations, a.options.WebhookDestination)
 		}
 		languages := map[string]string{}
+		preparers := map[string]report.OfficialPreparer{}
 		for _, channel := range config.NativeChannelNames() {
 			native := a.options.Config.Notifications.NativeChannels()[channel]
 			if native.Enabled {
@@ -394,7 +404,17 @@ func (a *App) Run(ctx context.Context) error {
 				languages[channel] = config.NativeChannelLanguage(native)
 			}
 		}
-		scheduler := &report.Scheduler{NativeLanguages: languages, Store: a.options.Store, Builder: a.report, DailyAt: a.options.Config.Reports.DailyAt, Destinations: destinations, NotificationPrivacy: a.options.Config.Privacy.NotificationIP, TelegramLanguage: config.TelegramLanguage(a.options.Config.Notifications.Telegram), Logger: a.options.Logger, BackfillDays: a.options.Config.Reports.BackfillDays}
+		for _, channel := range config.OfficialChannelNames() {
+			official := a.options.Config.Notifications.OfficialChannels()[channel]
+			if official.Enabled && official.DailyEnabled && official.Subscription.Allows("daily") {
+				destinations = append(destinations, a.options.OfficialDestinations[channel])
+				languages[channel] = config.OfficialChannelLanguage(official)
+				if p, ok := a.options.OfficialNotifiers[channel].(report.OfficialPreparer); ok {
+					preparers[channel] = p
+				}
+			}
+		}
+		scheduler := &report.Scheduler{NativeLanguages: languages, OfficialNotifiers: preparers, Hostname: a.options.Config.Hostname, Store: a.options.Store, Builder: a.report, DailyAt: a.options.Config.Reports.DailyAt, Destinations: destinations, NotificationPrivacy: a.options.Config.Privacy.NotificationIP, TelegramLanguage: config.TelegramLanguage(a.options.Config.Notifications.Telegram), Logger: a.options.Logger, BackfillDays: a.options.Config.Reports.BackfillDays}
 		start("report_scheduler", "running", false, func() error { return scheduler.Run(child) })
 	} else if err := a.options.Store.SetComponentStatus(ctx, "report_scheduler", "disabled", time.Now().UTC()); err != nil {
 		a.options.Logger.Warn("record disabled component", "component", "report_scheduler", "error", err)
@@ -588,6 +608,13 @@ func (a *App) prepareEvent(event model.Event) (model.Event, *store.OutboxMessage
 				continue
 			}
 		}
+		if config.IsOfficialChannel(target.channel) {
+			c := a.options.Config.Notifications.OfficialChannels()[target.channel]
+			activated := a.options.officialActivatedAt[target.channel]
+			if !c.EventsEnabled || !c.Subscription.Allows("event") || activated.IsZero() || event.ObservedAt.Before(activated) || (event.Phase != "recovery" && severityRank(event.Severity) < severityRank(model.Severity(c.MinSeverity))) {
+				continue
+			}
+		}
 		message := &store.OutboxMessage{ID: model.NewID("msg"), DedupeKey: "event:" + event.ID + ":" + target.channel, Channel: target.channel, PrivacyMode: a.options.Config.Privacy.NotificationIP, Destination: target.destination, Body: notify.FormatEvent(a.options.Config.Hostname, notification)}
 		// Webhook's English event renderer uses UTC independently of Telegram.
 		message.Timezone = "UTC|UTC+00:00"
@@ -603,6 +630,17 @@ func (a *App) prepareEvent(event model.Event) (model.Event, *store.OutboxMessage
 			location := a.report.Location
 			message.Timezone = location.String() + "|" + timezones.Offset(event.ObservedAt.In(location))
 			message.Body = notify.FormatNativeEvent(a.options.Config.Hostname, notification, message.Language, location)
+		}
+		if config.IsOfficialChannel(target.channel) {
+			message.Language = config.OfficialChannelLanguage(a.options.Config.Notifications.OfficialChannels()[target.channel])
+			location := a.report.Location
+			message.Timezone = location.String() + "|" + timezones.Offset(event.ObservedAt.In(location))
+			message.LogicalKind = "event"
+			body, semantic := notify.FormatOfficialEvent(a.options.Config.Hostname, notification, message.Language, location)
+			message.Body = body
+			if err := prepareOfficialMessage(a.options.OfficialNotifiers[target.channel], message, semantic); err != nil {
+				message.AdmissionFailure = "official_render_rejected"
+			}
 		}
 		if primary == nil {
 			primary = message
@@ -639,6 +677,10 @@ func (a *App) Status(ctx context.Context) Status {
 	for channel, native := range a.options.Config.Notifications.NativeChannels() {
 		status.NativeChannels[channel] = native.Enabled
 	}
+	status.OfficialChannels = map[string]bool{}
+	for channel, c := range a.options.Config.Notifications.OfficialChannels() {
+		status.OfficialChannels[channel] = c.Enabled
+	}
 	status.WebhookEnabled, status.HeartbeatEnabled = a.options.Config.Notifications.Webhook.Enabled, a.options.Config.Heartbeat.Enabled
 	status.SensorEnabled, status.AuthEnabled = a.options.Config.Sensor.Enabled, a.options.Config.Auth.Enabled
 	status.OptionalFailures = make(map[string]string, len(a.options.OptionalFailures))
@@ -652,6 +694,11 @@ func (a *App) Status(ctx context.Context) Status {
 		status.SensorInterfaces[name] = at
 	}
 	a.mu.RUnlock()
+	for _, channel := range config.OfficialChannelNames() {
+		if policy, err := a.options.Store.OfficialChannelStatus(ctx, channel, status.GeneratedAt); err == nil {
+			status.OfficialPolicies = append(status.OfficialPolicies, policy)
+		}
+	}
 	components, err := a.options.Store.ComponentStatuses(ctx)
 	a.recordWrite(err, "component_status", false)
 	if err == nil {

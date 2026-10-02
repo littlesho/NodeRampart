@@ -199,3 +199,26 @@ See [channel contracts](NOTIFICATION_CHANNELS.md) and [acceptance](ALPHA8_ACCEPT
 每渠道一个目标与独立去重、队列预算和结果，不增加监听端口或 sensor 权限。
 新日报目标保存启用边界，不补发历史。schema 13 保留旧数据/正文/语言时区，
 配置 API 1、sensor 协议 5 不变。凭据仅引用，sender 固定快照；轮换隔离旧正文。
+
+## Alpha.9 official account delivery
+
+Four fixed official origins extend the notification fan-out to twelve one-target
+channels; heartbeat stays separate. Protected snapshots contain application /
+account, sender, recipient and manual credential generation. QQ's bounded
+single-flight access-token refresh changes authentication within that snapshot,
+not destination identity. All new adapters use direct public HTTPS/443 with no
+proxy/redirect, listener, callback, Gateway or added daemon capability. The old
+Telegram, generic Webhook and heartbeat transport contracts remain.
+
+Schema14 attaches a bounded frozen request to each official outbox row, commits
+dispatch intent and UTC-day reservation before remote I/O, then records accepted /
+not-accepted / unknown independently of optional provider delivery status. LINE
+uses one persistent UUID in its original bounded retry window; uncertain QQ /
+Twilio / WhatsApp intents are held after crash or receipt-write loss. Twilio's
+bounded durable SID GET schedule never resubmits POST. Paid restore holds require
+operator receipt/budget reconciliation, preserve uncertainty and conservatively
+consume the current day's allowance. These controls do not guarantee exactly-once
+through disk rollback. All network work occurs outside local transactions/locks.
+Presentation, report period, SMS segment estimate or approved template mapping
+freeze at admission; settings cannot rewrite history. See the
+[account-channel contract](OFFICIAL_NOTIFICATION_CHANNELS.md).

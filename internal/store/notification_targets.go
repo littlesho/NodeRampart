@@ -25,15 +25,17 @@ func validNotificationTarget(channel, destination string) bool {
 }
 
 // MaxNotificationChannels is a fixed product limit, not a plugin registry.
-const MaxNotificationChannels = 8
+const MaxNotificationChannels = 12
 
-const notificationChannelsSQL = "'telegram','webhook','feishu','wecom','discord','slack','teams','google_chat'"
+const historicalV13ChannelsSQL = "'telegram','webhook','feishu','wecom','discord','slack','teams','google_chat'"
 
-var notificationChannels = [...]string{"telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat"}
+const notificationChannelsSQL = historicalV13ChannelsSQL + ",'qqbot','line','twilio_sms','whatsapp_cloud'"
+
+var notificationChannels = [...]string{"telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat", "qqbot", "line", "twilio_sms", "whatsapp_cloud"}
 
 func notificationChannel(channel string) bool {
 	switch channel {
-	case "telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat":
+	case "telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat", "qqbot", "line", "twilio_sms", "whatsapp_cloud":
 		return true
 	default:
 		return false
@@ -117,7 +119,8 @@ func (s *Store) NotificationDeliveryAllowed(ctx context.Context, id, destination
 	var allowed bool
 	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM notification_outbox o WHERE id=? AND destination=? AND sent_at IS NULL
  AND isolated_at IS NULL AND suppressed_at IS NULL AND quarantined_at IS NULL AND lease_until>? AND expires_at>?
- AND (channel='' OR EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=1)))`, id, destination, time.Now().UTC().UnixMilli(), time.Now().UTC().UnixMilli()).Scan(&allowed)
+ AND (channel='' OR EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=1))
+ AND (channel NOT IN ('qqbot','line','twilio_sms','whatsapp_cloud') OR EXISTS(SELECT 1 FROM official_channel_policy p JOIN notification_dispatch d ON d.notification_id=o.id WHERE p.channel=o.channel AND d.state='in_flight' AND d.first_attempt_at>0 AND p.enabled=1 AND p.revoked=0 AND p.optout_at=0 AND p.restore_hold=0 AND p.consented_at>0 AND p.consented_at<=? AND p.basis_id<>'' AND p.daily_message_limit>0 AND (p.channel NOT IN ('twilio_sms','whatsapp_cloud') OR p.cost_confirmed=1) AND EXISTS(SELECT 1 FROM json_each(p.notification_types) WHERE value=d.logical_kind))))`, id, destination, time.Now().UTC().UnixMilli(), time.Now().UTC().UnixMilli(), time.Now().UTC().UnixMilli()).Scan(&allowed)
 	return allowed, err
 }
 
@@ -133,11 +136,26 @@ func (s *Store) DiscardIsolatedNotifications(ctx context.Context, channel string
 		return 0, err
 	}
 	defer release()
-	// Retain the message record but erase only explicitly selected isolated bodies.
-	result, err := s.db.ExecContext(ctx, `UPDATE notification_outbox SET body='',suppressed_at=?,last_error='isolated notification explicitly discarded'
+	// Erase the selected channel's presentation and its frozen request together.
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `UPDATE notification_dispatch SET frozen_payload='' WHERE notification_id IN(SELECT id FROM notification_outbox WHERE channel=? AND isolated_at IS NOT NULL AND sent_at IS NULL AND suppressed_at IS NULL)`, channel); err != nil {
+		return 0, err
+	}
+	result, err := tx.ExecContext(ctx, `UPDATE notification_outbox SET body='',suppressed_at=?,last_error='isolated notification explicitly discarded'
  WHERE channel=? AND isolated_at IS NOT NULL AND sent_at IS NULL AND suppressed_at IS NULL`, now.UnixMilli(), channel)
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected()
+	count, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return count, nil
 }

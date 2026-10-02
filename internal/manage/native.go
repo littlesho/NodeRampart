@@ -21,6 +21,9 @@ func secretReferences(c config.Config) []string {
 	for _, name := range config.NativeChannelNames() {
 		paths = append(paths, c.Notifications.NativeChannels()[name].CredentialFile)
 	}
+	for _, name := range config.OfficialChannelNames() {
+		paths = append(paths, c.Notifications.OfficialChannels()[name].CredentialFile)
+	}
 	return paths
 }
 

@@ -29,7 +29,7 @@ func openNativeSettings(t *testing.T, s *recordedScreen, channel string) string 
 	return ""
 }
 
-func TestNativeSetupCatalogAndEightChannelActions(t *testing.T) {
+func TestNativeSetupCatalogAndTwelveChannelActions(t *testing.T) {
 	for _, channel := range config.NativeChannelNames() {
 		a, ok := findAction(channel + "_setup")
 		if !ok || !a.mutation {
@@ -50,7 +50,7 @@ func TestNativeSetupCatalogAndEightChannelActions(t *testing.T) {
 	}
 	for _, id := range []string{"notify_test", "notify_discard_isolated"} {
 		a, _ := findAction(id)
-		if len(a.params) != 1 || len(a.params[0].choices) != 8 {
+		if len(a.params) != 1 || len(a.params[0].choices) != 12 {
 			t.Fatal("channel operation omits targets")
 		}
 		for _, name := range a.params[0].choices {

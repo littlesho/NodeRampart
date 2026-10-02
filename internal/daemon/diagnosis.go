@@ -64,9 +64,20 @@ func DiagnoseAt(status Status, foreignKeysRequired bool, now time.Time) Diagnosi
 			add(feature.code, "degraded", "An enabled optional feature is unavailable; base monitoring continues.", "Correct its protected local resource, validate configuration, then restart.")
 		}
 	}
-	for _, channel := range config.NativeChannelNames() {
+	for _, channel := range append(config.NativeChannelNames(), config.OfficialChannelNames()...) {
 		if _, failed := status.OptionalFailures[channel]; failed {
 			add(channel+"_credentials_unavailable", "degraded", "An enabled optional notification channel is unavailable; base monitoring continues.", "Correct its protected credential file, validate configuration, then restart.")
+		}
+	}
+	for _, policy := range status.OfficialPolicies {
+		if policy.RestoreHold {
+			add("paid_notification_restore_hold", "degraded", "Paid delivery is held after restoring a historical ledger.", "Reconcile external receipts and budgets explicitly before allowing new submissions.")
+		}
+		if policy.OptedOut {
+			add("notification_recipient_opted_out", "degraded", "A recipient opt-out persists; ordinary resume or credential rotation cannot clear it.", "Obtain a new consent basis and follow the provider's permitted recovery process.")
+		}
+		if policy.UnknownDeliveries > 0 {
+			add("notification_delivery_unknown", "degraded", "Some dispatch intents may have been accepted externally; automatic resubmission is held.", "Inspect the local notification records and external receipts; do not silently retry.")
 		}
 	}
 	for _, component := range status.Components {
@@ -74,7 +85,7 @@ func DiagnoseAt(status Status, foreignKeysRequired bool, now time.Time) Diagnosi
 			continue
 		}
 		switch component.Name {
-		case "notification_worker", "webhook_worker", "feishu_worker", "wecom_worker", "discord_worker", "slack_worker", "teams_worker", "google_chat_worker", "heartbeat", "report_scheduler", "geoip", "billing":
+		case "notification_worker", "webhook_worker", "feishu_worker", "wecom_worker", "discord_worker", "slack_worker", "teams_worker", "google_chat_worker", "qqbot_worker", "line_worker", "twilio_sms_worker", "whatsapp_cloud_worker", "heartbeat", "report_scheduler", "geoip", "billing":
 			add("optional_component_degraded", "degraded", "An optional component reports degraded operation.", "Inspect the component state and its fixed local failure reason; retry or restart after correction.")
 		}
 	}

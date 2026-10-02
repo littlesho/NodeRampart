@@ -57,6 +57,9 @@ func (c Config) validateOutbound() error {
 	if err := c.validateNativeChannels(); err != nil {
 		return err
 	}
+	if err := c.validateOfficialChannels(); err != nil {
+		return err
+	}
 	w, h := c.Notifications.Webhook, c.Heartbeat
 	if w.Enabled {
 		if _, err := HTTPSURL(w.Endpoint); err != nil {

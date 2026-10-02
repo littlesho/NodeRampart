@@ -69,7 +69,7 @@ type TimelinePage struct {
 
 const timelineDeliveryColumns = `COALESCE(d.decision,CASE WHEN old.id IS NOT NULL THEN 'legacy' ELSE 'unknown' END),
  COALESCE(o.id,old.id,NULLIF(d.notification_id,''),''),
- CASE WHEN COALESCE(o.sent_at,old.sent_at) IS NOT NULL THEN CASE WHEN COALESCE(o.channel,old.channel)='teams' THEN 'accepted' ELSE 'sent' END
+ CASE WHEN COALESCE(o.sent_at,old.sent_at) IS NOT NULL THEN CASE WHEN COALESCE(o.channel,old.channel) IN ('teams','qqbot','line','twilio_sms','whatsapp_cloud') THEN 'accepted' ELSE 'sent' END
  WHEN COALESCE(o.isolated_at,old.isolated_at) IS NOT NULL AND COALESCE(o.suppressed_at,old.suppressed_at) IS NOT NULL
  AND COALESCE(o.body,old.body)='' AND COALESCE(o.last_error,old.last_error)='isolated notification explicitly discarded' THEN 'discarded'
  WHEN COALESCE(o.isolated_at,old.isolated_at) IS NOT NULL THEN 'isolated'
@@ -77,6 +77,8 @@ const timelineDeliveryColumns = `COALESCE(d.decision,CASE WHEN old.id IS NOT NUL
  WHEN d.decision IN ('silenced','ineligible','rejected') THEN d.decision
  WHEN COALESCE(o.id,old.id) IS NULL THEN 'history_unavailable'
  WHEN COALESCE(o.expires_at,old.expires_at)<=? THEN 'expired'
+ WHEN EXISTS(SELECT 1 FROM notification_dispatch nd WHERE nd.notification_id=o.id AND nd.state='delivery_unknown') THEN 'delivery_unknown'
+ WHEN EXISTS(SELECT 1 FROM notification_dispatch nd WHERE nd.notification_id=o.id AND nd.state='blocked') THEN 'blocked'
  WHEN COALESCE(o.quarantined_at,old.quarantined_at) IS NOT NULL THEN 'quarantined'
  WHEN EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=0) THEN 'paused'
  WHEN COALESCE(o.lease_until,old.lease_until,0)>? THEN 'sending'

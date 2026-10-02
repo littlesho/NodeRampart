@@ -2,6 +2,35 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.9 - Unreleased / development candidate
+
+- Add one-target official QQ Bot active C2C/group, LINE Messaging API Push,
+  Twilio Programmable Messaging SMS and Meta WhatsApp Cloud approved-template
+  channels. All default disabled; no callback, Gateway, chat, discovery or
+  unofficial account protocol. Each has independent en/zh event/recovery/test /
+  daily presentation, event selection and reviewed protected-file TUI setup.
+- Persist official request snapshots, dispatch intents, acceptance receipts and
+  uncertain outcomes. LINE retries reuse one durable UUID within a bounded
+  24-hour window; non-idempotent uncertain submissions remain held. Twilio
+  acceptance and bounded SID status GETs never reopen POST. Preserve opt-out
+  facts across rotation/restart and hold paid delivery after supported restore.
+- Add UTC-day logical/estimated-segment reservations and explicit paid preview /
+  confirmation. SMS counts GSM-7 extensions / UTF-16 and essential STOP content,
+  rejects unfit summaries and keeps actual provider charges nullable. WhatsApp
+  uses fixed Graph v26.0 and frozen approved BODY mappings, with no free-text
+  fallback or invented delivery/read lookup. Account/recipient permission and
+  commercial obligations remain the operator's responsibility.
+- Upgrade database 13 to 14 in one transaction; preserve old eight-channel
+  histories and bodies. Configuration/control API 1 and sensor protocol 5
+  remain. Old programs reject the new database; rollback needs matching database,
+  configuration and credential backups. No sensor precision fix is included.
+- Prepare project alpha.9 / DEB `0.4.0~alpha.9` / RPM
+  `0.4.0-0.alpha.10%{?dist}` and explicit candidate bootstrap mapping; default
+  remains alpha.5. No release/tag/assets or default installation change.
+- Real APIs, account authorization, human receipt, actual billing, native ARM64
+  and production remain NOT RUN. Existing alpha.8 network/diagnostic limitations,
+  GO-2026-5970 module finding and binary/tool scan coverage gaps remain disclosed.
+
 ## 0.4.0-alpha.8 - 2026-10-02 (UTC)
 
 - Published as a non-latest alpha prerelease at `2026-10-02T05:42:28Z`

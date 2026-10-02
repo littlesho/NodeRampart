@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/littlesho/NodeRampart/internal/api"
@@ -83,9 +84,20 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 			if err != nil {
 				return controlFailure("notification status unavailable")
 			}
-			response.Data = status
+			policies := make([]store.OfficialChannelStatus, 0, 4)
+			for _, channel := range config.OfficialChannelNames() {
+				p, err := a.options.Store.OfficialChannelStatus(ctx, channel, now)
+				if err != nil {
+					return controlFailure("official notification policy status unavailable")
+				}
+				policies = append(policies, p)
+			}
+			response.Data = struct {
+				store.QueueStatus
+				Official []store.OfficialChannelStatus `json:"official_policies"`
+			}{status, policies}
 		}
-	case "notify_test", "notify_discard_isolated":
+	case "notify_test", "notify_preview", "notify_discard_isolated":
 		var args api.NotifyChannelArgs
 		if api.DecodeArgs(request.Args, &args) != nil {
 			return invalid()
@@ -95,6 +107,15 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 		}
 		if !config.IsNotificationChannel(args.Channel) {
 			return invalid()
+		}
+		if config.IsOfficialChannel(args.Channel) && request.Command != "notify_discard_isolated" {
+			return a.officialControl(ctx, request.Command, args, now)
+		}
+		if args.ConfirmPaid || args.PreviewID != "" {
+			return invalid()
+		}
+		if request.Command == "notify_preview" {
+			return controlFailure("local preview is available for official account channels / 本地预览适用于官方账户渠道")
 		}
 		if request.Command == "notify_discard_isolated" {
 			count, err := a.options.Store.DiscardIsolatedNotifications(ctx, args.Channel, now)
@@ -222,6 +243,15 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 			state = "quarantined"
 		}
 		response.Data = map[string]string{"id": args.ID, "status": state}
+	case "notify_reconcile_paid":
+		var args api.OfficialReconcileArgs
+		if api.DecodeArgs(request.Args, &args) != nil || !config.IsPaidOfficialChannel(args.Channel) || !args.Confirm || !reconciliationReference.MatchString(args.EvidenceRef) || strings.Contains(args.EvidenceRef, "..") {
+			return invalid()
+		}
+		if err := a.options.Store.ReconcileOfficialPaidChannel(ctx, args.Channel, args.EvidenceRef, now); err != nil {
+			return controlFailure("paid channel reconciliation was refused; verify consent, opt-out and restored ledger / 付费渠道核对被拒绝；请检查订阅、退订与恢复账本")
+		}
+		response.Data = map[string]string{"channel": args.Channel, "status": "reconciled; old uncertain messages remain held"}
 	case "notify_resume":
 		var args api.DestinationArgs
 		if api.DecodeArgs(request.Args, &args) != nil || !api.ValidID(args.Destination) {
@@ -232,6 +262,9 @@ func (a *App) dispatchControl(ctx context.Context, request api.Request) api.Resp
 				return controlFailure("Telegram target identity unavailable")
 			}
 			args.Destination = a.options.NotificationDestination
+		}
+		if config.IsOfficialChannel(args.Destination) {
+			args.Destination = a.options.OfficialDestinations[args.Destination]
 		}
 		if err := a.options.Store.ResumeDestination(ctx, args.Destination); err != nil {
 			return controlFailure("notification destination could not be resumed")

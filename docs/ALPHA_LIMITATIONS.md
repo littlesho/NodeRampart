@@ -334,3 +334,33 @@ Keep the matching backup; refused unknown credentials are preserved.
 原生包 purge 不是完整安装事务；管理卸载先检查未知凭据，直接 `dpkg --purge`
 可能先删除包拥有的 conffile。拒绝未知凭据会保留该文件，但不保证配置完整回滚，
 应提前备份。
+
+## Alpha.9 official account development candidate
+
+Alpha.9 remains Unreleased: four additional one-target official APIs, disabled by
+default, with local consent/cost controls and schema14 durable unknown/acceptance
+states. [Account-channel prerequisites](OFFICIAL_NOTIFICATION_CHANNELS.md) are
+required; account approval/active-send rights, real API calls, human receipt,
+actual billing, native ARM64 and production remain NOT RUN. QQ's complete public
+service agreement/universal length unit and some Meta login-only terms were not
+fully readable; local bounds are not claims of platform entitlement. LINE
+acceptance cannot prove a blocked user received it. WhatsApp is approved-template
+only, Graph v26.0, with no inbound callback or wamid delivered/read lookup.
+Twilio sent is not delivered; polling is bounded and uncertainty remains held.
+Local quotas do not cap an entire platform account's money charges.
+
+The alpha.8 sensor precision defect is still unfixed. Historical snapshot unique
+cause remains UNESTABLISHED; Fedora44 alpha.8 public checksum download remains
+BLOCKED_NETWORK. Candidate-package tests cannot turn those old outcomes into
+PASS. The GO-2026-5970 module finding, stripped symbol / Fedora version-suffix
+scan gaps and tool advisories remain separate from new source reachability tests.
+First-batch Teams confirms Workflow request acceptance only; new/native channels
+are direct without proxies, rollback needs matching backups and purge is not
+atomic. No new public release, tag or production readiness claim follows from
+merging this development candidate.
+
+中文：alpha.9 为未发布开发候选；四平台真实请求／人工接收／收费、账户授权、
+原生 ARM64 与生产仍未测。模板／主动权限与真实订阅须操作者落实，本地声明不
+替代平台审批，额度也不保证全账户金额上限。不确定提交保留，不自动重发。
+旧 sensor 精度缺陷、历史根因未建立、Fedora 公开下载阻塞和安全扫描缺口不改为
+通过；候选合并不代表已发布或生产就绪。

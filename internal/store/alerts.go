@@ -124,14 +124,12 @@ func recordOneEventNotification(ctx context.Context, tx *sql.Tx, event model.Eve
 				return errors.New("notification merge count exhausted")
 			}
 			body := mergedBodyLocalized(count+1, message.Body, message.Language)
-			var pendingBytes, channelBytes int64
-			if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(LENGTH(CAST(body AS BLOB))),0),
- COALESCE(SUM(CASE WHEN channel=? THEN LENGTH(CAST(body AS BLOB)) ELSE 0 END),0)
- FROM notification_outbox WHERE sent_at IS NULL AND suppressed_at IS NULL`, message.Channel).Scan(&pendingBytes, &channelBytes); err != nil {
+			usage, err := outboxAdmissionUsage(ctx, tx, message.Channel)
+			if err != nil {
 				return err
 			}
-			if pendingBytes-previousBytes+int64(len(body)) > maxPendingOutboxBytes ||
-				message.Channel != "" && channelBytes-previousBytes+int64(len(body)) > maxChannelOutboxBytes {
+			if usage.bytes-previousBytes+int64(len(body)) > maxPendingOutboxBytes-usage.reservedBytes ||
+				message.Channel != "" && usage.channelBytes-previousBytes+int64(len(body)) > maxChannelOutboxBytes {
 				decision, notificationID = "rejected", ""
 				if _, err := tx.ExecContext(ctx, `UPDATE notification_counters SET rejected=MIN(rejected,9223372036854775806)+1 WHERE id=1`); err != nil {
 					return err
@@ -207,7 +205,8 @@ func (s *Store) ClaimNotification(ctx context.Context, id string, now time.Time)
  AND sent_at IS NULL AND quarantined_at IS NULL AND isolated_at IS NULL AND suppressed_at IS NULL AND expires_at>? AND next_attempt<=?
  AND (channel='' OR EXISTS(SELECT 1 FROM notification_targets t WHERE t.channel=o.channel AND t.destination=o.destination AND t.enabled=1))
  AND (lease_until IS NULL OR lease_until<=?)
- AND NOT EXISTS(SELECT 1 FROM notification_cooldowns c WHERE c.destination=o.destination AND c.until_at>?)`,
+ AND NOT EXISTS(SELECT 1 FROM notification_cooldowns c WHERE c.destination=o.destination AND c.until_at>?)
+ AND NOT EXISTS(SELECT 1 FROM notification_dispatch d WHERE d.notification_id=o.id AND d.state NOT IN ('prepared','retry_ready'))`,
 		now.Add(2*time.Minute).UnixMilli(), id, now.UnixMilli(), now.UnixMilli(), now.UnixMilli(), now.UnixMilli())
 	if err != nil {
 		return OutboxMessage{}, false, err
@@ -222,6 +221,13 @@ func (s *Store) ClaimNotification(ctx context.Context, id string, now time.Time)
 		return OutboxMessage{}, false, err
 	}
 	message.NextAttempt = time.UnixMilli(next).UTC()
+	if officialChannel(message.Channel) {
+		row, err := readOfficialRow(ctx, tx, id)
+		if err != nil {
+			return OutboxMessage{}, false, err
+		}
+		message = row.message
+	}
 	if err := tx.Commit(); err != nil {
 		return OutboxMessage{}, false, err
 	}
@@ -236,6 +242,6 @@ func (s *Store) ReleaseNotificationClaim(ctx context.Context, id string) error {
 		return err
 	}
 	defer release()
-	_, err = s.db.ExecContext(ctx, `UPDATE notification_outbox SET lease_until=NULL WHERE id=? AND sent_at IS NULL`, id)
+	_, err = s.db.ExecContext(ctx, `UPDATE notification_outbox SET lease_until=NULL WHERE id=? AND sent_at IS NULL AND NOT EXISTS(SELECT 1 FROM notification_dispatch d WHERE d.notification_id=id AND d.state='in_flight')`, id)
 	return err
 }

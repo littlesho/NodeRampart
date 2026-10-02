@@ -126,8 +126,17 @@ func humanResult(text, language string) string {
 					walk(child, depth+1)
 				default:
 					out.WriteString(indent + label(key) + ": ")
+					if child == nil {
+						if unknown, ok := officialUnknownObservation(key, language); ok {
+							child = unknown
+						}
+					}
 					if text, ok := child.(string); ok {
-						child = notificationResultLabel(key, monitorExecutionLabel(key, alertContextLabel(key, retentionLabel(key, text, language), language), language), language)
+						if state, ok := officialRowStateLabel(item, key, text, language); ok {
+							child = state
+						} else {
+							child = notificationResultLabel(key, monitorExecutionLabel(key, alertContextLabel(key, retentionLabel(key, text, language), language), language), language)
+						}
 					}
 					walk(child, 0)
 				}
