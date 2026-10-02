@@ -22,7 +22,7 @@ func TestOfficialCredentialGenerationAndSelectionIdentity(t *testing.T) {
 	for _, channel := range config.OfficialChannelNames() {
 		t.Run(channel, func(t *testing.T) {
 			sender, _ := officialFixture(t, channel)
-			for _, change := range []func(*config.OfficialChannelConfig){func(c *config.OfficialChannelConfig) { c.Enabled = false }, func(c *config.OfficialChannelConfig) { c.Timeout = config.Duration{time.Second} }, func(c *config.OfficialChannelConfig) { c.DailyMessageLimit++ }, func(c *config.OfficialChannelConfig) {
+			for _, change := range []func(*config.OfficialChannelConfig){func(c *config.OfficialChannelConfig) { c.Enabled = false }, func(c *config.OfficialChannelConfig) { c.Timeout = config.Duration{Duration: time.Second} }, func(c *config.OfficialChannelConfig) { c.DailyMessageLimit++ }, func(c *config.OfficialChannelConfig) {
 				if channel == "twilio_sms" {
 					c.DailySegmentLimit++
 				}
