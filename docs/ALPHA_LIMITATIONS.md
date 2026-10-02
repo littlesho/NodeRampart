@@ -16,15 +16,17 @@ identified a conditional sensor diagnostic precision defect in the unchanged
 alpha.8 source: a nanosecond receipt can compare later than the same fully
 committed microsecond watermark and yield `sensor_commit_unavailable` / strict
 exit2. Real pending or missing commits can produce the same reason, so unknown
-must not be ignored or called healthy. A separately authorized product fix is
-needed; none is included here. The original full Debian doctor/health JSON was
+must not be ignored or called healthy. Published alpha.8 remains affected; the
+subsequent alpha.9 development fix is described below and does not repair those
+released bytes or change the historical results. The original full Debian doctor/health JSON was
 in temporary guest storage and was absent after the new normal start; retained
 check/exit/digest and backup evidence does not establish its unique historical
 cause. Snapshot inspection also requires a safe standalone file with
 invoking-user/root ownership, separately from successful backup verification.
 
-中文：有限增量核验确认 alpha.8 有条件性的 sensor 诊断精度误判，需要独立产品
-修复；真实未提交状态也可能产生相同 reason，不能忽略 unknown 或改称健康。
+中文：有限增量核验确认已发布 alpha.8 有条件性的 sensor 诊断精度误判；下述
+alpha.9 开发修复不改变旧发行包或历史结果。真实未提交也可能产生相同 reason，
+不能忽略 unknown 或改称健康。
 原 Debian 完整诊断 JSON 的临时目录已不存在，剩余摘要不能证明原时点唯一成因。
 快照检查的安全归属契约和 backup verify 也须分开；详见上述增量记录。
 
@@ -349,8 +351,20 @@ only, Graph v26.0, with no inbound callback or wamid delivered/read lookup.
 Twilio sent is not delivered; polling is bounded and uncertainty remains held.
 Local quotas do not cap an entire platform account's money charges.
 
-The alpha.8 sensor precision defect is still unfixed. Historical snapshot unique
-cause remains UNESTABLISHED; Fedora44 alpha.8 public checksum download remains
+The published alpha.8 sensor precision defect remains in its immutable packages.
+Alpha.9 development diagnosis now requires matching receipt session/interface/
+sequence and compares that observation in persisted `UnixMicro` units. There is
+no time tolerance: a new identity within the same microsecond, a newer receipt,
+missing identity/watermark or unreadable state remains unknown. Latest partial
+commits remain degraded. A snapshot spanning sequence advancement can still be
+unknown: a later watermark does not prove that an earlier sequence committed.
+The additive `sensor_receipts` status field carries identity to CLI diagnosis;
+install matching CLI/daemon programs. A new CLI cannot infer identity from an
+old daemon's timestamp-only status. This is an Unreleased development fix,
+not an alpha.8 replacement or a guarantee that every sensor unknown is gone.
+See [diagnostic semantics](V0.4_OPERATIONS.md#sensor-commit-watermarks).
+
+Historical snapshot unique cause remains UNESTABLISHED; Fedora44 alpha.8 public checksum download remains
 BLOCKED_NETWORK. Candidate-package tests cannot turn those old outcomes into
 PASS. The GO-2026-5970 module finding, stripped symbol / Fedora version-suffix
 scan gaps and tool advisories remain separate from new source reachability tests.
@@ -362,5 +376,7 @@ merging this development candidate.
 中文：alpha.9 为未发布开发候选；四平台真实请求／人工接收／收费、账户授权、
 原生 ARM64 与生产仍未测。模板／主动权限与真实订阅须操作者落实，本地声明不
 替代平台审批，额度也不保证全账户金额上限。不确定提交保留，不自动重发。
-旧 sensor 精度缺陷、历史根因未建立、Fedora 公开下载阻塞和安全扫描缺口不改为
+已发布 alpha.8 的精度缺陷仍保留；alpha.9 开发候选按会话/接口/序号匹配后以
+持久化微秒比较，不放宽时间容差。新批次、缺失身份/水位及部分提交仍如实诊断；
+跨采样点序号变化也可能保守 unknown。历史根因未建立、Fedora 公开下载阻塞和安全扫描缺口不改为
 通过；候选合并不代表已发布或生产就绪。

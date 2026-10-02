@@ -3,8 +3,11 @@
 package daemon
 
 import (
-	"github.com/littlesho/NodeRampart/internal/config"
 	"time"
+
+	"github.com/littlesho/NodeRampart/internal/config"
+	"github.com/littlesho/NodeRampart/internal/protocol"
+	"github.com/littlesho/NodeRampart/internal/store"
 )
 
 // Diagnosis is a bounded explanation of current observations. It never applies
@@ -111,10 +114,14 @@ func DiagnoseAt(status Status, foreignKeysRequired bool, now time.Time) Diagnosi
 			partial = partial || !status.SensorCommits[i].Complete
 		}
 		for name, received := range status.SensorInterfaces {
-			i, ok := latest[name]
-			if !ok || received.After(status.SensorCommits[i].SentAt) {
-				unknown = true
+			matched := false
+			for _, watermark := range status.SensorCommits {
+				if watermark.Interface == name && receiptMatchesDurableWatermark(received, status.SensorReceipts[name], watermark) {
+					matched = true
+					break
+				}
 			}
+			unknown = unknown || !matched
 		}
 		if unknown {
 			add("sensor_commit_unavailable", "unknown", "Current receipt has no confirmed v5 durable commit watermark.", "Check legacy protocol or pending storage work; upgrade daemon before sensor.")
@@ -142,4 +149,19 @@ func DiagnoseAt(status Status, foreignKeysRequired bool, now time.Time) Diagnosi
 		add("status_stale", "unknown", "This status is too old to establish current health.", "Request a fresh authenticated status.")
 	}
 	return d
+}
+
+// receiptMatchesDurableWatermark compares only the same session/interface/sequence
+// observation (the caller checks interface). Connection-local interval checks do
+// not constrain the first frame after reconnect, so time proximity alone cannot
+// identify a commit. A later sequence can contain a gap and does not certify this
+// receipt; a status snapshot spanning progress conservatively remains unknown.
+func receiptMatchesDurableWatermark(received time.Time, receipt SensorReceipt, durable store.SensorWatermark) bool {
+	if !protocol.ValidSessionID(receipt.SessionID) || receipt.Sequence == 0 || receipt.SessionID != durable.SessionID || receipt.Sequence != durable.Sequence {
+		return false
+	}
+	// Persisted sent_at_us uses UnixMicro; reading it back cannot retain the
+	// sub-microsecond receipt precision. Equal persisted units for the same
+	// identity are exact at the store's precision, not a grace period/tolerance.
+	return received.UnixMicro() == durable.SentAt.UnixMicro()
 }
