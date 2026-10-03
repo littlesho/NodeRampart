@@ -200,7 +200,7 @@ route removal/restoration and capture cancellation, then removes its fixtures.
 
 ## Source and package transitions
 
-Installers reject the other installation's binaries and full systemd units,
+Installers reject the other installation's binaries, source removal helper and full systemd units,
 including installations whose services are stopped or disabled. Native package
 preinstall accepts administrator masks pointing to `/dev/null` and preserves
 drop-ins. A full custom unit must be reconciled explicitly because it overrides
@@ -211,12 +211,13 @@ the previous build available. New source installations record six SHA256
 ownership entries: three binaries, two full units, and
 `/usr/local/libexec/noderampart/manage-remove`. The transition also accepts an
 older five-entry manifest containing the three binaries and two units; it
-never deletes an unrecorded helper. Prepare a source-to-package
+never deletes an unrecorded helper. Alpha.9 native pre-install also rejects a remaining
+helper, including a dangling symlink; reconcile its ownership explicitly. Prepare a source-to-package
 transition with the checked-out script, then install the reviewed package:
 
 ```bash
 sudo ./scripts/source-to-package.sh --prepare
-sudo apt install ./dist/noderampart_0.4.0~alpha.8_amd64.deb
+sudo apt install ./dist/noderampart_0.4.0~alpha.9_amd64.deb
 sudo /usr/bin/noderampart doctor
 sudo /usr/bin/noderampart status
 ```
@@ -313,14 +314,15 @@ Use an isolated management network and a separate no-NAT traffic network. High-r
 6. Changelog, compatibility matrix, known limitations, checksums, SBOM, and provenance are attached.
 7. No release is marked stable until the privileged VM matrix and soak exit criteria are met.
 
-当前 `VERSION` 为 alpha.8；其 hosted prerelease 已独立公开，DEB 原生版本
-`0.4.0~alpha.8`，RPM `0.4.0-0.alpha.9%{?dist}`，排序高于已发布 alpha.7。普通 local/CI 包仍是独立候选，
-相同版本或源码树不使其继承正式 Release provenance。alpha.8 公开安装矩阵尚未闭环，
-无参数默认仍 alpha.5；冻结来源、发布日期及验收范围见
+当前 `VERSION` 为 alpha.9，仍为 Unreleased / development candidate；DEB 原生版本
+`0.4.0~alpha.9`、RPM `0.4.0-0.alpha.10%{?dist}`，排序高于已发布 alpha.8。
+普通 local/CI 包是独立候选，相同版本或源码树不使其继承正式 Release provenance。
+alpha.8 的 hosted prerelease 已独立公开，但其公开安装矩阵仍未闭环；无参数默认仍
+alpha.5。alpha.8 的冻结来源、发布日期及实际验收范围见
 [发布核验](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。
-schema 13 扩展固定渠道约束及原生日报启用边界，保留 schema 12 消息呈现元数据；
-配置/API 1、协议 v5 不变。回退需
-匹配旧数据库备份和旧配置/密钥，不能原地降 schema。
+alpha.9 在单次事务中将数据库 schema 13 升为 14，保留旧八渠道历史及消息呈现元数据，
+并增加账户渠道发送意图、额度与未决状态；配置/API 1、协议 v5 不变。回退需匹配的
+旧程序、数据库、配置及凭据备份，不能原地降低 schema，也不能把 purge 当成原子回滚。
 
 
 For alpha.8, use [acceptance](ALPHA8_ACCEPTANCE.md) and the bilingual

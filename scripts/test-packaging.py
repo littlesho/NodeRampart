@@ -329,6 +329,75 @@ class PackagingTests(unittest.TestCase):
             self.assertIn("conflicts", result.stderr)
             self.assert_no_mutations()
 
+    def test_native_installers_reject_remaining_source_helper(self):
+        helper = self.root / "usr/local/libexec/noderampart/manage-remove"
+        helper.parent.mkdir(parents=True)
+        canary = self.root / "helper-canary"
+        canary.write_text("unowned helper content")
+        dropin = self.root / "etc/systemd/system/noderampartd.service.d/local.conf"
+        self.write(dropin, "administrator override")
+        for kind in ("file", "directory", "symlink", "dangling", "dev_null"):
+            if kind == "file":
+                helper.write_text("unowned helper content")
+            elif kind == "directory":
+                helper.mkdir()
+            else:
+                helper.symlink_to({"symlink": canary, "dangling": "missing-fixture",
+                                   "dev_null": "/dev/null"}[kind])
+            try:
+                for source, args, section in (("packaging/debian/preinst", ("install",), None),
+                                              ("packaging/rpm/noderampart.spec", (), "pre")):
+                    with self.subTest(kind=kind, source=source):
+                        log = self.lab / "commands.jsonl"
+                        if log.exists():
+                            log.unlink()
+                        result = self.run_script(source, *args, section=section)
+                        self.assertNotEqual(result.returncode, 0, result.stderr)
+                        self.assertIn("conflicts", result.stderr)
+                        self.assert_no_mutations()
+                        self.assertTrue(helper.exists() or helper.is_symlink())
+                        self.assertEqual(canary.read_text(), "unowned helper content")
+                        self.assertEqual(dropin.read_text(), "administrator override")
+                        self.assertEqual((self.root / "etc/noderampart/config.json").read_text(), "fixture config\n")
+                        self.assertEqual((self.root / "var/lib/noderampart/state").read_text(), "persistent fixture\n")
+            finally:
+                if helper.is_symlink() or helper.is_file():
+                    helper.unlink()
+                else:
+                    helper.rmdir()
+
+    def test_five_entry_transition_preserves_helper_and_blocks_native_install(self):
+        self.assertEqual(self.run_script("scripts/install.sh").returncode, 0)
+        manifest = self.root / "usr/local/share/doc/noderampart/source-install.manifest"
+        entries = [line for line in manifest.read_text().splitlines() if not line.endswith("/manage-remove")]
+        self.assertEqual(len(entries), 5)
+        manifest.write_text("\n".join(entries) + "\n")
+        helper = self.root / "usr/local/libexec/noderampart/manage-remove"
+        original = helper.read_bytes()
+        result = self.run_script("scripts/source-to-package.sh", "--prepare")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(manifest.exists())
+        self.assertEqual(helper.read_bytes(), original)
+        self.assertFalse((self.root / "usr/local/bin/noderampart").exists())
+        for source, args, section in (("packaging/debian/preinst", ("install",), None),
+                                      ("packaging/rpm/noderampart.spec", (), "pre")):
+            with self.subTest(source=source):
+                (self.lab / "commands.jsonl").unlink(missing_ok=True)
+                result = self.run_script(source, *args, section=section)
+                self.assertNotEqual(result.returncode, 0, result.stderr)
+                self.assertIn("conflicts", result.stderr)
+                self.assert_no_mutations()
+                self.assertEqual(helper.read_bytes(), original)
+        # Only this fixture's explicitly owned helper is reconciled; installers
+        # must not guess ownership or remove it on the operator's behalf.
+        helper.unlink()
+        for source, args, section in (("packaging/debian/preinst", ("install",), None),
+                                      ("packaging/rpm/noderampart.spec", (), "pre")):
+            result = self.run_script(source, *args, section=section)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.root / "var/lib/noderampart/state").is_file())
+        self.assertTrue((self.root / "etc/noderampart/config.json").is_file())
+
     def test_native_installers_preserve_administrator_masks(self):
         for unit in ("noderampartd.service", "noderampart-sensor.service"):
             (self.root / "etc/systemd/system" / unit).symlink_to("/dev/null")

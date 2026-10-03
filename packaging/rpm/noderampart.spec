@@ -66,7 +66,7 @@ if [ -L %{_sysconfdir}/noderampart/config.json ] || { [ -e %{_sysconfdir}/nodera
   echo "refusing non-regular existing configuration" >&2
   exit 1
 fi
-for path in /usr/local/bin/noderampart /usr/local/bin/noderampartd /usr/local/bin/noderampart-sensor %{_sysconfdir}/systemd/system/noderampartd.service %{_sysconfdir}/systemd/system/noderampart-sensor.service; do
+for path in /usr/local/bin/noderampart /usr/local/bin/noderampartd /usr/local/bin/noderampart-sensor /usr/local/libexec/noderampart/manage-remove %{_sysconfdir}/systemd/system/noderampartd.service %{_sysconfdir}/systemd/system/noderampart-sensor.service; do
   if [ -L "$path" ] && [ "$(readlink "$path")" = /dev/null ]; then
     case "$path" in %{_sysconfdir}/systemd/system/*.service) continue;; esac
   fi
