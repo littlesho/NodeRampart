@@ -84,6 +84,7 @@ func (a *App) updateInterfaces(ctx context.Context, values []collector.Interface
 		if index, ok := old[ref.Name]; !ok || index != ref.Index {
 			changed = true
 			delete(a.sensorByInterface, ref.Name)
+			delete(a.sensorReceipts, ref.Name)
 		}
 	}
 	if changed && a.interfacesObserved {

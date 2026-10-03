@@ -85,6 +85,7 @@ type App struct {
 	sensorConnections          atomic.Uint64
 	interfaces                 []collector.InterfaceObservation
 	sensorByInterface          map[string]time.Time
+	sensorReceipts             map[string]SensorReceipt
 	sensorCommittedByInterface map[string]time.Time
 	interfaceDiscoveryRequired bool
 	discoveryDegraded          bool
@@ -115,6 +116,7 @@ type Status struct {
 	Monitoring           MonitorStatus                    `json:"monitoring"`
 	Interfaces           []collector.InterfaceObservation `json:"interfaces"`
 	SensorInterfaces     map[string]time.Time             `json:"sensor_interfaces"`
+	SensorReceipts       map[string]SensorReceipt         `json:"sensor_receipts,omitempty"`
 	Budget               *store.StorageBudgetStatus       `json:"storage_budget,omitempty"`
 	AuthDetection        detect.AuthStats                 `json:"auth_detection"`
 	SensorCommits        []store.SensorWatermark          `json:"sensor_commits"`
@@ -484,21 +486,7 @@ func (a *App) handleBatch(ctx context.Context, batch protocol.Batch) {
 	}
 	a.mu.Lock()
 	previousCommit := a.sensorCommittedByInterface[batch.Interface]
-	a.lastSensor = batch.SentAt
-	if a.sensorByInterface == nil {
-		a.sensorByInterface = make(map[string]time.Time)
-	}
-	if _, exists := a.sensorByInterface[batch.Interface]; !exists && len(a.sensorByInterface) >= a.options.Config.Sensor.InterfaceLimit() {
-		oldest := ""
-		for name, at := range a.sensorByInterface {
-			if oldest == "" || at.Before(a.sensorByInterface[oldest]) {
-				oldest = name
-			}
-		}
-		delete(a.sensorByInterface, oldest)
-	}
-	a.sensorByInterface[batch.Interface] = batch.SentAt
-	a.batches++
+	a.recordSensorReceiptLocked(batch)
 	a.mu.Unlock()
 	a.refreshSensorState(ctx)
 	windowStart := batch.SentAt.Add(-time.Duration(batch.IntervalMillis) * time.Millisecond)
@@ -692,6 +680,10 @@ func (a *App) Status(ctx context.Context) Status {
 	status.SensorInterfaces = make(map[string]time.Time, len(a.sensorByInterface))
 	for name, at := range a.sensorByInterface {
 		status.SensorInterfaces[name] = at
+	}
+	status.SensorReceipts = make(map[string]SensorReceipt, len(a.sensorReceipts))
+	for name, receipt := range a.sensorReceipts {
+		status.SensorReceipts[name] = receipt
 	}
 	a.mu.RUnlock()
 	for _, channel := range config.OfficialChannelNames() {

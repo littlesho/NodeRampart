@@ -52,21 +52,7 @@ func (a *App) handleSequencedBatch(ctx context.Context, b protocol.Batch) {
 		a.flushEvents(ctx)
 	}
 	a.mu.Lock()
-	a.lastSensor = b.SentAt
-	if a.sensorByInterface == nil {
-		a.sensorByInterface = make(map[string]time.Time)
-	}
-	if _, exists := a.sensorByInterface[b.Interface]; !exists && len(a.sensorByInterface) >= a.options.Config.Sensor.InterfaceLimit() {
-		oldest := ""
-		for name, at := range a.sensorByInterface {
-			if oldest == "" || at.Before(a.sensorByInterface[oldest]) {
-				oldest = name
-			}
-		}
-		delete(a.sensorByInterface, oldest)
-	}
-	a.sensorByInterface[b.Interface] = b.SentAt
-	a.batches++
+	a.recordSensorReceiptLocked(b)
 	a.mu.Unlock()
 	a.refreshSensorState(ctx)
 	if a.sensorPrepared == nil {
@@ -123,4 +109,41 @@ func (a *App) handleSequencedBatch(ctx context.Context, b protocol.Batch) {
 	if err == nil {
 		delete(a.sensorPrepared, b.Interface)
 	}
+}
+
+// SensorReceipt identifies the observation whose nanosecond timestamp is in
+// Status.SensorInterfaces. It is receipt evidence, not a commit acknowledgement.
+type SensorReceipt struct {
+	SessionID string `json:"session_id"`
+	Sequence  uint64 `json:"sequence"`
+}
+
+// recordSensorReceiptLocked retains one bounded identity/time pair per interface.
+// The caller holds a.mu. Legacy/unsequenced observations explicitly replace any
+// previous v5 identity; reconnects must not inherit an old session's commit.
+func (a *App) recordSensorReceiptLocked(b protocol.Batch) {
+	a.lastSensor = b.SentAt
+	if a.sensorByInterface == nil {
+		a.sensorByInterface = make(map[string]time.Time)
+	}
+	if a.sensorReceipts == nil {
+		a.sensorReceipts = make(map[string]SensorReceipt)
+	}
+	if _, exists := a.sensorByInterface[b.Interface]; !exists && len(a.sensorByInterface) >= a.options.Config.Sensor.InterfaceLimit() {
+		oldest := ""
+		for name, at := range a.sensorByInterface {
+			if oldest == "" || at.Before(a.sensorByInterface[oldest]) {
+				oldest = name
+			}
+		}
+		delete(a.sensorByInterface, oldest)
+		delete(a.sensorReceipts, oldest)
+	}
+	a.sensorByInterface[b.Interface] = b.SentAt
+	receipt := SensorReceipt{}
+	if b.ProtocolVersion >= 5 {
+		receipt = SensorReceipt{SessionID: b.SessionID, Sequence: b.Sequence}
+	}
+	a.sensorReceipts[b.Interface] = receipt
+	a.batches++
 }

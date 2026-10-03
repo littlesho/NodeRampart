@@ -4,6 +4,13 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 
 ## 0.4.0-alpha.9 - Unreleased / development candidate
 
+- Fix sensor commit diagnosis by matching receipt session/interface/sequence
+  before comparing timestamps at the store's persisted microsecond precision.
+  A committed batch's nanosecond remainder no longer causes a false unknown;
+  missing, pending, legacy, mismatched and partial observations remain visible.
+  Status adds bounded receipt identities without changing schema 14, API/config
+  schema 1 or sensor protocol 5. Published alpha.8 bytes remain affected.
+
 - Add one-target official QQ Bot active C2C/group, LINE Messaging API Push,
   Twilio Programmable Messaging SMS and Meta WhatsApp Cloud approved-template
   channels. All default disabled; no callback, Gateway, chat, discovery or
@@ -23,7 +30,7 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 - Upgrade database 13 to 14 in one transaction; preserve old eight-channel
   histories and bodies. Configuration/control API 1 and sensor protocol 5
   remain. Old programs reject the new database; rollback needs matching database,
-  configuration and credential backups. No sensor precision fix is included.
+  configuration and credential backups.
 - Prepare project alpha.9 / DEB `0.4.0~alpha.9` / RPM
   `0.4.0-0.alpha.10%{?dist}` and explicit candidate bootstrap mapping; default
   remains alpha.5. No release/tag/assets or default installation change.

@@ -1048,3 +1048,34 @@ Debian实时诊断精度缺陷是四项独立结论，不能合并成“全部�
 对象、保留证据、正常软停并独立确认 STOPPED/释放资源。未修改发行对象、产品、
 网络、权限、治理、安装默认或生产；真实外发、原生 ARM64、安全扫描缺口等继续
 披露。产品修复和新网络权限属于另行授权任务，本次有限增量到此收口。
+
+
+### Alpha.9 development follow-up: sensor receipt precision
+
+After the alpha.8 investigation above, a separate alpha.9 Unreleased source fix
+matches the receipt's session/interface/sequence with a durable watermark before
+comparing `UnixMicro()` timestamps. The store writes `sent_at_us`; sub-microsecond
+receipt digits are not a newer observation of that same identity. Time-only
+normalization was insufficient because a reconnect's first frame can have a new
+identity in the same microsecond before storage rejects nonmonotonic progress.
+The bounded additive `sensor_receipts` status map preserves that distinction.
+Missing/legacy identity, missing or unreadable watermarks, unmatched sequences,
+and partial commits retain unknown/degraded semantics. A later sequence cannot
+prove an earlier skipped receipt; cross-snapshot progress may remain unknown.
+
+This source change does not rebuild or replace Release 401526101, its tag,
+77ae069b8f00651106b9621a24047b0ad7b4e88d source or any of its 22 assets. Alpha.8
+strict results, nanosecond deltas and investigation records above remain exactly
+historical observations, not retroactive health PASS. Snapshot unique cause
+remains UNESTABLISHED, Fedora public bootstrap remains BLOCKED_NETWORK, and
+security/real-platform/native-ARM64/production limits are unchanged. Alpha.9 is
+not released. Current semantics are in
+[operations](V0.4_OPERATIONS.md#sensor-commit-watermarks); acceptance of a new
+candidate must bind its actual commit, tests and any runtime evidence separately.
+
+中文：后续独立修复仅进入 alpha.9 未发布开发源码：先匹配会话/接口/序号，再按
+持久化微秒精度比较。重连首帧不受旧连接间隔约束，因此不能只把时间粗化就认定
+新批次已提交。新增有界 receipt 身份；真实 pending/missing/partial 及跨采样点
+不确定状态继续保留。以上 alpha.8 原始 strict 结果、缺陷复现和未知历史根因均
+不改写；固定发行源、tag 和 22 项资产不变。新候选的测试和运行证据须独立绑定，
+不代表 alpha.9 已发布或生产就绪。

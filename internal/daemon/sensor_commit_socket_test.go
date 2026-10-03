@@ -306,3 +306,95 @@ func TestSensorSocketTwoNotificationChannelsOneQuotaRejectionIsPartial(t *testin
 		t.Fatal("one-channel rejection was hidden", ack)
 	}
 }
+
+// Receive on an actual replacement connection: the per-connection interval
+// history cannot establish that a same-microsecond frame is already durable.
+func TestSensorSocketReconnectPrecisionRequiresReceiptIdentity(t *testing.T) {
+	for _, kind := range []string{"next-sequence", "new-session", "legacy", "unsequenced-v5"} {
+		t.Run(kind, func(t *testing.T) {
+			cfg := config.Defaults()
+			cfg.Sensor.Interface = "lab0"
+			cfg.Sensor.BatchInterval.Duration = 100 * time.Millisecond
+			receiver, _, output := socketSensorApp(t, cfg)
+			a := eventTestApp(t)
+			a.options.Config.Sensor = cfg.Sensor
+			b := protocol.Batch{ProtocolVersion: protocol.Version, SessionID: strings.Repeat("a", 32), Sequence: 1, Interface: "lab0", IntervalMillis: 100, SentAt: time.UnixMicro(time.Now().UnixMicro()).Add(789 * time.Nanosecond)}
+			conn := rawSensorConnection(t, receiver)
+			if err := protocol.WriteFrame(conn, b); err != nil {
+				t.Fatal(err)
+			}
+			first := receiveCommitBatch(t, output)
+			a.handleBatch(context.Background(), first)
+			if ack := readCommitACK(t, conn); !ack.Complete {
+				t.Fatal(ack)
+			}
+			assertAppSensorCommitReason(t, a, "")
+			conn.Close()
+			b.SentAt = b.SentAt.Add(time.Nanosecond)
+			switch kind {
+			case "next-sequence":
+				b.Sequence = 2
+			case "new-session":
+				b.SessionID = strings.Repeat("b", 32)
+			case "legacy":
+				b.ProtocolVersion = 4
+				b.SessionID = ""
+				b.Sequence = 0
+			case "unsequenced-v5":
+				b.SessionID = ""
+				b.Sequence = 0
+			}
+			conn, received := reconnectSensorBatch(t, receiver, output, b)
+			if received.ConnectionID <= first.ConnectionID {
+				t.Fatal("not a real reconnect")
+			}
+			if received.Sequence > 0 {
+				// Capture the real handling window after receipt, before durable commit.
+				original := a.network
+				observed := false
+				a.network = receiptInspectingDetector{networkDetector: original, inspect: func() { observed = true; assertAppSensorCommitReason(t, a, "sensor_commit_unavailable") }}
+				a.handleBatch(context.Background(), received)
+				a.network = original
+				if !observed {
+					t.Fatal("pre-commit observation not exercised")
+				}
+				if ack := readCommitACK(t, conn); ack.Complete || ack.Reason != "retired_or_nonmonotonic_session" {
+					t.Fatal("nonmonotonic commit unexpectedly accepted", ack)
+				}
+			} else {
+				a.handleBatch(context.Background(), received)
+			}
+			assertAppSensorCommitReason(t, a, "sensor_commit_unavailable")
+			w, ok, err := a.options.Store.SensorWatermark(context.Background(), first.SessionID, first.Interface)
+			if err != nil || !ok || w.Sequence != 1 || !w.Complete {
+				t.Fatal("old durable identity changed", w, ok, err)
+			}
+		})
+	}
+}
+
+type receiptInspectingDetector struct {
+	networkDetector
+	inspect func()
+}
+
+func (d receiptInspectingDetector) Observe(b protocol.Batch) []model.Event {
+	d.inspect()
+	return d.networkDetector.Observe(b)
+}
+func assertAppSensorCommitReason(t *testing.T, a *App, want string) {
+	t.Helper()
+	s := a.Status(context.Background())
+	if s.SensorCommitUnknown {
+		t.Fatal("fixture could not read real watermarks")
+	}
+	found := ""
+	for _, c := range s.Diagnosis.Checks {
+		if strings.HasPrefix(c.Reason, "sensor_commit_") {
+			found = c.Reason
+		}
+	}
+	if found != want {
+		t.Fatalf("sensor reason %q want %q: %+v", found, want, s.Diagnosis.Checks)
+	}
+}
