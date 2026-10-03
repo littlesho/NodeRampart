@@ -10,8 +10,12 @@ import (
 )
 
 func (u *ui) previewThresholdDraft() {
+	u.previewThresholdDraftWithBack(u.configuration)
+}
+
+func (u *ui) previewThresholdDraftWithBack(back func()) {
 	if err := u.snapshot.Config.Validate(); err != nil {
-		u.output(u.tr("Fix draft first", "请先修正草稿"), err.Error(), u.configuration)
+		u.output(u.tr("Fix draft first", "请先修正草稿"), err.Error(), back)
 		return
 	}
 	input := tview.NewInputField().SetLabel(u.tr("Offline metadata file", "离线元数据文件")).SetFieldWidth(50)
@@ -25,15 +29,15 @@ func (u *ui) previewThresholdDraft() {
 			text, err := u.backend.Action(ctx, "threshold_preview_draft", arguments)
 			return func() {
 				if err != nil {
-					u.output(u.tr("Preview unavailable", "无法试运行"), err.Error(), u.configuration)
+					u.output(u.tr("Preview unavailable", "无法试运行"), err.Error(), back)
 					return
 				}
 				text = u.tr("Fewer alerts do not prove fewer false positives. Other draft settings are not exercised. Preview does not save configuration.\n\n", "告警减少不证明误报率下降；其他草稿设置未参与验证。试运行不会保存配置。\n\n") + text
 				pages, truncated := outputPages(text)
-				u.outputPageAction(u.tr("Threshold preview", "阈值试运行"), pages, 0, truncated, u.tr("Review and save draft", "检查并保存草稿"), u.saveConfiguration, u.configuration)
+				u.outputPageAction(u.tr("Threshold preview", "阈值试运行"), pages, 0, truncated, u.tr("Review and save draft", "检查并保存草稿"), func() { u.saveConfigurationWithBack(back) }, back)
 			}
-		}, u.configuration)
+		}, back)
 	})
-	form.AddButton(u.tr("Cancel", "取消"), u.configuration)
-	u.root(u.tr("Preview draft using local offline metadata", "使用本地离线元数据试运行草稿"), form, u.configuration)
+	form.AddButton(u.tr("Cancel", "取消"), back)
+	u.root(u.tr("Preview draft using local offline metadata", "使用本地离线元数据试运行草稿"), form, back)
 }

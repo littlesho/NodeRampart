@@ -13,10 +13,13 @@ import (
 )
 
 func (u *ui) editTimezone(f field) {
+	u.editTimezoneWithBack(f, func() { u.configGroup(f.group) })
+}
+
+func (u *ui) editTimezoneWithBack(f field, back func()) {
 	current := u.snapshot.Config.Reports.Timezone
 	at := time.Now() // One reference instant for the whole selector, including searches.
 	zones := timezones.List(at, current)
-	back := func() { u.configGroup(f.group) }
 	search := tview.NewInputField().SetLabel(u.tr("Search: ", "搜索：")).SetFieldWidth(0)
 	search.SetAcceptanceFunc(func(text string, _ rune) bool {
 		if len(text) > 256 {
@@ -41,7 +44,7 @@ func (u *ui) editTimezone(f field) {
 			return // Empty search must not write the first catalog item implicitly.
 		}
 		if !zone.Available {
-			u.output(u.tr("Timezone rules unavailable", "时区规则不可用"), u.tr("No rules could be loaded for this name. Keep the current setting or install/update timezone data; no draft change was made.", "无法加载此名称的规则。请保留当前设置，或安装/更新时区数据；草稿未修改。"), func() { u.editTimezone(f) })
+			u.output(u.tr("Timezone rules unavailable", "时区规则不可用"), u.tr("No rules could be loaded for this name. Keep the current setting or install/update timezone data; no draft change was made.", "无法加载此名称的规则。请保留当前设置，或安装/更新时区数据；草稿未修改。"), func() { u.editTimezoneWithBack(f, back) })
 			return
 		}
 		if zone.Name != current {

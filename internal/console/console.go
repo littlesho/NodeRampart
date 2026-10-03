@@ -251,7 +251,7 @@ func (u *ui) menu(en, zh string, items []menuItem, back func()) {
 func (u *ui) welcome() {
 	u.menu("Welcome — set up your server observer", "欢迎 — 设置服务器观察工具", []menuItem{
 		{"Basic settings", "基本设置", "Network and SSH observation work without external accounts.", "网络与 SSH 观察无需外部账户。", u.configuration},
-		{"Set up Telegram (optional)", "设置 Telegram（可选）", "Use your bot token and chat ID. Setup sends no message.", "填写自己的 Bot Token 与会话 ID；设置不会发送消息。", func() { u.openAction("telegram_setup", u.welcome) }},
+		{"Notification channels (optional)", "通知渠道（可选）", "Choose a channel; browsing sends no message.", "选择需要的渠道；浏览不会发送消息。", func() { u.notificationsWithBack(u.welcome) }},
 		{"Download local GeoIP (optional)", "下载本地 GeoIP（可选）", "Requires your MaxMind account, license key and terms acceptance.", "需要自己的 MaxMind 账户、License Key 与条款同意。", func() { u.openAction("geo_download", u.welcome) }},
 		{"Set up cloud egress estimates (optional)", "设置云出站费用估算（可选）", "Public tariffs only; no cloud credentials needed.", "仅使用公开价格；不需要云账户凭据。", u.prices},
 		{"Start configured services", "启动已配置的服务", "Choose this when configuration is ready.", "完成配置后选择此项。", func() { u.openAction("service_start", u.welcome) }},
@@ -275,7 +275,7 @@ func (u *ui) home() {
 		{"Configuration", "功能配置", "Edit every setting; review before saving.", "编辑所有设置；确认后再保存。", u.configuration},
 		{"Reports", "报告", "Current report, saved days and bounded backfill.", "当前报告、已保存日报与有界历史补齐。", u.reports},
 		{"Events and incidents", "事件与 Incident", "Timeline and related event details.", "时间线与相关事件详情。", u.incidents},
-		{"Notification channels", "通知渠道", "Telegram, generic Webhook and six native platforms; setup sends no message.", "Telegram、通用 Webhook 及六个原生平台；设置不会发送消息。", u.notifications},
+		{"Notification channels", "通知渠道", "12 channels, including Telegram, Webhook and official account APIs; browsing sends no message.", "12 个渠道，包括 Telegram、Webhook 与官方账户 API；浏览不会发送消息。", u.notifications},
 		{"Local GeoIP databases", "本地 GeoIP 数据库", "Download, inspect and schedule optional updates.", "下载、查看和设置可选定时更新。", u.geo},
 		{"Cloud egress cost estimates", "云公网出站费用估算", "AWS, OCI or a custom tariff; not a provider invoice.", "AWS、OCI 或自定义价格；不代表云厂商账单。", u.prices},
 		{"Backup, replay and privacy", "备份、回放与隐私", "Local files and privacy key management.", "本地文件与隐私密钥管理。", u.tools},

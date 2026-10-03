@@ -104,8 +104,8 @@ func TestSimulationOfficialHiddenFieldCancellationDoesNotSaveOrSend(t *testing.T
 	s, _, _ := launch(t, false, b)
 	awaitFrame(t, s, "Main menu")
 	selectIndex(s, 5)
-	awaitFrame(t, s, "Notification channels")
-	selectIndex(s, 19)
+	awaitFrame(t, s, "NodeRampart — Notification channels")
+	selectIndex(s, notificationActionIndex(t, "qqbot_credentials"))
 	awaitFrame(t, s, "App ID (hidden; blank retains)")
 	key(s, tcell.KeyTab)
 	textKeys(s, "SYNTHETIC_PRIVATE_APP_ID")
@@ -116,7 +116,7 @@ func TestSimulationOfficialHiddenFieldCancellationDoesNotSaveOrSend(t *testing.T
 		t.Fatal("hidden field visible")
 	}
 	key(s, tcell.KeyEscape)
-	awaitFrame(t, s, "Notification channels")
+	awaitFrame(t, s, "NodeRampart — Notification channels")
 	if len(b.calls) != 0 || len(b.saves) != 0 {
 		t.Fatal("cancel triggered action")
 	}
@@ -132,8 +132,8 @@ func openTwilioTest(t *testing.T, s *recordedScreen) {
 	t.Helper()
 	awaitFrame(t, s, "Main menu")
 	selectIndex(s, 5)
-	awaitFrame(t, s, "Notification channels")
-	selectIndex(s, 3)
+	awaitFrame(t, s, "NodeRampart — Notification channels")
+	selectIndex(s, notificationActionIndex(t, "notify_test"))
 	awaitFrame(t, s, "Send a test notification")
 	key(s, tcell.KeyEnter)
 	for range 10 {
@@ -168,7 +168,7 @@ func TestSimulationPaidTestPreviewCancelAndSeparateChargeConfirmation(t *testing
 			}
 			if !confirm {
 				key(s, tcell.KeyEscape)
-				awaitFrame(t, s, "Notification channels")
+				awaitFrame(t, s, "NodeRampart — Notification channels")
 			} else {
 				key(s, tcell.KeyRight)
 				key(s, tcell.KeyEnter)

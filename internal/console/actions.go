@@ -47,6 +47,7 @@ var actions = []action{
 	{id: "incident_show", en: "Incident details", zh: "Incident 详情", params: []parameter{p("id", "Incident ID", "Incident ID")}},
 	{id: "timeline", en: "Event timeline", zh: "事件时间线"},
 	{id: "notify_status", en: "Notification delivery status", zh: "通知投递状态"},
+	{id: "webhook_configuration", en: "Configure generic HTTPS Webhook", zh: "配置通用 HTTPS Webhook", helpEN: "Open the existing Configuration → Notifications draft editor. Review before saving; credentials and receiver rules are unchanged.", helpZH: "打开现有功能配置 → 通知草稿编辑器；检查后才保存，凭据与接收端规则不变。"},
 	{id: "notify_list", en: "Notification messages", zh: "通知消息列表"},
 	{id: "notify_test", params: []parameter{choice("channel", "Channel", "通道", "telegram", "webhook", "feishu", "wecom", "discord", "slack", "teams", "google_chat")}, en: "Send a test notification", zh: "发送测试通知", confirmEN: "Queue a real test message to the selected configured target?", confirmZH: "向所选已配置目标发送一条真实测试通知？", mutation: true},
 	{id: "notify_retry", en: "Retry a notification", zh: "重试通知", params: []parameter{p("id", "Message ID", "消息 ID")}, confirmEN: "Retry this notification? It may be delivered again.", confirmZH: "重试这条通知？可能再次投递。", mutation: true},
@@ -142,12 +143,24 @@ func (u *ui) incidents() {
 	u.actionMenu("Events and incidents", "事件与 Incident", []string{"incident_list", "incident_show", "timeline"}, u.home)
 }
 func (u *ui) notifications() {
-	ids := []string{"telegram_setup", "notify_status", "notify_list", "notify_test", "notify_retry", "notify_quarantine", "notify_discard_isolated", "notify_resume", "silence_list", "silence_add", "silence_remove", "feishu_setup", "wecom_setup", "discord_setup", "slack_setup", "teams_setup", "google_chat_setup", "notification_help"}
+	u.notificationsWithBack(u.home)
+}
+
+// Both setup and the main menu use this list. Channel configuration precedes
+// shared delivery operations; account credentials and subscriptions stay local.
+func notificationActionIDs() []string {
+	ids := []string{"telegram_setup", "webhook_configuration", "feishu_setup", "wecom_setup", "discord_setup", "slack_setup", "teams_setup", "google_chat_setup"}
 	for _, channel := range config.OfficialChannelNames() {
-		ids = append(ids, channel+"_setup", channel+"_credentials", channel+"_subscription")
+		ids = append(ids, channel+"_setup")
 	}
-	ids = append(ids, "notify_preview", "notify_reconcile_paid")
-	u.actionMenu("Notification channels", "通知渠道", ids, u.home)
+	for _, channel := range config.OfficialChannelNames() {
+		ids = append(ids, channel+"_credentials", channel+"_subscription")
+	}
+	return append(ids, "notify_status", "notify_list", "notify_test", "notify_preview", "notify_retry", "notify_quarantine", "notify_discard_isolated", "notify_resume", "notify_reconcile_paid", "silence_list", "silence_add", "silence_remove", "notification_help")
+}
+
+func (u *ui) notificationsWithBack(back func()) {
+	u.actionMenu("Notification channels", "通知渠道", notificationActionIDs(), back)
 }
 func (u *ui) geo() {
 	u.actionMenu("Local GeoIP", "本地 GeoIP", []string{"geo_status", "geo_download", "geo_refresh", "geo_schedule"}, u.home)
@@ -170,6 +183,10 @@ func (u *ui) services() {
 }
 
 func (u *ui) openAction(id string, back func()) {
+	if id == "webhook_configuration" {
+		u.configurationWithBack(back)
+		return
+	}
 	if id == "notification_help" {
 		u.notificationHelp(back)
 		return
@@ -179,7 +196,7 @@ func (u *ui) openAction(id string, back func()) {
 		return
 	}
 	if a.mutation && u.dirty && id != "service_stop" {
-		u.output(u.tr("Save or discard the configuration draft first", "请先保存或放弃配置草稿"), u.tr("This action can change settings or services. Return to Configuration and save or discard the unsaved draft first.", "此操作可能更改配置或服务。请先返回功能配置，保存或放弃未保存草稿。"), u.configuration)
+		u.output(u.tr("Save or discard the configuration draft first", "请先保存或放弃配置草稿"), u.tr("This action can change settings or services. Return to Configuration and save or discard the unsaved draft first.", "此操作可能更改配置或服务。请先返回功能配置，保存或放弃未保存草稿。"), func() { u.configurationWithBack(back) })
 		return
 	}
 	if id == "prices_fetch" {
