@@ -13,7 +13,7 @@ if [ -L /etc/noderampart/config.json ] || { [ -e /etc/noderampart/config.json ] 
   exit 1
 fi
 
-for path in /usr/local/bin/noderampart /usr/local/bin/noderampartd /usr/local/bin/noderampart-sensor /etc/systemd/system/noderampartd.service /etc/systemd/system/noderampart-sensor.service; do
+for path in /usr/local/bin/noderampart /usr/local/bin/noderampartd /usr/local/bin/noderampart-sensor /usr/local/libexec/noderampart/manage-remove /etc/systemd/system/noderampartd.service /etc/systemd/system/noderampart-sensor.service; do
   # Administrator masks are preserved. Other full unit overrides hide the
   # package's unit; move customizations into drop-ins before installation.
   if [ -L "$path" ] && [ "$(readlink "$path")" = /dev/null ]; then

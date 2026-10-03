@@ -4,6 +4,11 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 
 ## 0.4.0-alpha.9 - Unreleased / development candidate
 
+- Reject a remaining source-install removal helper before DEB/RPM installation,
+  including dangling links. Older five-entry transitions retain unrecorded
+  helpers for explicit ownership reconciliation; package pre-install never
+  deletes them. Preserve administrator masks and drop-ins.
+
 - Fix sensor commit diagnosis by matching receipt session/interface/sequence
   before comparing timestamps at the store's persisted microsecond precision.
   A committed batch's nanosecond remainder no longer causes a false unknown;
