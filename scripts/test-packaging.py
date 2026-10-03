@@ -18,6 +18,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 
 REPO = Path(__file__).resolve().parent.parent
@@ -32,6 +33,25 @@ RPM_GUARD_PATHS = (
     "/etc/systemd/system/noderampartd.service",
     "/etc/systemd/system/noderampart-sensor.service",
 )
+
+
+def rpm_path_macro(name):
+    """Require an expanded native RPM path, not just an installed rpm binary."""
+    if not RPM:
+        return None
+    try:
+        result = subprocess.run([RPM, "--eval", "%{" + name + "}"],
+                                text=True, capture_output=True, check=False, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    value = result.stdout.strip()
+    if result.returncode != 0 or not value.startswith("/") or "%" in value:
+        return None
+    if any(ord(char) < 32 or ord(char) == 127 for char in value):
+        return None
+    return value
+
+
 MOCK = r'''
 import json, os, pathlib, subprocess, sys, tarfile
 name = pathlib.Path(sys.argv[0]).name
@@ -1099,6 +1119,12 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
 
     @unittest.skipUnless(RPMBUILD and RPM and RPMSPEC, "native RPM build tooling is unavailable")
     def test_native_rpm_header_keeps_pretrans_prein_and_sysusers_payload(self):
+        # A host may have RPM tools without Fedora's systemd-rpm-macros.
+        # Only this full build needs these paths; Lua/rpmspec checks still run.
+        unitdir = rpm_path_macro("_unitdir")
+        sysusersdir = rpm_path_macro("_sysusersdir")
+        if unitdir is None or sysusersdir is None:
+            self.skipTest("native RPM systemd/sysusers macros are unavailable")
         # Build the real spec without installing it. A synthetic Go command
         # creates inert binaries, keeping this header regression fast/offline.
         version = (REPO / "VERSION").read_text().strip()
@@ -1147,11 +1173,7 @@ chmod 0755 "$output"
         self.assertIn("getent group noderampart", prein)
         self.assertIn("useradd", prein)
         self.assertEqual(query("[%{PREINPROG}\\n]").splitlines(), ["/bin/sh"])
-        result = subprocess.run([RPM, "--eval", "%{_sysusersdir}"],
-                                text=True, capture_output=True, check=False, timeout=15)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertNotIn("%{", result.stdout)
-        self.assertIn(result.stdout.strip() + "/noderampart.conf", query("[%{FILENAMES}\\n]").splitlines())
+        self.assertIn(sysusersdir + "/noderampart.conf", query("[%{FILENAMES}\\n]").splitlines())
         # RPMSENSE_PRETRANS is bit 7 in RPM's public rpmds.h. Only internal
         # rpmlib capabilities may be required before transaction payloads exist.
         dependencies = query("[%{REQUIRENAME}\\t%{REQUIREFLAGS}\\n]").splitlines()
@@ -1163,6 +1185,44 @@ chmod 0755 "$output"
             outcome, message = self.run_rpm_pretrans(body=pretrans)
             self.assertEqual(outcome, "BLOCKED", message)
             self.assertIn("conflicts", message)
+
+class RPMMacroCapabilityTests(unittest.TestCase):
+    def test_rpm_path_macro_requires_expanded_absolute_path(self):
+        with mock.patch(__name__ + ".RPM", "/fixture/rpm"):
+            for value in ("", "%{_unitdir}", "relative/path", "/%{unresolved}", "/%_unresolved",
+                          "/usr/lib\n/systemd/system", "/usr/lib\x00/systemd/system"):
+                with self.subTest(value=value), mock.patch(__name__ + ".subprocess.run") as run:
+                    run.return_value = subprocess.CompletedProcess([], 0, value, "")
+                    self.assertIsNone(rpm_path_macro("_unitdir"))
+            with mock.patch(__name__ + ".subprocess.run") as run:
+                run.return_value = subprocess.CompletedProcess([], 0, " /usr/lib/systemd/system\n", "")
+                self.assertEqual(rpm_path_macro("_unitdir"), "/usr/lib/systemd/system")
+                run.assert_called_once_with(["/fixture/rpm", "--eval", "%{_unitdir}"],
+                                            text=True, capture_output=True, check=False, timeout=5)
+
+    def test_rpm_path_macro_fails_closed_on_tool_errors(self):
+        with mock.patch(__name__ + ".RPM", None), mock.patch(__name__ + ".subprocess.run") as run:
+            self.assertIsNone(rpm_path_macro("_unitdir"))
+            run.assert_not_called()
+        with mock.patch(__name__ + ".RPM", "/fixture/rpm"):
+            for error in (OSError("synthetic unavailable tool"), subprocess.TimeoutExpired("rpm", 5),
+                          subprocess.SubprocessError("synthetic process failure")):
+                with self.subTest(error=type(error).__name__), mock.patch(__name__ + ".subprocess.run", side_effect=error):
+                    self.assertIsNone(rpm_path_macro("_sysusersdir"))
+            with mock.patch(__name__ + ".subprocess.run") as run:
+                run.return_value = subprocess.CompletedProcess([], 1, "/usr/lib/sysusers.d", "")
+                self.assertIsNone(rpm_path_macro("_sysusersdir"))
+
+    def test_native_header_skips_only_when_required_path_macro_is_unavailable(self):
+        method = PackagingTests.test_native_rpm_header_keeps_pretrans_prein_and_sysusers_payload
+        method = getattr(method, "__wrapped__", method)
+        for paths in ((None, "/usr/lib/sysusers.d"), ("/usr/lib/systemd/system", None), (None, None)):
+            with self.subTest(paths=paths), mock.patch(__name__ + ".rpm_path_macro", side_effect=paths) as macro:
+                native_test = PackagingTests("test_native_rpm_header_keeps_pretrans_prein_and_sysusers_payload")
+                # Missing capabilities must stop before creating/building a package.
+                with self.assertRaisesRegex(unittest.SkipTest, "native RPM systemd/sysusers macros are unavailable"):
+                    method(native_test)
+                self.assertEqual(macro.call_args_list, [mock.call("_unitdir"), mock.call("_sysusersdir")])
 
 
 if __name__ == "__main__":
