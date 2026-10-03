@@ -1079,3 +1079,34 @@ candidate must bind its actual commit, tests and any runtime evidence separately
 不确定状态继续保留。以上 alpha.8 原始 strict 结果、缺陷复现和未知历史根因均
 不改写；固定发行源、tag 和 22 项资产不变。新候选的测试和运行证据须独立绑定，
 不代表 alpha.9 已发布或生产就绪。
+
+### Alpha.9 development follow-up: RPM transaction ordering
+
+The no-tag preflight candidate `2ec534be8d78231896fdc288e80d5862f28e953e`
+is invalidated. Its real Fedora44 installation with RPM 6.0.2 rejected a
+remaining source helper in `%pre`, after implicit `%sysusers` had already
+created the service group/users. That failed candidate's six runtime packages,
+SRPM, SPDX/buildinfo, 22-asset collection, archive and VM package identities
+remain failed-candidate evidence, not evidence for a repaired release source.
+
+Alpha.9 Unreleased adds a dependency-free, read-only embedded Lua `%pretrans`
+guard for all existing filesystem-conflict rules before implicit sysusers;
+`%pre` remains a later defense-in-depth recheck. Dangling links are detected
+with RPM Lua's lstat-based `posix.stat`; only the two full unit paths allow
+direct `/dev/null` masks. The sysusers declaration, service accounts, Debian
+behavior, version and schemas are unchanged. New package and transaction
+evidence must bind the actual repair candidate. After repair merge and main
+gates, no-tag preflight must start again from a newly frozen source; this source
+change alone is not preflight PASS or release authorization.
+
+The published alpha.8 source/tag/Release 401526101 and its 22 assets are unchanged.
+Historical snapshot cause remains UNESTABLISHED and Fedora public bootstrap
+remains BLOCKED_NETWORK. GO-2026-5970, scanner coverage gaps and real-platform,
+human-receipt, billing, native-ARM64 and production NOT RUN limits remain.
+
+中文：`2ec534be...` 候选在 Fedora44 RPM 6.0.2 的真实安装中，先创建服务账户，
+再由 `%pre` 拒绝源码 helper，故其完整候选资产集失效并保留为失败证据。
+alpha.9 未发布源码增加只读、无外部解释器依赖的 Lua `%pretrans` 早期检查，
+保留 `%pre` 复核、sysusers、账户、Debian 行为及版本/schema。修复包须重新
+绑定实际来源并验证交易顺序；合并及 main 检查通过后重新冻结并从零预验收。
+不改写任何 alpha.8 历史结果，也不修改已发布对象或宣称 alpha.9 已发布。

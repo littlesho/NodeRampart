@@ -54,7 +54,51 @@ install -Dpm0644 packaging/systemd/noderampartd.service %{buildroot}%{_unitdir}/
 install -Dpm0644 packaging/systemd/noderampart-sensor.service %{buildroot}%{_unitdir}/noderampart-sensor.service
 install -Dpm0644 packaging/sysusers.d/noderampart.conf %{buildroot}%{_sysusersdir}/noderampart.conf
 
+%pretrans -p <lua>
+-- Reject pre-existing conflicts before RPM's implicit sysusers/account stage.
+-- Embedded posix.stat uses lstat: links, including dangling links, have type
+-- "link". Only ENOENT means absent; other inspection errors fail closed.
+local function object_type(path)
+    local kind, _, code = posix.stat(path, "type")
+    if kind == nil and code ~= 2 then
+        error("cannot inspect installation path: " .. path, 0)
+    end
+    return kind
+end
+for _, path in ipairs({"%{_sysconfdir}/noderampart", "/var/lib/noderampart"}) do
+    local kind = object_type(path)
+    if kind ~= nil and kind ~= "directory" then
+        error("refusing non-directory or symlinked installation directory: " .. path, 0)
+    end
+end
+local config_type = object_type("%{_sysconfdir}/noderampart/config.json")
+if config_type ~= nil and config_type ~= "regular" then
+    error("refusing non-regular existing configuration", 0)
+end
+local conflict = "source installation or full unit override conflicts with the package; run scripts/source-to-package.sh --prepare for owned source files"
+for _, path in ipairs({"/usr/local/bin/noderampart", "/usr/local/bin/noderampartd", "/usr/local/bin/noderampart-sensor", "/usr/local/libexec/noderampart/manage-remove"}) do
+    if object_type(path) ~= nil then
+        error(conflict, 0)
+    end
+end
+for _, path in ipairs({"%{_sysconfdir}/systemd/system/noderampartd.service", "%{_sysconfdir}/systemd/system/noderampart-sensor.service"}) do
+    local kind = object_type(path)
+    local mask = false
+    if kind == "link" then
+        local target = posix.readlink(path)
+        if target == nil then
+            error("cannot inspect installation path: " .. path, 0)
+        end
+        mask = target == "/dev/null"
+    end
+    if kind ~= nil and not mask then
+        error(conflict, 0)
+    end
+end
+
 %pre
+# Later defense-in-depth recheck before remaining package work. %pretrans is
+# the read-only gate before RPM's implicit sysusers/account mutation.
 set -e
 for path in %{_sysconfdir}/noderampart /var/lib/noderampart; do
   if [ -L "$path" ] || { [ -e "$path" ] && [ ! -d "$path" ]; }; then

@@ -272,10 +272,15 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
   Prometheus listener, or multi-node collector is included. Default-off fixed
   HTTPS heartbeat/Webhook send only to explicitly configured targets; they do
   not install a receiver, timer or background broker.
-- Fedora RPM can create service accounts through native sysusers processing
-  before an unsafe path is rejected by the package's pre-install script.
-  Rejection preserves the symlink target, but does not guarantee an entirely
-  unchanged system. RPM removal preserves state and may save modified config
+- Published alpha.8 and the failed alpha.9 preflight source `2ec534be8d78` can
+  create Fedora service accounts through RPM's implicit sysusers processing
+  before `%pre` rejects a filesystem conflict. Alpha.9 Unreleased adds a
+  dependency-free embedded Lua `%pretrans` guard before that stage, preserving
+  `%pre` as a later recheck. It rejects pre-existing guarded conflicts without
+  package-controlled account creation; it does not prevent hostile concurrent
+  path changes between phases or make a multi-package transaction atomic.
+  The failed candidate's packages/assets are not release-ready evidence.
+  RPM removal preserves state and may save modified config
   as `.rpmsave`; it is not a purge or automatic settings restore on reinstall.
 
 Additional alert/evidence limits are documented in [the feature guide](ALERTS_EVIDENCE.md):

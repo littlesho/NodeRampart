@@ -4,6 +4,11 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 
 ## 0.4.0-alpha.9 - Unreleased / development candidate
 
+- Check RPM filesystem conflicts in a dependency-free embedded Lua `%pretrans`
+  guard before RPM 6's implicit sysusers stage. Retain `%pre` rechecks, service
+  accounts and administrator unit masks. The failed `2ec534be8d78` no-tag
+  preflight candidate is invalidated; published alpha.8 assets are unchanged.
+
 - Reject a remaining source-install removal helper before DEB/RPM installation,
   including dangling links. Older five-entry transitions retain unrecorded
   helpers for explicit ownership reconciliation; package pre-install never

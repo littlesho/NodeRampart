@@ -6,18 +6,32 @@ No packages are installed and no real services, accounts, or system paths change
 Run with: python3 scripts/test-packaging.py
 """
 
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 
 
 REPO = Path(__file__).resolve().parent.parent
+RPM_LUA = shutil.which("rpmlua")
+RPM = shutil.which("rpm")
+RPMBUILD = shutil.which("rpmbuild")
+RPMSPEC = shutil.which("rpmspec")
+RPM_GUARD_PATHS = (
+    "/etc/noderampart", "/var/lib/noderampart", "/etc/noderampart/config.json",
+    "/usr/local/bin/noderampart", "/usr/local/bin/noderampartd",
+    "/usr/local/bin/noderampart-sensor", "/usr/local/libexec/noderampart/manage-remove",
+    "/etc/systemd/system/noderampartd.service",
+    "/etc/systemd/system/noderampart-sensor.service",
+)
 MOCK = r'''
 import json, os, pathlib, subprocess, sys, tarfile
 name = pathlib.Path(sys.argv[0]).name
@@ -174,7 +188,8 @@ class PackagingTests(unittest.TestCase):
     def run_script(self, source, *args, section=None):
         content = (REPO / source).read_text()
         if section:
-            content = content.split("\n%" + section + "\n", 1)[1].split("\n%", 1)[0]
+            _, content = self.rpm_section(content, section)
+            content = content.split("\n%", 1)[0]
             content = "#!/bin/sh\n" + content.replace("%{_sysconfdir}", "/etc").replace("%{_bindir}", "/usr/bin")
         if source == "packaging/debian/postinst" or section == "post":
             self.write(self.root / "usr/bin/noderampart", self.cli_mock, executable=True)
@@ -186,6 +201,126 @@ class PackagingTests(unittest.TestCase):
         self.write(staged, content)
         return subprocess.run(["/bin/sh", str(staged), *args], cwd=self.project,
                               env=self.env, text=True, capture_output=True, check=False)
+
+    @staticmethod
+    def rpm_section(content, section):
+        # Exact names keep %pretrans and %preun from being mistaken for %pre.
+        match = re.search(r"(?m)^%" + re.escape(section) + r"(?=[ \t]|\n)([^\n]*)\n", content)
+        if not match:
+            raise AssertionError("missing RPM section: " + section)
+        body = content[match.end():]
+        boundary = re.search(r"(?m)^%(?:description|prep|build|install|check|clean|pretrans|pre|post|preun|postun|posttrans|files|changelog)(?:\s|$)", body)
+        return match.group(1).strip(), body[:boundary.start()] if boundary else body
+
+    def rpm_pretrans_body(self):
+        options, body = self.rpm_section((REPO / "packaging/rpm/noderampart.spec").read_text(), "pretrans")
+        self.assertEqual(options, "-p <lua>")
+        return body.replace("%{_sysconfdir}", "/etc")
+
+    def filesystem_snapshot(self):
+        snapshot = {}
+        for path in [self.root, *sorted(self.root.rglob("*"))]:
+            metadata = path.lstat()
+            content = os.readlink(path) if stat.S_ISLNK(metadata.st_mode) else path.read_bytes() if stat.S_ISREG(metadata.st_mode) else None
+            snapshot[str(path.relative_to(self.root))] = (
+                metadata.st_mode, metadata.st_ino, metadata.st_uid, metadata.st_gid,
+                metadata.st_mtime_ns, metadata.st_ctime_ns, content,
+            )
+        return snapshot
+
+    def run_rpm_pretrans(self, *, body=None, failure=None):
+        # Run production Lua in RPM's own interpreter. Only read-only native
+        # posix calls are exposed, and their fixed paths map into the lab root.
+        # RPM posix.stat uses lstat, including for dangling symlinks.
+        body = self.rpm_pretrans_body() if body is None else body
+        self.assert_rpm_pretrans_read_only(body)
+        quote = lambda value: json.dumps(value, ensure_ascii=False)
+        paths = "{" + ",".join("[" + quote(path) + "]=true" for path in RPM_GUARD_PATHS) + "}"
+        injected = ""
+        if failure:
+            path, operation, number = failure
+            injected = ("if path == " + quote(path) + " and operation == " + quote(operation)
+                        + " then return nil, 'synthetic inspection failure', " + ("nil" if number is None else str(number)) + " end\n")
+        harness = """
+local native_stat, native_readlink = posix.stat, posix.readlink
+local allowed = PATHS
+local fixture_root = ROOT
+local reads = 0
+-- rpm --eval buffers print output without adding line separators.
+local function emit(value) print(value .. '\\n') end
+local function inspect(operation, path, selector)
+    assert(allowed[path], 'UNEXPECTED_PATH: ' .. tostring(path))
+    reads = reads + 1
+    assert(reads <= 2 * 9, 'UNBOUNDED_READS')
+    if operation == 'stat' then assert(selector == 'type', 'UNEXPECTED_SELECTOR') end
+    emit('READ\\t' .. operation .. '\\t' .. path)
+    INJECTED
+    if operation == 'stat' then return native_stat(fixture_root .. path, selector) end
+    return native_readlink(fixture_root .. path)
+end
+local fixture_posix = setmetatable({
+    stat = function(path, selector) return inspect('stat', path, selector) end,
+    readlink = function(path) return inspect('readlink', path) end,
+}, {__index = function(_, key) error('UNSAFE_POSIX: ' .. tostring(key)) end})
+local safe = setmetatable({posix = fixture_posix, error = error, ipairs = ipairs,
+    pairs = pairs, type = type, tostring = tostring, string = string, table = table,
+}, {__index = function(_, key) error('UNSAFE_GLOBAL: ' .. tostring(key)) end})
+local guard = assert(load(BODY, 'noderampart-pretrans', 't', safe))
+local ok, message = pcall(guard)
+if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(message)) end
+"""
+        harness = (harness.replace("PATHS", paths).replace("ROOT", quote(str(self.root)))
+                   .replace("INJECTED", injected).replace("BODY", quote(body)))
+        script = self.lab / "rpm-pretrans-fixture.lua"
+        self.write(script, harness)
+        command = [RPM_LUA, str(script)] if RPM_LUA else [RPM, "--eval", "%{lua:dofile(" + quote(str(script)) + ")}"]
+        before = self.filesystem_snapshot()
+        result = subprocess.run(command, text=True, capture_output=True, check=False, timeout=15)
+        self.assertEqual(self.filesystem_snapshot(), before, "pretrans changed fixture objects")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotRegex(result.stdout + result.stderr, r"UNSAFE_|UNEXPECTED_|UNBOUNDED_")
+        self.assertFalse(self.commands(), "pretrans invoked an external mocked command")
+        rows = result.stdout.splitlines()
+        outcomes = [row.split("\t", 2) for row in rows if row.startswith("RESULT\t")]
+        self.assertEqual(len(outcomes), 1, result.stdout + result.stderr)
+        self.assertTrue(any(row.startswith("READ\t") for row in rows), "guard made no native posix reads")
+        return outcomes[0][1], outcomes[0][2] if len(outcomes[0]) == 3 else ""
+
+    def assert_rpm_pretrans_read_only(self, body):
+        calls = set(re.findall(r"\b(posix|os|io|rpm)\s*\.\s*(\w+)\s*\(", body))
+        self.assertTrue(calls)
+        self.assertLessEqual(calls, {("posix", "stat"), ("posix", "readlink")})
+        self.assertNotRegex(body, r"\b(?:require|load|loadfile|dofile)\s*\(")
+        self.assertNotIn("%{", body)
+
+    @contextmanager
+    def rpm_guard_object(self, relative, kind):
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        saved = self.lab / "saved-guard-object"
+        existed = path.exists() or path.is_symlink()
+        if existed:
+            path.rename(saved)
+        if kind == "regular":
+            self.write(path, "unowned fixture\n")
+        elif kind == "directory":
+            path.mkdir()
+        elif kind == "fifo":
+            os.mkfifo(path)
+        elif kind == "missing":
+            pass
+        else:
+            path.symlink_to({"symlink": self.root / "guard-canary", "dangling": "missing-fixture",
+                             "dev_null": "/dev/null", "dev_null_alias": "/dev/../dev/null"}[kind])
+        try:
+            yield path
+        finally:
+            if path.is_dir() and not path.is_symlink():
+                path.rmdir()
+            elif path.exists() or path.is_symlink():
+                path.unlink()
+            if existed:
+                saved.rename(path)
 
     def commands(self):
         path = self.lab / "commands.jsonl"
@@ -410,6 +545,86 @@ class PackagingTests(unittest.TestCase):
         result = self.run_script("packaging/debian/postinst", "configure")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(any(command[0] == "deb-systemd-invoke" or command[:2] == ["deb-systemd-helper", "enable"] for command in self.commands()))
+
+    def test_rpm_pretrans_is_separate_embedded_read_only_lua(self):
+        sample = "%pretrans -p <lua>\nerror('guard')\n%pre\nuseradd fixture\n%post\ntrue\n"
+        self.assertEqual(self.rpm_section(sample, "pretrans"), ("-p <lua>", "error('guard')\n"))
+        self.assertEqual(self.rpm_section(sample, "pre"), ("", "useradd fixture\n"))
+        body = self.rpm_pretrans_body()
+        self.assert_rpm_pretrans_read_only(body)
+        _, prein = self.rpm_section((REPO / "packaging/rpm/noderampart.spec").read_text(), "pre")
+        self.assertIn("useradd", prein)
+        self.assertNotIn("posix.", prein)
+        self.assertNotRegex((REPO / "packaging/rpm/noderampart.spec").read_text(), r"(?mi)^Requires\([^\n)]*pretrans")
+
+    @unittest.skipUnless(RPM_LUA or RPM, "native RPM Lua runtime is unavailable")
+    def test_rpm_pretrans_rejects_all_remaining_source_helper_types(self):
+        self.write(self.root / "guard-canary", "unowned helper target\n")
+        self.write(self.root / "etc/systemd/system/noderampartd.service.d/local.conf", "administrator override\n")
+        for kind in ("regular", "directory", "symlink", "dangling", "dev_null"):
+            with self.subTest(kind=kind), self.rpm_guard_object("usr/local/libexec/noderampart/manage-remove", kind):
+                outcome, message = self.run_rpm_pretrans()
+                self.assertEqual(outcome, "BLOCKED", message)
+                self.assertIn("conflicts", message)
+
+    @unittest.skipUnless(RPM_LUA or RPM, "native RPM Lua runtime is unavailable")
+    def test_rpm_pretrans_rejects_remaining_source_binaries(self):
+        for name in ("noderampart", "noderampartd", "noderampart-sensor"):
+            for kind in ("regular", "dangling", "dev_null"):
+                with self.subTest(name=name, kind=kind), self.rpm_guard_object("usr/local/bin/" + name, kind):
+                    outcome, message = self.run_rpm_pretrans()
+                    self.assertEqual(outcome, "BLOCKED", message)
+                    self.assertIn("conflicts", message)
+
+    @unittest.skipUnless(RPM_LUA or RPM, "native RPM Lua runtime is unavailable")
+    def test_rpm_pretrans_rejects_full_units_and_preserves_exact_dev_null_masks(self):
+        self.write(self.root / "guard-canary", "administrator unit target\n")
+        for name in ("noderampartd.service", "noderampart-sensor.service"):
+            for kind in ("regular", "directory", "fifo", "symlink", "dangling", "dev_null_alias", "dev_null"):
+                with self.subTest(name=name, kind=kind), self.rpm_guard_object("etc/systemd/system/" + name, kind):
+                    outcome, message = self.run_rpm_pretrans()
+                    self.assertEqual(outcome, "OK" if kind == "dev_null" else "BLOCKED", message)
+                    if kind != "dev_null":
+                        self.assertIn("conflicts", message)
+
+    @unittest.skipUnless(RPM_LUA or RPM, "native RPM Lua runtime is unavailable")
+    def test_rpm_pretrans_rejects_unsafe_managed_directories_and_config_types(self):
+        self.write(self.root / "guard-canary", "configuration target must survive\n")
+        for relative in ("etc/noderampart", "var/lib/noderampart"):
+            for kind in ("regular", "fifo", "symlink", "dangling"):
+                with self.subTest(relative=relative, kind=kind), self.rpm_guard_object(relative, kind):
+                    outcome, message = self.run_rpm_pretrans()
+                    self.assertEqual(outcome, "BLOCKED", message)
+                    self.assertIn("refusing non-directory or symlinked installation directory", message)
+        for kind in ("directory", "fifo", "symlink", "dangling", "dev_null"):
+            with self.subTest(config=kind), self.rpm_guard_object("etc/noderampart/config.json", kind):
+                outcome, message = self.run_rpm_pretrans()
+                self.assertEqual(outcome, "BLOCKED", message)
+                self.assertIn("refusing non-regular existing configuration", message)
+
+    @unittest.skipUnless(RPM_LUA or RPM, "native RPM Lua runtime is unavailable")
+    def test_rpm_pretrans_accepts_valid_and_absent_managed_paths(self):
+        self.assertEqual(self.run_rpm_pretrans(), ("OK", ""))
+        for relative in ("etc/noderampart/config.json", "etc/noderampart", "var/lib/noderampart"):
+            with self.subTest(absent=relative), self.rpm_guard_object(relative, "missing"):
+                self.assertEqual(self.run_rpm_pretrans(), ("OK", ""))
+
+    @unittest.skipUnless(RPM_LUA or RPM, "native RPM Lua runtime is unavailable")
+    def test_rpm_pretrans_fails_closed_on_inspection_errors(self):
+        for path in RPM_GUARD_PATHS:
+            for number in (5, 13, None):
+                with self.subTest(path=path, errno=number):
+                    outcome, message = self.run_rpm_pretrans(failure=(path, "stat", number))
+                    self.assertEqual(outcome, "BLOCKED", message)
+                    self.assertIn("cannot inspect installation path", message)
+        for name in ("noderampartd.service", "noderampart-sensor.service"):
+            path = "/etc/systemd/system/" + name
+            with self.rpm_guard_object(path.lstrip("/"), "dev_null"):
+                for number in (5, 13, None):
+                    with self.subTest(path=path, readlink_errno=number):
+                        outcome, message = self.run_rpm_pretrans(failure=(path, "readlink", number))
+                        self.assertEqual(outcome, "BLOCKED", message)
+                        self.assertIn("cannot inspect installation path", message)
 
     def test_source_transition_checks_ownership_and_preserves_state_and_dropins(self):
         result = self.run_script("scripts/install.sh")
@@ -881,6 +1096,73 @@ class PackagingTests(unittest.TestCase):
                                 text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.splitlines(), ["noderampart"])
+
+    @unittest.skipUnless(RPMBUILD and RPM and RPMSPEC, "native RPM build tooling is unavailable")
+    def test_native_rpm_header_keeps_pretrans_prein_and_sysusers_payload(self):
+        # Build the real spec without installing it. A synthetic Go command
+        # creates inert binaries, keeping this header regression fast/offline.
+        version = (REPO / "VERSION").read_text().strip()
+        self.prepare_rpm_source(version)
+        topdir = self.lab / "native-rpm"
+        for directory in ("BUILD", "BUILDROOT", "RPMS", "SOURCES", "SPECS", "SRPMS"):
+            (topdir / directory).mkdir(parents=True)
+        with tarfile.open(topdir / "SOURCES" / ("noderampart-" + version + ".tar.gz"), "w:gz") as archive:
+            archive.add(self.project, arcname="NodeRampart-" + version)
+        spec = topdir / "SPECS/noderampart.spec"
+        self.write(spec, (REPO / "packaging/rpm/noderampart.spec").read_text())
+        tools = self.lab / "native-tools"
+        fake_go = """#!/bin/sh
+set -eu
+[ "$1" = build ] || exit 1
+output=
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = -o ]; then shift; output=$1; fi
+  shift
+done
+[ -n "$output" ] || exit 1
+mkdir -p "$(dirname "$output")"
+printf '#!/bin/sh\\nexit 0\\n' > "$output"
+chmod 0755 "$output"
+"""
+        self.write(tools / "go", fake_go, executable=True)
+        native_env = dict(os.environ, PATH=str(tools) + ":/usr/bin:/bin")
+        result = subprocess.run([RPMBUILD, "--nodeps", "-bb", "--define", "_topdir " + str(topdir),
+                                 "--define", "_buildhost packaging-fixture.invalid", str(spec)],
+                                env=native_env, text=True, capture_output=True, check=False, timeout=120)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        packages = list((topdir / "RPMS").rglob("*.rpm"))
+        self.assertEqual(len(packages), 1, packages)
+
+        def query(format):
+            result = subprocess.run([RPM, "-qp", "--qf", format, str(packages[0])],
+                                    text=True, capture_output=True, check=False, timeout=15)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return result.stdout
+
+        pretrans = query("%{PRETRANS}")
+        self.assertEqual(pretrans.strip(), self.rpm_pretrans_body().strip())
+        self.assertEqual(query("[%{PRETRANSPROG}\\n]").splitlines(), ["<lua>"])
+        self.assert_rpm_pretrans_read_only(pretrans)
+        prein = query("%{PREIN}")
+        self.assertIn("getent group noderampart", prein)
+        self.assertIn("useradd", prein)
+        self.assertEqual(query("[%{PREINPROG}\\n]").splitlines(), ["/bin/sh"])
+        result = subprocess.run([RPM, "--eval", "%{_sysusersdir}"],
+                                text=True, capture_output=True, check=False, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("%{", result.stdout)
+        self.assertIn(result.stdout.strip() + "/noderampart.conf", query("[%{FILENAMES}\\n]").splitlines())
+        # RPMSENSE_PRETRANS is bit 7 in RPM's public rpmds.h. Only internal
+        # rpmlib capabilities may be required before transaction payloads exist.
+        dependencies = query("[%{REQUIRENAME}\\t%{REQUIREFLAGS}\\n]").splitlines()
+        external_pretrans = [name for name, flags in (line.split("\t") for line in dependencies)
+                             if int(flags) & (1 << 7) and not name.startswith("rpmlib(")]
+        self.assertEqual(external_pretrans, [])
+        self.assertEqual(self.run_rpm_pretrans(body=pretrans), ("OK", ""))
+        with self.rpm_guard_object("usr/local/libexec/noderampart/manage-remove", "dangling"):
+            outcome, message = self.run_rpm_pretrans(body=pretrans)
+            self.assertEqual(outcome, "BLOCKED", message)
+            self.assertIn("conflicts", message)
 
 
 if __name__ == "__main__":
