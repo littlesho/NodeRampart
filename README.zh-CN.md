@@ -2,33 +2,19 @@
 
 **在 SSH 终端里了解你的 VPS：谁在尝试登录、流量是否异常、每天用了多少流量，以及公网出站可能花多少钱。**
 
-NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成日报，并可通过 Telegram 通知你。安装后用中文终端菜单完成配置、查看状态和报告，无需搭建 Web 面板。
+NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成日报，并可通过多种通知渠道发送告警、恢复通知和日报摘要。安装后用中文终端菜单完成配置、查看状态和报告，无需搭建 Web 面板。
 
 它负责观察和提醒，不会自动封禁 IP 或修改防火墙，不保存或分析应用层通信内容，也不会新增 Web 监听端口。它不是 DDoS 防护或流量清洗服务。
 
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.9：Unreleased 开发候选。** 新增 QQ Bot、LINE Push、Twilio SMS 和 WhatsApp Cloud 批准模板通知，默认关闭，正在候选验收。付费通知须记录同意、明确确认费用并设置持久有限额度。参见[官方账户渠道](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md)和[alpha.9 验收](docs/ALPHA9_ACCEPTANCE.md)。尚无 alpha.9 tag／Release，下列已发布固定安装示例保持不变。
+## 版本状态与验收范围
 
-> **v0.4.0-alpha.8：已公开的非 latest alpha 预发布版本。** [固定发行](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8)新增六个原生渠道，全部默认关闭。参见[设置与平台权限](docs/NOTIFICATION_CHANNELS.zh-CN.md)、[隐私政策](docs/PRIVACY.md)和[用户协议](docs/USER_AGREEMENT.md)。六平台实网/人工接收、原生 ARM64 与生产仍为 **NOT RUN**；已知漏洞发现及扫描覆盖缺口继续披露。
+**v0.4.0-alpha.9 是 main 上的 Unreleased 开发候选。** 四个官方账户渠道与已有八个渠道并行，均为可选。alpha.9 尚无公开安装资产；[验收记录](docs/ALPHA9_ACCEPTANCE.md)区分契约测试、候选包和仍未执行的检查。
 
-> **alpha.8 分发结果：** 22 项新匿名下载与已验收 hosted draft 同字节，并明确复用其 22 项 provenance / 六项 SPDX 验签结果。Debian 13 显式公开 bootstrap、分步中文设置取消和基础观察通过；strict doctor 仍为 **unknown / 退出码 2**。Fedora 44 公开 bootstrap 为 **BLOCKED_NETWORK**，下载超时且未安装，新设置/运行检查 **NOT RUN**。公开安装矩阵尚未闭环，下列固定安装示例继续保留 alpha.7；省略 `--version` 仍选择 alpha.5。详见[实际公开验收范围](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。
+**[v0.4.0-alpha.8](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) 已作为非 latest 的 alpha 预发布版本公开。** 六个原生渠道包含在其安装包中。平台实网／人工接收、原生 ARM64 和生产仍为 **NOT RUN**；Fedora 44 公开 bootstrap 仍为 **BLOCKED_NETWORK**，历史 strict doctor unknown 继续保留在[公开分发与诊断记录](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。已知漏洞发现和扫描覆盖缺口见[当前限制](docs/ALPHA_LIMITATIONS.md)。
 
-以下 alpha.7 及更早记录保留原有证据范围：
-
-> **v0.4.0-alpha.7：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) 新增可搜索的报告时区及独立中英 Telegram 正文。数据库升级为 schema 12；升级前验证匹配备份并分别保护旧配置/密钥，先安装三个匹配程序再保存新配置。
-
-> **历史 alpha.7 分发验收：** 22 项匿名下载及校验和通过，与已认证的 22 项 provenance、6 项 runtime SPDX 完全同字节。Debian 13/Fedora 44 公开 bootstrap、setup、基础采集、在线备份和清理：**PASS**。两台 strict 诊断快照仍为 **unknown / 退出码 2**。当前 alpha.7 的 Debian 12/Fedora 43 运行、真实 ARM64 和自然 SSH 恢复链仍未验收，不代表生产就绪。见[本次发布核验](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)。
-
-以下 alpha.6 范围保留为历史记录，不替代 alpha.7 运行证明：
-
-> **v0.4.0-alpha.6：已发布的 alpha 预发布版本。** [公开安装包](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6) 增加通知目标隔离、完整本地报告、诊断及采集提交水位。数据库升级至 schema 11，采集协议升级至 v5；升级前请保留已验证的兼容备份。
-
-> **验收范围：** 22 项资产的新环境匿名下载及校验和通过，字节与已认证核验的 22 项 provenance、6 项 SPDX 一致。Debian 12/13、Fedora 43/44 的准确最终包跨版本升级及生命周期通过；Debian 13、Fedora 44 的公开 bootstrap 与分开运行 setup 通过。真实 ARM64 和 SSH 自然恢复链仍未验证，不代表生产就绪。详见[发布验证](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification)。
-
-> **GeoIP 修复范围：** alpha.4 修复共享 MMDB 数据重复解析造成的预算误拒绝，并提供安全的 MMDB 校验/资源预算错误提示。匹配候选对 City/ASN 的完整离线校验通过；用户正式下载、激活和每日更新尚未验证。详见[验证范围与资源限制](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)及[升级与 GeoIP 验收](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance)。
-
-> **固定版本安装：** 请在下列命令中明确选择 `v0.4.0-alpha.7`。冻结的 bootstrap 省略 `--version` 时仍默认 alpha.5。[本次验收摘要](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)区分实际结果与未验证范围。
+以下固定安装示例仍为 alpha.7；省略 `--version` 仍选择 alpha.5。[alpha.7](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)、[alpha.6](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification)和 [GeoIP 验收](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)保留原有范围，版本历史见 [CHANGELOG](CHANGELOG.md)。已发布包的程序与文档保持其冻结源码快照；更新 main 不会改变已安装的旧发行包。
 
 ## 能帮你做什么？
 
@@ -49,7 +35,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。ARM64 安装包已提供，但真实 ARM64 运行尚未验收。
 
-先下载到独立目录，查看脚本后再决定是否执行：
+**这是旧版 alpha.7 的安装路径。** 下文当前 main 的新菜单和新增渠道需要对应的新构建；此命令不会安装全部 12 个渠道。先下载到独立目录，查看脚本后再决定是否执行：
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
@@ -79,16 +65,14 @@ sudo noderampart setup --language zh
 ~~~
 
 1. **基本设置**：选择网卡、SSH 监控、检测阈值、时区和日报时间。不提供外部账户，也能使用基础观察功能。
-2. **Telegram（可选）**：输入自己的 Bot Token 和 Chat ID，Token 隐藏显示。保存配置不会自动发送测试消息，需要另选“发送测试通知”。
+2. **通知渠道（可选）**：打开共用页面，选择需要的渠道。不需要 Telegram 账户也能完成基础设置。按渠道说明使用受保护凭据入口，秘密输入隐藏；保存不会自动向平台验证或入队／发送测试。应用已启用设置后，可按规则正常投递通知。测试须另选一个目标，付费渠道还需独立预览和费用确认。
 3. **本地 GeoIP（可选）**：输入自己的 MaxMind Account ID 和 License Key，确认已接受其条款，程序自动下载 City 和 ASN 两个数据库。每日更新可自行开启。
 4. **出站费用估算（可选）**：选择 AWS 或 OCI、对应区域/分组，并填写分配给本机的整月免费额度。
 5. 配置完成后选择**启动已配置的服务**，再查看**当前运行状态**。
 
 菜单用方向键和 Enter 操作，表单用 Tab/Shift+Tab 切换字段，Escape 返回。也可在菜单中随时切换中文和 English。
 
-alpha.7 提供可搜索的地区/城市时区列表及独立的 Telegram
-**English / 简体中文**正文选择，缺省仍为英文，与界面语言独立。只有新入队消息使用
-新呈现设置，旧正文/重试不重译。保存与旧消息规则见[时区与推送语言操作说明](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language)。
+报告时区选择离线工作；通知语言与界面语言独立，修改设置不会翻译旧队列正文。参见[时区与 Telegram 语言](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language)和下方各渠道说明。从 setup 进入后，“返回”／Escape 回到首次设置；从 `tui` 进入后回到主菜单。
 
 ## 平时怎么使用？
 
@@ -104,11 +88,46 @@ sudo noderampart tui --language zh
 | 功能配置 | 编辑全部可配置字段，包括高级选项；检查草稿后再确认保存。 |
 | 报告 | 生成当前报告、查看已保存日报、补齐缺失日期。 |
 | 事件与 Incident | 查看时间线和单次异常事件已保留的过程。 |
-| Telegram 与通知 | 配置 Bot、查看投递结果、设置和撤销到期静默。 |
+| 通知渠道 | 进入当前 main 的全部 12 渠道，查看独立投递结果与消息、选择单个测试目标、管理到期静默。 |
 | 本地 GeoIP 数据库 | 下载或更新数据库、检查库龄、设置每日自动更新。 |
 | 云公网出站费用估算 | 获取公开价格、比较已缓存的 AWS/OCI 估算、填写自定义价格。 |
 | 备份、回放与隐私 | 备份数据库、验证备份、离线比较检测规则。 |
 | 服务与卸载 | 启动、停止、重启、恢复之前的配置或卸载。 |
+
+## 通知渠道
+
+当前 main 共用一个入口：**setup → 通知渠道（可选）**，或 **tui → 通知渠道**。在同一页面选择已有渠道表单或配置编辑器；各渠道的凭据与投递规则保持独立。全部渠道均为可选，默认关闭。
+
+<a id="alpha8-预发布版本的原生通知"></a>
+
+| 渠道／标识 | 发送方式 | 配置入口与说明 | 版本范围 |
+| --- | --- | --- | --- |
+| Telegram／`telegram` | Bot API 向一个 Chat 发送文本 | Telegram 设置 · [操作说明](docs/V0.4_OPERATIONS.md#telegram) | 既有功能，固定 alpha.7 示例已包含 |
+| 通用 HTTPS Webhook／`webhook` | 固定接收方、JSON 与 Bearer 凭据 | 通知配置 · [操作说明](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook) | 既有功能，固定 alpha.7 示例已包含 |
+| 飞书／`feishu` | 自定义群机器人 Webhook，可选签名 | 飞书设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#feishu--飞书) | 已发布 alpha.8 及以后 |
+| 企业微信／`wecom` | 群机器人 Webhook | 企业微信设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#wecom--企业微信) | 已发布 alpha.8 及以后 |
+| Discord／`discord` | 频道 Incoming Webhook | Discord 设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#discord) | 已发布 alpha.8 及以后 |
+| Slack／`slack` | Slack App Incoming Webhook | Slack 设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#slack) | 已发布 alpha.8 及以后 |
+| Microsoft Teams Workflows／`teams` | 所支持的 Adaptive Card 工作流，仅确认请求接受 | Teams 设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#microsoft-teams-workflows) | 已发布 alpha.8 及以后 |
+| Google Chat／`google_chat` | Space Incoming Webhook | Google Chat 设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#google-chat) | 已发布 alpha.8 及以后 |
+| QQ Bot／`qqbot` | 官方主动 C2C／群文本，须有已授权的平台 ID | QQ Bot 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#qq-bot主动-c2c-或群通知) | alpha.9 main；Unreleased |
+| LINE Messaging API Push／`line` | Official Account 向获授权用户／群／room 推送 | LINE 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#lineofficial-account-的-messaging-api-push) | alpha.9 main；Unreleased |
+| Twilio SMS／`twilio_sms` | Programmable Messaging SMS 向一个 E.164 收件人发送 | Twilio SMS 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#twilio-sms分段同意与有限费用预留) | alpha.9 main；Unreleased |
+| WhatsApp Cloud API／`whatsapp_cloud` | Meta Cloud API 向一个收件人发送批准模板 | WhatsApp 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#whatsapp直接-meta-cloud-api仅批准-body-模板) | alpha.9 main；Unreleased |
+
+渠道通过持久 outbox 发送符合规则的事件开始／更新／恢复及短日报。Telegram、六个原生 Webhook 和四个账户渠道可独立选择 English／简体中文；通用 Webhook 保持既有英文 JSON 契约。WhatsApp 必须有相应语言的批准模板，SMS 使用有分段上限的紧凑摘要；付费渠道日报默认关闭。修改语言或时区不会重写旧队列正文。
+
+浏览和离线预览不会调用平台或发送消息；保存不会自动向平台验证或入队／发送测试。应用设置后，已启用的 daemon 可按规则正常投递。测试须明确选择一个目标，付费测试还需当前预览及独立费用确认。平台账户／管理员授权和收件人同意仍须操作者落实，付费渠道必须设置持久有限额度。平台受理不等于送达或已读；真实平台、人工接收和费用验收仍为 **NOT RUN**。Teams 仅确认工作流请求被接受。原生 Webhook／账户渠道直连，不使用环境代理。
+
+账号前提、平台条款、重试／未知投递和计费边界见[六渠道指南](docs/NOTIFICATION_CHANNELS.zh-CN.md)、[四账户渠道指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md)、[隐私政策](docs/PRIVACY.md)、[用户协议](docs/USER_AGREEMENT.md)和[当前限制](docs/ALPHA_LIMITATIONS.md)。心跳、本地 GeoIP 与公网出站费用估算保持独立。
+
+<a id="telegram-和-geoip-需要准备什么"></a>
+
+### Telegram 设置
+
+使用自己的 [BotFather](https://t.me/BotFather) 创建 Bot，先与它发起对话或加入目标群组，再从“通知渠道”选择 **设置 Telegram**，隐藏输入 Token 和数字 Chat ID。Token 保存在权限受限的本地文件，不应放进命令参数。[完整设置与目标隔离说明](docs/V0.4_OPERATIONS.md#telegram)。
+
+更换 Bot／Chat 或收紧隐私后，旧未发消息会隔离；切回旧目标不会自动接管。同目标换 Token 保留重试和限流状态；在“通知消息列表”检查后，再明确丢弃不需要的隔离正文。在途请求可能在原收件方完成，隔离未发消息仍遵循七天到期规则。
 
 ## 新告警和证据包怎么用？
 
@@ -139,7 +158,7 @@ sudo noderampart evidence export --output /root/noderampart-evidence.zip
 | 流量阈值 | SYN 每秒 5,000 包；UDP 10,000 包；ICMP 2,000 包；带宽 100 MiB/s。 |
 | 日报时间 | 主机所在时区的 09:00；例如可将时区改为 Asia/Shanghai。 |
 | 重复事件更新 | 默认在 10 分钟窗口内合并。 |
-| 可选功能 | Telegram、GeoIP 下载和出站费用估算需要单独配置。 |
+| 可选功能 | 通知渠道、GeoIP 下载和出站费用估算需要分别配置。 |
 | IP 隐私 | 默认保存和通知中使用网段前缀：IPv4 /24、IPv6 /48。 |
 
 菜单管理的配置文件固定为 **/etc/noderampart/config.json**，[完整默认配置](configs/noderampart.json)随项目提供。菜单会保留高级字段并检查整份配置。数据库和套接字路径须位于服务支持的目录内；修改数据库路径不会自动搬迁历史数据。
@@ -173,17 +192,13 @@ ACK 另行说明派生事件及通知入队决策是否已持久化；队列拒�
 历史缺失、裁剪或过载时不作提示；修改配置或隐私 key 后重启会重新观察七天。
 沿用现有隐私设置，不额外保存原始地址或建立另一份基线。
 
-也提供默认关闭的 HTTPS 外部心跳和一个通用 JSON Webhook；在通知配置中设置固定目标与受保护凭据文件，不新增端口。心跳区分进程存活和功能降级，Webhook复用目标隔离发件队列。[配置、身份变化与重试限制](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook)。
+HTTPS 外部心跳是独立、可选的健康上报机制，不是第 13 个通知渠道。它区分进程存活和功能降级，不新增监听端口。[心跳配置](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook)。
 
-## Telegram 和 GeoIP 需要准备什么？
+## 本地 GeoIP
 
-Telegram：使用 [BotFather](https://t.me/BotFather) 创建 Bot，先与它发起对话或将其加入目标群组，再将 Token 和目标 Chat ID 填进菜单。程序会把 Token 存入权限受限的本地文件，不需要将它写到命令参数里。[详细步骤](docs/V0.4_OPERATIONS.md#telegram)。
+需要你自己的 [MaxMind GeoLite 账户](https://www.maxmind.com/en/geolite2/signup)，并已接受 [GeoLite 条款](https://www.maxmind.com/en/geolite/eula)。向导可以自动下载 City 和 ASN 两个库，并按你的选择定期更新；本项目不会代注册、代接受条款或直接捆绑这些数据库。运行时通过本地库查询，地理位置仅供参考。也可以跳过，或使用已经合法取得的本地 MMDB。[详细说明](docs/V0.4_OPERATIONS.md#local-geoip)。
 
-请使用数字 Chat ID。消息绑定 Bot/Chat 身份，数据库不保存 Token。更换 Bot/Chat 或收紧通知隐私后，旧的未发送消息会保留隔离；切回旧目标也不会自动接管它们。同目标换 Token 保留重试与限流状态，停用通知只暂停已确认的同目标队列。可在“通知消息列表”检查，并显式选择“丢弃隔离通知正文”。已在发送中的请求可能在原收件方完成；隔离的未发送消息仍遵循原有七天到期规则。
-
-GeoIP：需要你自己的 [MaxMind GeoLite 账户](https://www.maxmind.com/en/geolite2/signup)，并已接受 [GeoLite 条款](https://www.maxmind.com/en/geolite/eula)。向导可以自动下载两个库，并按你的选择定期更新；本项目不会代注册、代接受条款或直接捆绑这些数据库。运行时通过本地库查询，地理位置仅供参考。也可以跳过，或使用已经合法取得的本地 MMDB。[详细说明](docs/V0.4_OPERATIONS.md#local-geoip)。
-
-报告、Incident 和通知可以直接从列表进入详情；翻页自动保留查询时间段和游标。保存配置前会显示每项设置的旧值与新值。GeoIP 下载验证后若内容相同，会保留当前数据库和服务，避免无意义重启。
+GeoIP 下载验证后若内容相同，会保留当前数据库和服务，避免无意义重启。报告、Incident 和通知可以直接从列表进入详情；翻页保留查询时间段和游标。保存配置前会显示设置的旧值与新值。
 
 ## 费用估算应该怎么看？
 
@@ -195,9 +210,7 @@ GeoIP：需要你自己的 [MaxMind GeoLite 账户](https://www.maxmind.com/en/g
 
 ## 完整本地报告、趋势和结算周期预测
 
-以下命令读取本地 daemon。新日报单独保存完整结构化内容；Telegram 和 Webhook
-只接收省略来源标识的简短指标摘要。历史快照不可变，旧快照保留原短正文，明确说明
-原始完整内容不可用，不会重建后冒充原快照。
+以下命令读取本地 daemon。新日报保存完整结构化内容；通知采用各渠道的短摘要或批准模板，不发送整份本地报告。历史快照不可变，旧快照保留原短正文，明确说明原始完整内容不可用，不会重建后冒充原快照。
 
 ~~~bash
 sudo noderampart report export --date 2026-09-29 --format html
@@ -268,12 +281,4 @@ SSH 会话没有终端时，可用 ssh -t 分配终端，或使用原有的非�
 
 项目原创代码采用 [MIT License](LICENSE)。编译依赖保留各自许可证，见[第三方声明](THIRD_PARTY_NOTICES.md)；MaxMind 数据使用独立的数据许可。
 
-新生成的日报会保存完整单价、来源、免费额度、字节单位和观测流量，便于复算。
-历史补报使用生成时配置的价格，已有存档不会重新计价。alpha.6 自动迁移到 schema 11，保留公开 schema 7 的日志恢复状态，并新增目标隔离、完整报告文档、采集提交水位及分通道投递决策。
-升级前请备份，旧版程序不能直接打开已迁移的数据库；只有通道名、没有可靠收件归属的历史 Telegram 消息会保留隔离，不绑定当前收件方。
-
-已发布 alpha.6 产物附有 Go 依赖 SBOM 与匹配的 GitHub 来源证明，验证步骤见[发布验证](docs/RELEASE_VERIFICATION.md)。包内 README 与许可证保持冻结发布源码的快照；之后的文档更新不替换安装包字节，也不代表包中安装了完整离线手册。
-
-## alpha.8 预发布版本的原生通知
-
-飞书、企业微信、Discord、Slack、Teams Workflows 与 Google Chat 各支持一个独立目标和中英文消息语言。在**通知渠道**隐藏输入凭据，经预览应用后，另行选择明确渠道发送测试。既有可通知事件、恢复及短日报复用持久 outbox，没有入站命令、监听端口或厂商 SDK 运行依赖。管理员前提、Teams 接受边界、Slack 分发条款、轮换、队列隔离和回退见[完整中文操作说明](docs/NOTIFICATION_CHANNELS.zh-CN.md)。这些功能已包含于公开 alpha.8 包。真实外发需用户自行创建并明确授权测试 Webhook；mock 通过不等于真实平台投递或人工接收验收。
+日报保存估算所用的单价、来源、免费额度、字节单位和观测流量，便于复算；补报使用生成时配置，已有存档不重新计价。升级前备份数据库，并分别保护匹配的配置和凭据；旧程序不能直接打开较新 schema。参见[升级与回退](docs/V0.4_OPERATIONS.md#upgrades-and-removal)和[历史发布核验](docs/RELEASE_VERIFICATION.md)。包内 README／许可证保持其冻结发布源码快照；之后的文档更新不替换包字节，也不安装完整离线手册。

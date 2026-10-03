@@ -130,12 +130,16 @@ type backendCall struct {
 type fakeBackend struct {
 	cfg     config.Config
 	loadErr error
+	load    func(context.Context) (Snapshot, error)
 	calls   chan backendCall
 	saves   chan Snapshot
 	action  func(context.Context, string, map[string]string) (string, error)
 }
 
-func (b *fakeBackend) Load(context.Context) (Snapshot, error) {
+func (b *fakeBackend) Load(ctx context.Context) (Snapshot, error) {
+	if b.load != nil {
+		return b.load(ctx)
+	}
 	return Snapshot{Config: b.cfg, Fingerprint: "synthetic-fingerprint"}, b.loadErr
 }
 func (b *fakeBackend) Save(_ context.Context, s Snapshot) (string, error) {
@@ -237,13 +241,32 @@ func selectIndex(s *recordedScreen, index int) {
 	}
 	key(s, tcell.KeyEnter)
 }
+
+func notificationActionIndex(t *testing.T, id string) int {
+	t.Helper()
+	for i, current := range notificationActionIDs() {
+		if current == id {
+			return i
+		}
+	}
+	t.Fatalf("notification action %q is absent", id)
+	return 0
+}
+
 func launch(t *testing.T, setup bool, b *fakeBackend) (*recordedScreen, context.CancelFunc, <-chan error) {
+	return launchWithLanguage(t, setup, "en", b)
+}
+
+func launchWithLanguage(t *testing.T, setup bool, language string, b *fakeBackend) (*recordedScreen, context.CancelFunc, <-chan error) {
 	t.Helper()
 	screen := newRecordedScreen()
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	completed := make(chan struct{})
-	go func() { done <- Run(ctx, b, Options{Setup: setup, Language: "en", Screen: screen}); close(completed) }()
+	go func() {
+		done <- Run(ctx, b, Options{Setup: setup, Language: language, Screen: screen})
+		close(completed)
+	}()
 	t.Cleanup(func() {
 		cancel()
 		select {
@@ -263,6 +286,347 @@ func launch(t *testing.T, setup bool, b *fakeBackend) (*recordedScreen, context.
 }
 func newBackend() *fakeBackend {
 	return &fakeBackend{cfg: config.Defaults(), calls: make(chan backendCall, 20), saves: make(chan Snapshot, 10)}
+}
+
+func navigationText(language, en, zh string) string {
+	if language == "zh" {
+		return zh
+	}
+	return en
+}
+
+func enterNotificationMenu(t *testing.T, s *recordedScreen, setup bool, language string) string {
+	t.Helper()
+	parent := navigationText(language, "NodeRampart — Main menu", "NodeRampart — 主菜单")
+	index := 5
+	if setup {
+		parent = navigationText(language, "NodeRampart — Welcome", "NodeRampart — 欢迎")
+		index = 1
+	}
+	frame := awaitFrame(t, s, parent)
+	if setup && (!strings.Contains(frame, navigationText(language, "Notification channels (optional)", "通知渠道（可选）")) || strings.Contains(frame, "Telegram (optional)") || strings.Contains(frame, "Telegram（可选）")) {
+		t.Fatal("setup still presents an exclusive Telegram entry")
+	}
+	selectIndex(s, index)
+	awaitFrame(t, s, navigationText(language, "NodeRampart — Notification channels", "NodeRampart — 通知渠道"))
+	return parent
+}
+
+func notificationConfigFieldIndex(t *testing.T, path string) int {
+	t.Helper()
+	index := 0
+	for _, f := range fields {
+		if f.group != "notifications" {
+			continue
+		}
+		if f.path == path {
+			return index
+		}
+		index++
+	}
+	t.Fatalf("notification field %q is absent", path)
+	return 0
+}
+
+func notificationConfigGroupIndex(t *testing.T) int {
+	t.Helper()
+	for i, group := range groups {
+		if group.key == "notifications" {
+			return i
+		}
+	}
+	t.Fatal("notification configuration group is absent")
+	return 0
+}
+
+func assertNotificationNavigationReadOnly(t *testing.T, b *fakeBackend, before config.Config) {
+	t.Helper()
+	if len(b.calls) != 0 || len(b.saves) != 0 || !reflect.DeepEqual(b.cfg, before) {
+		t.Fatal("notification navigation, help or cancellation changed configuration or invoked an action")
+	}
+}
+
+func TestNotificationMenuHasAllTwelveConfigurationEntriesBeforeOperations(t *testing.T) {
+	want := []string{"telegram_setup", "webhook_configuration", "feishu_setup", "wecom_setup", "discord_setup", "slack_setup", "teams_setup", "google_chat_setup", "qqbot_setup", "line_setup", "twilio_sms_setup", "whatsapp_cloud_setup"}
+	for _, channel := range []string{"qqbot", "line", "twilio_sms", "whatsapp_cloud"} {
+		want = append(want, channel+"_credentials", channel+"_subscription")
+	}
+	ids := notificationActionIDs()
+	if len(ids) < len(want) || !reflect.DeepEqual(ids[:len(want)], want) {
+		t.Fatalf("notification configuration order or reachability changed: %v", ids)
+	}
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if seen[id] {
+			t.Fatal("duplicate notification entry", id)
+		}
+		seen[id] = true
+		if _, ok := findAction(id); !ok {
+			t.Fatal("notification entry has no existing local action", id)
+		}
+	}
+	for _, id := range []string{"notify_status", "notify_list", "notify_test", "notify_preview", "notify_retry", "notify_quarantine", "notify_discard_isolated", "notify_resume", "notify_reconcile_paid", "silence_list", "silence_add", "silence_remove", "notification_help"} {
+		if !seen[id] || notificationActionIndex(t, id) < len(want) {
+			t.Fatal("shared operation missing or placed before channel configuration", id)
+		}
+	}
+}
+
+func TestSimulationUnifiedNotificationEntryPointsAndSmallTerminalReachability(t *testing.T) {
+	for _, language := range []string{"en", "zh"} {
+		for _, setup := range []bool{false, true} {
+			mode := map[bool]string{false: "tui", true: "setup"}[setup]
+			t.Run(language+"/"+mode, func(t *testing.T) {
+				b := newBackend()
+				messageLanguage, messageLabel := "zh", "简体中文"
+				if language == "zh" {
+					messageLanguage, messageLabel = "en", "English"
+				}
+				b.cfg.Notifications.Telegram.Language = messageLanguage
+				for _, channel := range config.NativeChannelNames() {
+					n := b.cfg.Notifications.NativeChannels()[channel]
+					n.Language = messageLanguage
+					if err := b.cfg.Notifications.SetNativeChannel(channel, n); err != nil {
+						t.Fatal(err)
+					}
+				}
+				for _, channel := range config.OfficialChannelNames() {
+					n := b.cfg.Notifications.OfficialChannels()[channel]
+					n.Language = messageLanguage
+					if err := b.cfg.Notifications.SetOfficialChannel(channel, n); err != nil {
+						t.Fatal(err)
+					}
+				}
+				before := cloneConfig(b.cfg)
+				s, _, _ := launchWithLanguage(t, setup, language, b)
+				parent := enterNotificationMenu(t, s, setup, language)
+				notifications := navigationText(language, "NodeRampart — Notification channels", "NodeRampart — 通知渠道")
+				s.resize(80, 24)
+				frame := awaitFrame(t, s, notifications)
+				if rows := strings.Count(frame, "\n"); rows != 24 {
+					t.Fatalf("small-terminal fixture has %d rows instead of 24", rows)
+				}
+				for _, id := range []string{"telegram_setup", "webhook_configuration", "feishu_setup", "wecom_setup", "discord_setup", "slack_setup", "teams_setup", "google_chat_setup", "qqbot_setup", "line_setup", "twilio_sms_setup", "whatsapp_cloud_setup"} {
+					selectIndex(s, notificationActionIndex(t, id))
+					if id == "webhook_configuration" {
+						configuration := navigationText(language, "NodeRampart — Configuration · schema", "NodeRampart — 功能配置 · schema")
+						group := navigationText(language, "NodeRampart — Notifications", "NodeRampart — 通知")
+						awaitFrame(t, s, configuration)
+						selectIndex(s, notificationConfigGroupIndex(t))
+						awaitFrame(t, s, group)
+						selectIndex(s, notificationConfigFieldIndex(t, "notifications.webhook.enabled"))
+						awaitFrame(t, s, "notifications.webhook.enabled")
+						key(s, tcell.KeyEscape)
+						awaitFrame(t, s, group)
+						key(s, tcell.KeyEscape)
+						awaitFrame(t, s, configuration)
+					} else {
+						a, _ := findAction(id)
+						frame = awaitFrame(t, s, "NodeRampart — "+navigationText(language, a.en, a.zh))
+						if !strings.Contains(frame, messageLabel) {
+							t.Fatalf("%s lost the independently configured message language in %s UI", id, language)
+						}
+					}
+					key(s, tcell.KeyEscape)
+					awaitFrame(t, s, notifications)
+					assertNotificationNavigationReadOnly(t, b, before)
+				}
+				selectIndex(s, notificationActionIndex(t, "notification_help"))
+				awaitFrame(t, s, navigationText(language, "NodeRampart — Notification channel help", "NodeRampart — 通知渠道使用帮助"))
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, notifications)
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, parent)
+				// Switching the interface after loading all channel settings must
+				// leave their independently configured notification language alone.
+				otherLanguage := "zh"
+				if language == "zh" {
+					otherLanguage = "en"
+				}
+				languageIndex := 10
+				if setup {
+					languageIndex = 6
+				}
+				selectIndex(s, languageIndex)
+				otherParent := navigationText(otherLanguage, "NodeRampart — Main menu", "NodeRampart — 主菜单")
+				if setup {
+					otherParent = navigationText(otherLanguage, "NodeRampart — Welcome", "NodeRampart — 欢迎")
+				}
+				enterNotificationMenu(t, s, setup, otherLanguage)
+				selectIndex(s, notificationActionIndex(t, "telegram_setup"))
+				frame = awaitFrame(t, s, navigationText(otherLanguage, "Bot token (hidden)", "Bot Token（隐藏）"))
+				if !strings.Contains(frame, messageLabel) {
+					t.Fatal("switching UI language changed the loaded notification language")
+				}
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, navigationText(otherLanguage, "NodeRampart — Notification channels", "NodeRampart — 通知渠道"))
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, otherParent)
+				assertNotificationNavigationReadOnly(t, b, before)
+			})
+		}
+	}
+}
+
+func TestSimulationNotificationSecretHelpAndCancelKeepContext(t *testing.T) {
+	for _, language := range []string{"en", "zh"} {
+		for _, setup := range []bool{false, true} {
+			t.Run(language+"/"+map[bool]string{false: "tui", true: "setup"}[setup], func(t *testing.T) {
+				b := newBackend()
+				before := cloneConfig(b.cfg)
+				s, _, _ := launchWithLanguage(t, setup, language, b)
+				parent := enterNotificationMenu(t, s, setup, language)
+				notifications := navigationText(language, "NodeRampart — Notification channels", "NodeRampart — 通知渠道")
+				for _, id := range []string{"telegram_setup", "slack_setup", "qqbot_credentials"} {
+					a, _ := findAction(id)
+					secretIndex := -1
+					for i, param := range a.params {
+						if param.secret {
+							secretIndex = i
+							break
+						}
+					}
+					if secretIndex < 0 {
+						t.Fatal("secret fixture action has no hidden field", id)
+					}
+					for _, operation := range []string{"escape", "cancel_button", "help"} {
+						selectIndex(s, notificationActionIndex(t, id))
+						awaitFrame(t, s, "NodeRampart — "+navigationText(language, a.en, a.zh))
+						for range secretIndex {
+							key(s, tcell.KeyTab)
+						}
+						const value = "synthetic-cancel-value"
+						textKeys(s, value)
+						frame := awaitFrame(t, s, strings.Repeat("•", len(value)))
+						if strings.Contains(frame, value) {
+							t.Fatal("hidden input appeared in navigation frame")
+						}
+						switch operation {
+						case "escape":
+							key(s, tcell.KeyEscape)
+						case "cancel_button", "help":
+							tabs := len(a.params) - secretIndex + 1
+							if operation == "help" {
+								tabs++
+							}
+							for range tabs {
+								key(s, tcell.KeyTab)
+							}
+							key(s, tcell.KeyEnter)
+							if operation == "help" {
+								awaitFrame(t, s, "1 / 1")
+								key(s, tcell.KeyEscape)
+								frame = awaitFrame(t, s, navigationText(language, a.params[secretIndex].en, a.params[secretIndex].zh))
+								if strings.Contains(frame, "••") || strings.Contains(frame, value) {
+									t.Fatal("help cancellation retained hidden input")
+								}
+								key(s, tcell.KeyEscape)
+							}
+						}
+						awaitFrame(t, s, notifications)
+						assertNotificationNavigationReadOnly(t, b, before)
+					}
+				}
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, parent)
+				assertNotificationNavigationReadOnly(t, b, before)
+			})
+		}
+	}
+}
+
+func TestSimulationNotificationWebhookDraftValidationReviewAndDirtyGuardReturn(t *testing.T) {
+	for _, language := range []string{"en", "zh"} {
+		for _, setup := range []bool{false, true} {
+			t.Run(language+"/"+map[bool]string{false: "tui", true: "setup"}[setup], func(t *testing.T) {
+				b := newBackend()
+				b.cfg.Notifications.Webhook.ReceiverID = "existing-receiver"
+				before := cloneConfig(b.cfg)
+				s, _, _ := launchWithLanguage(t, setup, language, b)
+				parent := enterNotificationMenu(t, s, setup, language)
+				notifications := navigationText(language, "NodeRampart — Notification channels", "NodeRampart — 通知渠道")
+				configuration := navigationText(language, "NodeRampart — Configuration · schema", "NodeRampart — 功能配置 · schema")
+				group := navigationText(language, "NodeRampart — Notifications", "NodeRampart — 通知")
+				selectIndex(s, notificationActionIndex(t, "webhook_configuration"))
+				awaitFrame(t, s, configuration)
+				selectIndex(s, notificationConfigGroupIndex(t))
+				awaitFrame(t, s, group)
+				selectIndex(s, notificationConfigFieldIndex(t, "notifications.webhook.receiver_id"))
+				awaitFrame(t, s, "notifications.webhook.receiver_id")
+				key(s, tcell.KeyCtrlU)
+				textKeys(s, "draft-receiver")
+				key(s, tcell.KeyTab)
+				key(s, tcell.KeyEnter)
+				awaitFrame(t, s, group)
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, configuration)
+				selectIndex(s, len(groups))
+				awaitFrame(t, s, navigationText(language, "NodeRampart — Draft validation", "NodeRampart — 草稿检查"))
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, configuration)
+				selectIndex(s, len(groups)+2)
+				frame := awaitFrame(t, s, navigationText(language, "NodeRampart — Review configuration changes", "NodeRampart — 检查配置修改"))
+				if !strings.Contains(frame, "notifications.webhook.receiver_id") || !strings.Contains(frame, `"existing-receiver" → "draft-receiver"`) {
+					t.Fatal("generic Webhook entry did not use the existing configuration draft")
+				}
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, configuration)
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, notifications)
+				selectIndex(s, notificationActionIndex(t, "qqbot_setup"))
+				awaitFrame(t, s, navigationText(language, "Save or discard the configuration draft first", "请先保存或放弃配置草稿"))
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, configuration)
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, notifications)
+				key(s, tcell.KeyEscape)
+				awaitFrame(t, s, parent)
+				assertNotificationNavigationReadOnly(t, b, before)
+			})
+		}
+	}
+}
+
+func TestSimulationNotificationConfigurationLoadFailureAndCancellationKeepContext(t *testing.T) {
+	for _, language := range []string{"en", "zh"} {
+		for _, setup := range []bool{false, true} {
+			for _, cancelLoad := range []bool{false, true} {
+				t.Run(language+"/"+map[bool]string{false: "tui", true: "setup"}[setup]+"/"+map[bool]string{false: "load_failure", true: "load_cancel"}[cancelLoad], func(t *testing.T) {
+					b := newBackend()
+					b.loadErr = errors.New("synthetic configuration load failure")
+					started := make(chan struct{})
+					if cancelLoad {
+						b.load = func(ctx context.Context) (Snapshot, error) {
+							close(started)
+							<-ctx.Done()
+							return Snapshot{}, ctx.Err()
+						}
+					}
+					before := cloneConfig(b.cfg)
+					s, _, _ := launchWithLanguage(t, setup, language, b)
+					parent := enterNotificationMenu(t, s, setup, language)
+					selectIndex(s, notificationActionIndex(t, "webhook_configuration"))
+					if cancelLoad {
+						select {
+						case <-started:
+						case <-time.After(time.Second):
+							t.Fatal("configuration load did not start")
+						}
+						key(s, tcell.KeyEscape)
+					}
+					frame := awaitFrame(t, s, navigationText(language, "NodeRampart — Configuration unavailable", "NodeRampart — 配置不可用"))
+					if strings.Contains(frame, "synthetic configuration load failure") {
+						t.Fatal("configuration load failure exposed a raw backend error")
+					}
+					key(s, tcell.KeyEscape)
+					awaitFrame(t, s, navigationText(language, "NodeRampart — Notification channels", "NodeRampart — 通知渠道"))
+					key(s, tcell.KeyEscape)
+					awaitFrame(t, s, parent)
+					assertNotificationNavigationReadOnly(t, b, before)
+				})
+			}
+		}
+	}
 }
 
 func TestSimulationWelcomeSkipsExternalFeaturesAndChangesLanguage(t *testing.T) {
@@ -285,8 +649,8 @@ func TestSimulationWelcomeSkipsExternalFeaturesAndChangesLanguage(t *testing.T) 
 func openTelegram(t *testing.T, s *recordedScreen) string {
 	t.Helper()
 	selectIndex(s, 5)
-	awaitFrame(t, s, "Notification channels")
-	selectIndex(s, 0)
+	awaitFrame(t, s, "NodeRampart — Notification channels")
+	selectIndex(s, notificationActionIndex(t, "telegram_setup"))
 	return awaitFrame(t, s, "Bot token (hidden)")
 }
 
@@ -302,8 +666,8 @@ func TestSimulationSecretIsMaskedAndCancelDoesNotApply(t *testing.T) {
 		t.Fatal("secret rendered in clear text")
 	}
 	key(s, tcell.KeyEscape)
-	awaitFrame(t, s, "Notification channels")
-	selectIndex(s, 0)
+	awaitFrame(t, s, "NodeRampart — Notification channels")
+	selectIndex(s, notificationActionIndex(t, "telegram_setup"))
 	frame = awaitFrame(t, s, "Bot token (hidden)")
 	if strings.Contains(frame, "••") {
 		t.Fatal("cancelled secret was prefilled")

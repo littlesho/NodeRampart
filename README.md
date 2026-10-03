@@ -2,33 +2,19 @@
 
 **See what is happening on your Linux VPS: suspicious traffic, SSH logins, daily usage and estimated Internet egress costs.**
 
-NodeRampart watches your server in the background. It records events, builds daily reports and can notify you through configured notification channels. A terminal menu guides you through setup and everyday management over SSH.
+NodeRampart watches your server in the background. It records events, builds daily reports and can send alerts, recovery notices and daily summaries through multiple notification channels. A terminal menu guides you through setup and everyday management over SSH.
 
 It observes and reports. It does not block IP addresses, change your firewall, inspect application payloads or open a web dashboard port. It is not DDoS mitigation or a traffic-scrubbing service.
 
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
-> **v0.4.0-alpha.9 — Unreleased development candidate.** Four official account channels (QQ Bot, LINE Push, Twilio SMS and WhatsApp Cloud templates) are under candidate validation, disabled by default. Paid notifications require recorded consent, explicit cost confirmation and finite persistent limits. See the [account-channel guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md) and [alpha.9 acceptance](docs/ALPHA9_ACCEPTANCE.md). No alpha.9 tag or release is published; the pinned public installation below is unchanged.
+## Version status and validation scope
 
-> **v0.4.0-alpha.8 — published, non-latest alpha prerelease.** The [fixed release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) adds six native channels, all disabled by default. Read [setup and platform permissions](docs/NOTIFICATION_CHANNELS.md), [privacy](docs/PRIVACY.md) and [user agreement](docs/USER_AGREEMENT.md). Real vendor APIs / human receipt, native ARM64 and production remain **NOT RUN**; known vulnerability findings and scanner coverage gaps remain disclosed.
+**v0.4.0-alpha.9 is an Unreleased development candidate on main.** Its four official account channels join the existing eight, all optional. Alpha.9 has no published installation assets; the [acceptance record](docs/ALPHA9_ACCEPTANCE.md) distinguishes contract tests, candidate packages and remaining checks.
 
-> **Alpha.8 distribution:** 22 new anonymous downloads match the accepted hosted draft and its reused 22 provenance / six SPDX subjects. Debian 13 explicit public bootstrap, separate Chinese setup cancellation and basic observation passed; strict doctor remained **unknown / exit 2**. Fedora 44 public bootstrap is **BLOCKED_NETWORK**: download timed out before installation, so new setup/runtime checks are **NOT RUN**. The pinned example below remains alpha.7 while this public-installation matrix is incomplete; omitting `--version` still selects alpha.5. See the [actual publication scope](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification).
+**[v0.4.0-alpha.8](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) is published as a non-latest alpha prerelease.** Its six native channels are included in those packages. Real platform APIs / human receipt, native ARM64 and production remain **NOT RUN**. Public Fedora 44 bootstrap remains **BLOCKED_NETWORK**, and historical strict-doctor unknowns are preserved in the [publication and diagnostic record](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification). Known vulnerability findings and scanner coverage gaps remain disclosed in [limitations](docs/ALPHA_LIMITATIONS.md).
 
-The following alpha.7 and earlier records retain their original evidence:
-
-> **v0.4.0-alpha.7 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7) add a searchable report timezone and independent English/Chinese Telegram text. The database upgrades to schema 12; verify a matching backup, preserve earlier configuration/keys separately and install all three matching programs before saving new settings.
-
-> **Historical alpha.7 distribution:** All 22 anonymous downloads and checksums match the authenticated 22 provenance and six runtime SPDX subjects byte-for-byte. Debian 13/Fedora 44 public bootstrap, setup, basic collection, online backup and cleanup: **PASS**. Both strict doctor snapshots remained **unknown / exit 2**. Current alpha.7 Debian 12/Fedora 43 runtime, native ARM64 and natural SSH recovery remain unvalidated; this is not production readiness. See [this release verification](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
-
-The following alpha.6 scope is historical and does not prove alpha.7 runtime acceptance:
-
-> **v0.4.0-alpha.6 — published alpha prerelease.** The [public packages](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.6) add isolated notification targets, full local reports, diagnosis and committed sensor watermarks. The database upgrades to schema 11 and the sensor protocol to v5; retain a verified compatible pre-upgrade backup.
-
-> **Validation:** All 22 assets passed fresh anonymous download/checksum checks; their bytes match the authenticated 22 provenance and six SPDX checks. Exact final-package upgrades and lifecycle checks passed on Debian 12/13 and Fedora 43/44 amd64/x86_64. Public bootstrap with separate setup passed on Debian 13 and Fedora 44. Native ARM64 and the natural SSH recovery chain remain unvalidated; this does not establish production readiness. See [release verification](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification).
-
-> **GeoIP fix scope:** alpha.4 fixes repeated parsing of shared MMDB data that could exhaust the validation budget, and adds safe MMDB validation/resource-budget errors. Matching candidate City/ASN samples passed complete offline validation; user download, activation and daily updates remain unverified. See [validation scope and resource limits](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) and [upgrade and GeoIP acceptance](docs/V0.4_OPERATIONS.md#alpha4-upgrade-and-geoip-acceptance).
-
-> **Pinned installation:** explicitly select `v0.4.0-alpha.7` below. The frozen bootstrap still defaults to alpha.5 when `--version` is omitted. The [current acceptance](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification) separates measured results from remaining limits.
+The pinned installation below remains alpha.7; omitting `--version` still selects alpha.5. Earlier [alpha.7](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification), [alpha.6](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification) and [GeoIP validation](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) retain their original scope. See [CHANGELOG](CHANGELOG.md) for version history. Published package documentation and programs remain their frozen snapshots; updating main does not change an installed release.
 
 ## What can it do?
 
@@ -49,7 +35,7 @@ You can also merge repeated alerts, set silences that expire automatically, fill
 
 The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. The download command needs curl and working HTTPS certificates; the installer and apt/dnf handle the remaining installation dependencies. Go is not needed. ARM64 packages are available but native ARM64 execution is not yet validated.
 
-Download into a separate directory and inspect the script before deciding to execute it:
+**This is the older alpha.7 installation path.** The current-main menus described below and the newer channels require a matching new build; this command does not install all 12 channels. Download into a separate directory and inspect the script before deciding to execute it:
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
@@ -79,18 +65,14 @@ sudo noderampart setup
 ~~~
 
 1. **Basic settings:** choose network interfaces, SSH monitoring, thresholds, timezone and report time. The defaults work without external accounts.
-2. **Telegram, optional:** enter your bot token and chat ID. The token is hidden. Saving does not send a test message; choose **Send a test notification** separately.
+2. **Notification channels (optional):** open the shared page and choose a channel. No Telegram account is required to finish basic setup. Follow the selected channel's protected credential instructions; secret inputs are hidden. Saving does not automatically validate with the platform or queue/send a test. Enabled channels can then deliver eligible notifications under their configured rules. A test is a separate action for one selected target, with an additional preview and cost confirmation for paid channels.
 3. **Local GeoIP, optional:** supply your own MaxMind Account ID and License Key, confirm that you have accepted its terms, then download the City and ASN databases. Daily updates are optional.
 4. **Egress estimates, optional:** choose AWS or OCI, the appropriate region/group, and the monthly free allowance assigned to this host.
 5. Choose **Start configured services**, then inspect **Current status**.
 
 Use arrow keys and Enter for menus, Tab/Shift+Tab for form fields, and Escape to go back. English and Chinese are available from the language menu or the --language en / --language zh option.
 
-Alpha.7 adds a searchable region/city timezone selector and independent Telegram
-**English / 简体中文** text, defaulting to English regardless of UI language. Only
-newly admitted messages use changed presentation settings; old bodies and retries
-are not translated again. See the bilingual [timezone and message language
-instructions](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language).
+The report timezone selector works offline. Notification language is separate from UI language; changing either does not translate old queued messages. See [timezone and Telegram language](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language) and the channel-specific guides below. From this setup page, **Back** / Escape returns to setup; from `tui`, it returns to the main menu.
 
 ## Everyday use
 
@@ -106,7 +88,7 @@ Closing the menu leaves the background services running.
 | Configuration | Edit every configurable field, including advanced settings; validate and review before saving. |
 | Reports | Read the current report, open saved daily reports and fill missing dates. |
 | Events and incidents | Follow the timeline and inspect an incident. |
-| Notification channels | Configure Telegram, generic Webhook and six native channels; inspect independent outcomes and expiring silences. |
+| Notification channels | Reach all 12 current-main channels, inspect independent delivery outcomes and messages, choose a single test target and manage expiring silences. |
 | Local GeoIP databases | Download, refresh, inspect database age and enable/disable daily updates. |
 | Cloud egress cost estimates | Fetch public prices, compare cached AWS/OCI scenarios or enter a custom tariff. |
 | Backup, replay and privacy | Back up the database, verify backups and compare offline detection rules. |
@@ -115,6 +97,41 @@ Closing the menu leaves the background services running.
 Historical report details show the saved tariff and free allowance used at the
 time. Incident details explain recorded alert thresholds and observations; the
 alert status page distinguishes checks in progress, timeouts and pending writes.
+
+## Notification channels
+
+Current main provides one shared entry: **setup → Notification channels (optional)** or **tui → Notification channels**. Choose the existing channel form or configuration editor there; channel-specific credentials and delivery rules remain separate. All channels are optional and default disabled.
+
+<a id="native-channels-in-the-alpha8-prerelease"></a>
+
+| Channel / identifier | Sending method | Configuration and guide | Version range |
+| --- | --- | --- | --- |
+| Telegram / `telegram` | Bot API text to one chat | Telegram setup · [operations](docs/V0.4_OPERATIONS.md#telegram) | Existing; included in the pinned alpha.7 |
+| Generic HTTPS Webhook / `webhook` | Fixed receiver, JSON and Bearer credential | Notification configuration · [operations](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook) | Existing; included in the pinned alpha.7 |
+| Feishu / `feishu` | Custom group-bot Webhook, optional signing | Feishu setup · [guide](docs/NOTIFICATION_CHANNELS.md#feishu) | Published alpha.8 and later |
+| WeCom / `wecom` | Group-bot Webhook | WeCom setup · [guide](docs/NOTIFICATION_CHANNELS.md#wecom) | Published alpha.8 and later |
+| Discord / `discord` | Channel Incoming Webhook | Discord setup · [guide](docs/NOTIFICATION_CHANNELS.md#discord) | Published alpha.8 and later |
+| Slack / `slack` | Slack App Incoming Webhook | Slack setup · [guide](docs/NOTIFICATION_CHANNELS.md#slack) | Published alpha.8 and later |
+| Microsoft Teams Workflows / `teams` | Supported Adaptive Card workflow, request acceptance only | Teams setup · [guide](docs/NOTIFICATION_CHANNELS.md#microsoft-teams-workflows) | Published alpha.8 and later |
+| Google Chat / `google_chat` | Space Incoming Webhook | Google Chat setup · [guide](docs/NOTIFICATION_CHANNELS.md#google-chat) | Published alpha.8 and later |
+| QQ Bot / `qqbot` | Official active C2C/group text with authorized platform IDs | QQ Bot actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#qq-bot-active-c2c-or-group-messages) | Alpha.9 main; Unreleased |
+| LINE Messaging API Push / `line` | Official Account push to an authorized user/group/room | LINE actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#line-official-account-messaging-api-push) | Alpha.9 main; Unreleased |
+| Twilio SMS / `twilio_sms` | Programmable Messaging SMS to one E.164 recipient | Twilio SMS actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#twilio-sms-individual-consent-and-finite-segment-budget) | Alpha.9 main; Unreleased |
+| WhatsApp Cloud API / `whatsapp_cloud` | Meta Cloud API approved templates to one recipient | WhatsApp actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#whatsapp-cloud-approved-body-templates-only) | Alpha.9 main; Unreleased |
+
+The channels send eligible events, start/update/recovery notices and short daily summaries using the durable outbox. Telegram, the six native Webhook channels and four account channels have independent English/Simplified Chinese choices; the generic Webhook retains its existing English JSON contract. WhatsApp requires approved templates in the chosen language, and SMS uses a compact summary with a segment limit. Paid daily summaries default off. Language/timezone changes do not rewrite queued content.
+
+Browsing and local previews do not call the platform or send a message. Saving does not automatically validate with the platform or queue/send a test; the enabled daemon can deliver eligible notifications after settings apply. Explicit tests select one target; paid tests additionally require a current preview and cost confirmation. Operator account/admin authorization and recipient consent remain necessary, with finite persistent limits for paid channels. Platform acceptance does not prove delivery or reading; real platform, human-receipt and fee tests remain **NOT RUN**. Teams confirms only workflow request acceptance. Native Webhook/account transports connect directly without an environment proxy.
+
+See the [six-channel guide](docs/NOTIFICATION_CHANNELS.md), [four account-channel guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md), [privacy](docs/PRIVACY.md), [user agreement](docs/USER_AGREEMENT.md) and [limits](docs/ALPHA_LIMITATIONS.md) for prerequisites, platform terms, retry/unknown-delivery behavior and costs. Heartbeat, local GeoIP and cloud egress estimates are separate features.
+
+<a id="telegram-and-local-geoip"></a>
+
+### Telegram setup
+
+Create your own bot using [BotFather](https://t.me/BotFather), start a conversation with it or add it to the intended group, then select **Set up Telegram** from Notification channels. Enter the token privately and a numeric chat ID. The token is stored in a restricted local file and does not belong in CLI arguments. [Full setup and target-isolation rules](docs/V0.4_OPERATIONS.md#telegram).
+
+Changing bot/chat or tightening privacy isolates older unsent messages; switching back does not adopt them. Same-target token rotation keeps retry/cooldown state. Inspect **Notification messages** before explicitly discarding isolated bodies. An in-flight request may finish at its original receiver; isolated unsent messages keep their seven-day expiry.
 
 ## Alerts and offline evidence
 
@@ -150,7 +167,7 @@ Start with the defaults, inspect your traffic, then adjust thresholds for your s
 | Traffic thresholds | SYN 5,000/s; UDP 10,000/s; ICMP 2,000/s; bandwidth 100 MiB/s. |
 | Report schedule | 09:00, host timezone. For example, choose Asia/Shanghai. |
 | Repeated incident updates | Merge within a 10-minute window. |
-| Optional services | Telegram, GeoIP downloads and egress estimates require setup. |
+| Optional services | Notification channels, GeoIP downloads and egress estimates require separate setup. |
 | IP privacy | Store/send network prefixes by default: IPv4 /24, IPv6 /48. |
 
 The menu manages **/etc/noderampart/config.json**; a full example is [included here](configs/noderampart.json). It preserves advanced fields and checks the complete configuration. File/socket paths remain within the service's supported directories; changing a database path does not migrate existing history.
@@ -193,32 +210,13 @@ Missing, pruned or overloaded history suppresses hints. Restarting after a
 configuration or privacy-key change starts a new observation period. Existing
 privacy settings apply; no additional raw addresses or baseline are stored.
 
-HTTPS heartbeat and a single generic JSON Webhook are also available, disabled by default. Configure fixed targets and protected bearer files in Notifications; no port is opened. Heartbeat separates process liveness from functional degradation, while Webhook shares the isolated outbox. [Configuration, identity changes and retry bounds](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook).
+HTTPS heartbeat is a separate, optional health-reporting mechanism, not a thirteenth notification channel. It distinguishes process liveness from functional degradation and opens no listener. [Heartbeat configuration](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook).
 
-## Native channels in the alpha.8 prerelease
+## Local GeoIP
 
-Feishu, WeCom, Discord, Slack, Teams Workflows and Google Chat each support one
-independent target and message language. Configure hidden credentials in
-**Notification channels**, review/apply, then explicitly select one test target.
-Eligible events/recoveries and short daily summaries use the existing durable
-outbox; no incoming commands, listeners or SDK runtime. Read the
-[English/Chinese operations](docs/NOTIFICATION_CHANNELS.md) for administrator
-requirements, Teams' acceptance boundary, Slack distribution terms, rotation
-and rollback. Real-platform tests require your separately authorized webhook.
-These features are included in the published alpha.8 assets. Contract/mock
-acceptance does not establish real platform delivery or receiver confirmation.
+Obtain your own [MaxMind GeoLite account](https://www.maxmind.com/en/geolite2/signup) and accept the [GeoLite terms](https://www.maxmind.com/en/geolite/eula). The menu can then download both City and ASN databases and optionally keep them updated. NodeRampart does not bundle GeoLite data or enroll on your behalf. Address lookups use the local databases; locations are approximate. You can skip GeoIP or use already licensed local MMDB files. [GeoIP details](docs/V0.4_OPERATIONS.md#local-geoip).
 
-## Telegram and local GeoIP
-
-Create your Telegram bot using [BotFather](https://t.me/BotFather), start a conversation with it or add it to the target group, then enter the token and target chat ID in the menu. NodeRampart stores the token in a restricted local file; it does not require it in command-line arguments. [Telegram setup details](docs/V0.4_OPERATIONS.md#telegram).
-
-Use a numeric chat ID. Messages are bound to the bot/chat identity without storing the token in the database. Changing bot/chat or tightening notification privacy retains older unsent messages in isolation; switching back does not adopt them. Same-target token rotation keeps retry/cooldown state, and disabling delivery pauses a known same-target queue. Inspect **Notification messages** and explicitly choose **Discard isolated notification bodies** if those bodies are no longer needed. An in-flight request may finish at its original receiver. Isolated unsent messages retain the existing seven-day expiry.
-
-Identical verified GeoIP updates keep the active databases and services running without a configuration restart.
-
-For GeoIP, obtain your own [MaxMind GeoLite account](https://www.maxmind.com/en/geolite2/signup) and accept the [GeoLite terms](https://www.maxmind.com/en/geolite/eula). The menu can then download both databases and optionally keep them updated. NodeRampart does not bundle GeoLite data or enroll on your behalf. Address lookups use the local databases; locations are approximate. You can skip GeoIP or use already licensed local MMDB files. [GeoIP details](docs/V0.4_OPERATIONS.md#local-geoip).
-
-Saved reports, incidents and notifications open directly from their lists. Next/previous page controls keep your query period and cursors. Configuration review shows old and new values before saving.
+Identical verified GeoIP updates keep the active databases and services running without a configuration restart. Saved reports, incidents and notifications open directly from their lists; paging preserves the query period and cursors. Configuration review shows old and new values before saving.
 
 ## Understanding the cost estimate
 
@@ -230,10 +228,7 @@ Guest TX is not identical to billable Internet egress. Free allowances and prici
 
 ## Full local reports, trends and cycle forecasts
 
-These commands read the local daemon. New daily snapshots preserve an independent
-full document; Telegram and Webhook receive a short numeric summary with source
-identifiers omitted. Original snapshots stay immutable. Older snapshots retain
-their short body and explicitly report that original full content is unavailable.
+These commands read the local daemon. New daily snapshots preserve an independent full document; notifications use channel-specific short summaries or approved templates rather than sending the full local report. Original snapshots stay immutable. Older snapshots retain their short body and explicitly report that original full content is unavailable.
 
 ~~~bash
 sudo noderampart report export --date 2026-09-29 --format html
@@ -311,9 +306,7 @@ For an SSH session without a terminal, allocate one with ssh -t, or use the exis
 
 `upgrade preflight` checks an explicit backup, configuration, keys, disk and local package metadata without upgrading; `upgrade rehearse` validates a temporary restored copy and cleans it afterward. Target schema compatibility remains unknown without verified target information. `threshold preview` compares current/candidate rules offline; the TUI connects draft preview to its existing confirmed save. Bounded local `threshold feedback` labels do not train or tune rules. See [operation examples and limits](docs/V0.4_OPERATIONS.md#upgrade-preflight-and-restore-rehearsal).
 
-New daily archives retain the full tariff, source, free allowance, byte unit and observed bytes used for their estimate. Backfilled reports use the tariff configured when generated; old archives are not re-priced. Alpha.6 migrates to database schema 11, preserving public schema 7 journal recovery while adding target isolation, full report documents, sensor commit watermarks and separate per-channel delivery decisions. Back up before upgrading because older binaries cannot open the migrated database. Legacy channel-only Telegram messages remain isolated rather than being assigned to the current receiver.
-
-Published alpha.6 packages include a Go dependency SBOM and matching GitHub attestations; see [verify a release](docs/RELEASE_VERIFICATION.md). Packaged README/license files remain the frozen release-source snapshot; later documentation updates do not replace package bytes or install a complete offline manual.
+Daily archives retain the tariff, source, free allowance, byte unit and observations used for their estimate. Backfills use the configuration at generation; saved archives are not re-priced. Back up the database and preserve matching configuration/credentials before upgrading; old binaries cannot open a newer schema. See [upgrade and rollback](docs/V0.4_OPERATIONS.md#upgrades-and-removal) and [historical release verification](docs/RELEASE_VERIFICATION.md). Packaged README/license files stay with their frozen release source; later documentation does not replace those bytes or install a complete offline manual.
 
 Contributors: [development guide](docs/DEVELOPMENT.md), [architecture](docs/ARCHITECTURE.md), [threat model](docs/THREAT_MODEL.md), [contributing](CONTRIBUTING.md). Ordinary tests do not need packet-capture privileges; privileged checks belong in disposable lab VMs.
 

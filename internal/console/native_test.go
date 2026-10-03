@@ -18,12 +18,10 @@ import (
 func openNativeSettings(t *testing.T, s *recordedScreen, channel string) string {
 	t.Helper()
 	selectIndex(s, 5)
-	awaitFrame(t, s, "Notification channels")
-	for i, name := range config.NativeChannelNames() {
-		if name == channel {
-			selectIndex(s, 11+i)
-			return awaitFrame(t, s, "Replacement webhook URL (hidden)")
-		}
+	awaitFrame(t, s, "NodeRampart — Notification channels")
+	if config.IsNativeChannel(channel) {
+		selectIndex(s, notificationActionIndex(t, channel+"_setup"))
+		return awaitFrame(t, s, "Replacement webhook URL (hidden)")
 	}
 	t.Fatal("unknown test channel")
 	return ""
@@ -85,7 +83,7 @@ func TestSimulationNativeHiddenInputCancellationAndIndependentLanguage(t *testin
 				t.Fatal("native URL rendered in clear text")
 			}
 			key(s, tcell.KeyEscape)
-			awaitFrame(t, s, "Notification channels")
+			awaitFrame(t, s, "NodeRampart — Notification channels")
 			if len(b.calls) != 0 || len(b.saves) != 0 {
 				t.Fatal("settings browsing/cancel sent or saved")
 			}
@@ -154,7 +152,7 @@ func TestSimulationNativeReviewCancelDoesNotApply(t *testing.T) {
 	key(s, tcell.KeyEnter)
 	awaitFrame(t, s, "Review notification settings")
 	key(s, tcell.KeyEscape)
-	awaitFrame(t, s, "Notification channels")
+	awaitFrame(t, s, "NodeRampart — Notification channels")
 	if len(b.calls) != 0 || len(b.saves) != 0 {
 		t.Fatal("cancelled review applied settings")
 	}
@@ -165,8 +163,8 @@ func TestSimulationNotificationHelpIsReadOnlyAndExplainsTeamsBoundary(t *testing
 	s, _, _ := launch(t, false, b)
 	awaitFrame(t, s, "Main menu")
 	selectIndex(s, 5)
-	awaitFrame(t, s, "Notification channels")
-	selectIndex(s, 17)
+	awaitFrame(t, s, "NodeRampart — Notification channels")
+	selectIndex(s, notificationActionIndex(t, "notification_help"))
 	frame := awaitFrame(t, s, "OAuth is unsupported")
 	if !strings.Contains(frame, "does not confirm final Teams display") || len(b.calls) != 0 || len(b.saves) != 0 {
 		t.Fatal("help omitted delivery boundary or contacted backend")
@@ -257,8 +255,8 @@ func TestSimulationNativeTestUnavailableDisplaysChineseFixedError(t *testing.T) 
 	selectIndex(s, 10)
 	awaitFrame(t, s, "主菜单")
 	selectIndex(s, 5)
-	awaitFrame(t, s, "通知渠道")
-	selectIndex(s, 3)
+	awaitFrame(t, s, "NodeRampart — 通知渠道")
+	selectIndex(s, notificationActionIndex(t, "notify_test"))
 	awaitFrame(t, s, "发送测试通知")
 	key(s, tcell.KeyEnter)
 	key(s, tcell.KeyDown)

@@ -24,8 +24,13 @@ var groups = []struct{ key, en, zh string }{
 }
 
 func (u *ui) configuration() {
+	u.configurationWithBack(u.home)
+}
+
+func (u *ui) configurationWithBack(back func()) {
+	show := func() { u.configurationWithBack(back) }
 	if u.busy {
-		u.output(u.tr("Configuration", "功能配置"), u.tr("Wait for the current operation to finish before editing configuration.", "请等待当前操作结束后再编辑配置。"), u.home)
+		u.output(u.tr("Configuration", "功能配置"), u.tr("Wait for the current operation to finish before editing configuration.", "请等待当前操作结束后再编辑配置。"), back)
 		return
 	}
 	if !u.loaded {
@@ -33,38 +38,42 @@ func (u *ui) configuration() {
 			snapshot, err := u.backend.Load(ctx)
 			return func() {
 				if err != nil {
-					u.output(u.tr("Configuration unavailable", "配置不可用"), u.tr("The configuration could not be loaded. Run diagnosis or recover a previous configuration from Services.", "无法加载配置。请运行诊断，或在服务菜单恢复之前的配置。"), u.home)
+					u.output(u.tr("Configuration unavailable", "配置不可用"), u.tr("The configuration could not be loaded. Run diagnosis or recover a previous configuration from Services.", "无法加载配置。请运行诊断，或在服务菜单恢复之前的配置。"), back)
 					return
 				}
 				u.snapshot = snapshot
 				u.baseline = cloneConfig(snapshot.Config)
 				u.loaded = true
-				u.configuration()
+				show()
 			}
-		}, u.home)
+		}, back)
 		return
 	}
 	items := []menuItem{}
 	for _, group := range groups {
 		g := group
-		items = append(items, menuItem{g.en, g.zh, "Edit settings in this group.", "编辑本组设置。", func() { u.configGroup(g.key) }})
+		items = append(items, menuItem{g.en, g.zh, "Edit settings in this group.", "编辑本组设置。", func() { u.configGroupWithBack(g.key, show) }})
 	}
 	items = append(items,
-		menuItem{"Validate draft", "检查配置草稿", "Check all settings together before saving.", "保存前联合检查所有设置。", func() { u.validateDraft() }},
-		menuItem{"Try thresholds on offline data", "使用离线数据试运行阈值", "Compare current and draft rules before the existing review and save step.", "比较当前规则与草稿，再按原有流程检查并保存。", u.previewThresholdDraft},
-		menuItem{"Review and save", "确认并保存", "Save validated settings; applying may briefly restart services.", "保存有效配置；生效时可能短暂重启服务。", u.saveConfiguration},
+		menuItem{"Validate draft", "检查配置草稿", "Check all settings together before saving.", "保存前联合检查所有设置。", func() { u.validateDraftWithBack(show) }},
+		menuItem{"Try thresholds on offline data", "使用离线数据试运行阈值", "Compare current and draft rules before the existing review and save step.", "比较当前规则与草稿，再按原有流程检查并保存。", func() { u.previewThresholdDraftWithBack(show) }},
+		menuItem{"Review and save", "确认并保存", "Save validated settings; applying may briefly restart services.", "保存有效配置；生效时可能短暂重启服务。", func() { u.saveConfigurationWithBack(show) }},
 		menuItem{"Discard edits and reload", "放弃修改并重新加载", "Reload the latest file without saving this draft.", "重新读取最新文件，不保存当前草稿。", func() {
-			u.confirm(u.tr("Discard this draft and reload the current configuration?", "放弃当前草稿并重新加载配置？"), func() { u.dirty = false; u.changed = map[string]bool{}; u.loaded = false; u.configuration() }, u.configuration)
+			u.confirm(u.tr("Discard this draft and reload the current configuration?", "放弃当前草稿并重新加载配置？"), func() { u.dirty = false; u.changed = map[string]bool{}; u.loaded = false; show() }, show)
 		}},
 	)
 	title := u.tr("Configuration", "功能配置") + fmt.Sprintf(" · schema %d", u.snapshot.Config.SchemaVersion)
 	if u.dirty {
 		title += u.tr(" · unsaved edits", " · 有未保存修改")
 	}
-	u.menu(title, title, items, u.home)
+	u.menu(title, title, items, back)
 }
 
 func (u *ui) configGroup(key string) {
+	u.configGroupWithBack(key, u.configuration)
+}
+
+func (u *ui) configGroupWithBack(key string, back func()) {
 	items := []menuItem{}
 	title := key
 	for _, g := range groups {
@@ -81,18 +90,22 @@ func (u *ui) configGroup(key string) {
 		if value == "" {
 			value = u.tr("(empty)", "（空）")
 		}
-		items = append(items, menuItem{f.en, f.zh, value, value, func() { u.editField(f) }})
+		items = append(items, menuItem{f.en, f.zh, value, value, func() { u.editFieldWithBack(f, func() { u.configGroupWithBack(key, back) }) }})
 	}
-	u.menu(title, title, items, u.configuration)
+	u.menu(title, title, items, back)
 }
 
 func (u *ui) editField(f field) {
+	u.editFieldWithBack(f, func() { u.configGroup(f.group) })
+}
+
+func (u *ui) editFieldWithBack(f field, back func()) {
 	if officialSubscriptionField(f.path) {
-		u.output(u.tr(f.en, f.zh), u.tr(f.helpEN, f.helpZH), u.configuration)
+		u.output(u.tr(f.en, f.zh), u.tr(f.helpEN, f.helpZH), back)
 		return
 	}
 	if f.path == "reports.timezone" {
-		u.editTimezone(f)
+		u.editTimezoneWithBack(f, back)
 		return
 	}
 	form := tview.NewForm()
@@ -121,12 +134,11 @@ func (u *ui) editField(f field) {
 		form.AddFormItem(input)
 		read = input.GetText
 	}
-	back := func() { u.configGroup(f.group) }
 	form.AddButton(u.tr("Keep in draft", "暂存到草稿"), func() {
 		candidate := u.snapshot.Config
 		candidate.Sensor.Interfaces = append([]string(nil), candidate.Sensor.Interfaces...)
 		if err := setField(&candidate, f.path, read()); err != nil {
-			u.output(u.tr("Invalid value", "输入无效"), u.tr("The value has an invalid type, unsupported characters, or exceeds the size limit. See the field's format and limits.", "输入类型无效、包含不支持的字符或超过长度限制。请参考字段格式与范围。"), func() { u.editField(f) })
+			u.output(u.tr("Invalid value", "输入无效"), u.tr("The value has an invalid type, unsupported characters, or exceeds the size limit. See the field's format and limits.", "输入类型无效、包含不支持的字符或超过长度限制。请参考字段格式与范围。"), func() { u.editFieldWithBack(f, back) })
 			return
 		}
 		u.snapshot.Config = candidate
@@ -141,27 +153,35 @@ func (u *ui) editField(f field) {
 }
 
 func (u *ui) validateDraft() {
+	u.validateDraftWithBack(u.configuration)
+}
+
+func (u *ui) validateDraftWithBack(back func()) {
 	message := u.tr("Configuration is valid. Save to apply it.", "配置有效；保存后生效。")
 	if err := u.snapshot.Config.Validate(); err != nil {
 		message = err.Error()
 	}
-	u.output(u.tr("Draft validation", "草稿检查"), message, u.configuration)
+	u.output(u.tr("Draft validation", "草稿检查"), message, back)
 }
 
 func (u *ui) saveConfiguration() {
+	u.saveConfigurationWithBack(u.configuration)
+}
+
+func (u *ui) saveConfigurationWithBack(back func()) {
 	if !u.dirty {
-		u.output(u.tr("Configuration", "功能配置"), u.tr("There are no unsaved changes.", "没有未保存的修改。"), u.configuration)
+		u.output(u.tr("Configuration", "功能配置"), u.tr("There are no unsaved changes.", "没有未保存的修改。"), back)
 		return
 	}
 	if err := u.snapshot.Config.Validate(); err != nil {
-		u.output(u.tr("Fix settings before saving", "请先修正配置"), err.Error(), u.configuration)
+		u.output(u.tr("Fix settings before saving", "请先修正配置"), err.Error(), back)
 		return
 	}
 	diff := configDiff(u.baseline, u.snapshot.Config)
 	if diff == "" {
 		u.dirty = false
 		u.changed = map[string]bool{}
-		u.output(u.tr("Configuration", "功能配置"), u.tr("There are no effective changes.", "没有实际修改。"), u.configuration)
+		u.output(u.tr("Configuration", "功能配置"), u.tr("There are no effective changes.", "没有实际修改。"), back)
 		return
 	}
 	if !reflect.DeepEqual(u.baseline.Notifications, u.snapshot.Config.Notifications) || u.baseline.Privacy.NotificationIP != u.snapshot.Config.Privacy.NotificationIP {
@@ -186,7 +206,7 @@ func (u *ui) saveConfiguration() {
 						} else {
 							text = err.Error()
 						}
-						u.output(u.tr("Configuration save did not complete", "配置保存未完成"), cleanText(text), u.configuration)
+						u.output(u.tr("Configuration save did not complete", "配置保存未完成"), cleanText(text), back)
 						return
 					}
 					u.dirty = false
@@ -198,11 +218,11 @@ func (u *ui) saveConfiguration() {
 					} else {
 						text += "\n" + u.tr("Saved, but the refreshed configuration could not be read. Reload before editing again.", "已保存，但无法重新读取配置；再次编辑前请重新加载。")
 					}
-					u.output(u.tr("Configuration saved", "配置已保存"), text, u.configuration)
+					u.output(u.tr("Configuration saved", "配置已保存"), text, back)
 				}
-			}, u.configuration)
-		}, u.configuration)
-	}, u.configuration)
+			}, back)
+		}, back)
+	}, back)
 }
 
 func cloneConfig(c config.Config) config.Config {
