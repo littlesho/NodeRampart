@@ -5,9 +5,9 @@
 Name:           noderampart
 %{!?noderampart_commit:%global noderampart_commit unknown}
 %{!?noderampart_build_date:%global noderampart_build_date unknown}
-%{!?noderampart_version:%global noderampart_version 0.4.0-alpha.9}
+%{!?noderampart_version:%global noderampart_version 0.4.0-alpha.10}
 Version:        0.4.0
-Release:        0.alpha.10%{?dist}
+Release:        0.alpha.11%{?dist}
 Summary:        Security monitoring and traffic reporting agent for Linux VPS hosts
 License:        MIT AND BSD-3-Clause AND ISC AND Apache-2.0
 URL:            https://github.com/littlesho/NodeRampart
@@ -133,6 +133,10 @@ fi
 chown root:noderampart %{_sysconfdir}/noderampart/config.json
 chmod 0640 %{_sysconfdir}/noderampart/config.json
 %{_bindir}/noderampart config test --config %{_sysconfdir}/noderampart/config.json >/dev/null
+if ! %{_bindir}/noderampart assets reconcile-schedule; then
+  echo "GeoIP updater unit reconciliation failed; retry noderampart assets reconcile-schedule and systemctl daemon-reload before running the updater. New package files remain installed; package configuration may need to be retried." >&2
+  exit 1
+fi
 %systemd_post noderampartd.service noderampart-sensor.service
 
 %preun

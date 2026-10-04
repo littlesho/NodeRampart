@@ -100,8 +100,15 @@ func officialEventSummary(event model.Event, supported, zh bool) string {
 		return localText(zh, "Port count unknown", "端口计数未知")
 	}
 	if strings.HasPrefix(event.Kind, "health_") {
+		diagnostic := healthDiagnostic(event, time.UTC, zh).compact
 		if reason, ok := reasonText[event.Evidence["reason"]]; ok {
+			if diagnostic != "" {
+				return reason.local(zh) + "; " + diagnostic
+			}
 			return reason.local(zh)
+		}
+		if diagnostic != "" {
+			return diagnostic
 		}
 		return localText(zh, "Health observation; details local", "健康观察；详情在本地")
 	}

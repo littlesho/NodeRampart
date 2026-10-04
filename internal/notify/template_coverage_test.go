@@ -19,7 +19,7 @@ import (
 // kind, evidence field or fixed summary requires a reviewed localized template;
 // passing an English generated sentence through as "original text" is unsafe.
 var eventEvidenceKeys = []string{
-	"baseline_days", "baseline_mean_bytes", "basis", "condition_since_utc", "count_basis", "coverage", "coverage_complete", "currency", "detection_window_complete", "elapsed_millis", "growth_ratio", "history_basis", "history_hint_state", "history_source_hint", "history_time_hint", "incident_duration_millis", "interface", "invalid_user", "method", "milestone", "observation", "observed_bytes", "observed_cost", "observed_rate", "packets", "period", "period_end_utc", "period_start_utc", "preceding_source_failures", "preceding_source_failures_complete", "reason", "rule", "source_scope", "threshold", "threshold_bytes", "threshold_cost", "threshold_rate", "top_source_bytes", "top_source_packets", "window", "window_millis", "window_seconds",
+	"baseline_days", "baseline_mean_bytes", "basis", "component_reason", "condition_since_utc", "count_basis", "coverage", "coverage_complete", "currency", "detection_window_complete", "diagnostic_at_utc", "diagnostic_scope", "elapsed_millis", "failure_cause", "failure_stage", "geoip_edition", "growth_ratio", "history_basis", "history_hint_state", "history_source_hint", "history_time_hint", "http_status", "incident_duration_millis", "interface", "invalid_user", "journal_exit_code", "journal_signal", "journal_state", "method", "milestone", "observation", "observed_bytes", "observed_cost", "observed_rate", "packets", "period", "period_end_utc", "period_start_utc", "preceding_source_failures", "preceding_source_failures_complete", "reason", "rule", "source_scope", "threshold", "threshold_bytes", "threshold_cost", "threshold_rate", "top_source_bytes", "top_source_packets", "window", "window_millis", "window_seconds",
 }
 
 func parsedProducer(t *testing.T, path string) *ast.File {
@@ -71,7 +71,7 @@ func sortedSet(set map[string]bool) []string {
 }
 
 func TestLocalizedTemplatesCoverActualProducerContracts(t *testing.T) {
-	paths := []string{"../detect/auth.go", "../detect/network.go", "../detect/fleet.go", "../daemon/auth_history.go", "../daemon/health.go", "../daemon/monitor_state.go"}
+	paths := []string{"../detect/auth.go", "../detect/network.go", "../detect/fleet.go", "../daemon/auth_history.go", "../daemon/health.go", "../daemon/monitor_state.go", "../daemon/monitor_diagnostics.go"}
 	keys, kinds, summaries := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	for _, path := range paths {
 		ast.Inspect(parsedProducer(t, path), func(node ast.Node) bool {

@@ -4,6 +4,7 @@ package collector
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -40,6 +41,7 @@ type JournalEntry struct {
 	ReceivedAt  time.Time
 	Observation *AuthObservation
 	SkipReason  string
+	SkipCause   string // Fixed diagnostic subclass; never journal field contents.
 }
 
 type JournalStatus struct {
@@ -48,13 +50,25 @@ type JournalStatus struct {
 	At     time.Time `json:"at_utc"`
 	Since  time.Time `json:"since_utc"`
 	Count  uint64    `json:"count"`
+	// Diagnostics contain only fixed classifications, never journal text,
+	// command arguments, paths or raw errors. A restarted quiet child can be
+	// running while retaining a last_failure diagnostic until trusted ingest.
+	Cause           string    `json:"cause,omitempty"`
+	Detail          string    `json:"detail,omitempty"`
+	DiagnosticScope string    `json:"diagnostic_scope,omitempty"`
+	DiagnosticAt    time.Time `json:"diagnostic_at_utc,omitzero"`
+	ExitCode        *int      `json:"exit_code,omitempty"`
+	Signal          string    `json:"signal,omitempty"`
 }
 
 func (s JournalStatus) QualityDegraded() bool {
 	return s.State == "degraded" || s.State == "gap" && s.Reason == "malformed_record"
 }
 
-type journalAttemptError struct{ reason string }
+type journalAttemptError struct {
+	reason     string
+	diagnostic JournalDiagnostic
+}
 
 // ErrJournalAlreadyAcknowledged reports a successful duplicate checkpoint,
 // not a new trusted ingest. It advances replay without clearing recovery.
@@ -87,8 +101,41 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 	if options.BackfillWindow < 0 || options.BackfillWindow > 24*time.Hour || options.MaxBackfill < 1 || options.MaxBackfill > 100_000 || options.RestartMin < 0 || options.RestartMax < options.RestartMin || options.RestartMax > 5*time.Minute {
 		return errors.New("invalid journal recovery bounds")
 	}
-	emit := func(state, reason string, since time.Time, count uint64) error {
-		status := JournalStatus{State: state, Reason: reason, At: time.Now().UTC(), Since: since, Count: count}
+	var lastFailure, qualityFailure JournalDiagnostic
+	if options.InitialRecoveryPending {
+		qualityFailure = journalDiagnostic("recovery_pending", time.Now().UTC())
+		lastFailure = qualityFailure
+	}
+	publish := func(status JournalStatus) error {
+		status.At = time.Now().UTC()
+		diagnostic := status.SafeDiagnostic()
+		switch status.Reason {
+		case "record_persisted":
+			lastFailure, qualityFailure = JournalDiagnostic{}, JournalDiagnostic{}
+		case "process_started":
+			diagnostic = lastFailure
+			if diagnostic.Cause != "" {
+				diagnostic.Scope = "last_failure"
+			}
+			if status.State == "retrying" {
+				diagnostic = qualityFailure
+				if diagnostic.Cause == "" {
+					diagnostic = journalDiagnostic("recovery_pending", status.At)
+				}
+				diagnostic.Scope = "current"
+			}
+		default:
+			if diagnostic.Cause == "" {
+				diagnostic = journalDiagnostic(status.Reason, status.At)
+			}
+			if status.QualityDegraded() {
+				qualityFailure = diagnostic
+				lastFailure = diagnostic
+			} else if status.State == "retrying" {
+				lastFailure = diagnostic
+			}
+		}
+		status.setDiagnostic(diagnostic)
 		var err error
 		if status.QualityDegraded() && options.OnDegradation != nil {
 			err = options.OnDegradation(ctx, status)
@@ -97,9 +144,16 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 			options.OnStatus(status)
 		}
 		if err != nil {
-			return journalAttemptError{reason: "persist_failed"}
+			return journalFailure("persist_failed", nil, nil)
 		}
 		return nil
+	}
+	emit := func(state, reason string, since time.Time, count uint64, cause ...string) error {
+		status := JournalStatus{State: state, Reason: reason, Since: since, Count: count}
+		if len(cause) == 1 {
+			status.setDiagnostic(journalDiagnostic(cause[0], time.Now().UTC()))
+		}
+		return publish(status)
 	}
 	cursor, acknowledgedAt := options.InitialCursor, options.InitialObservedAt
 	if cursor != "" && !validJournalCursor(cursor) {
@@ -137,13 +191,18 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 		err := j.runReliableAttempt(ctx, cursor, since, started, options.MaxBackfill, &recoveryPending, func(entry JournalEntry) error {
 			ack := consume(ctx, entry)
 			if ack != nil && !errors.Is(ack, ErrJournalAlreadyAcknowledged) {
-				return journalAttemptError{reason: "persist_failed"}
+				return journalFailure("persist_failed", nil, nil)
 			}
 			cursor = entry.Cursor
 			if entry.ReceivedAt.After(acknowledgedAt) {
 				acknowledgedAt = entry.ReceivedAt
 			}
 			forceSince = time.Time{}
+			if ack == nil && !recoveryPending && lastFailure.Cause != "" && (entry.SkipReason == "" || entry.SkipReason == "unrecognized_message") {
+				// Process startup only restores process availability. Clear the
+				// retained failure evidence after a new trusted durable ACK.
+				emit("running", "record_persisted", entry.ReceivedAt, 0)
+			}
 			return ack
 		}, emit)
 		if ctx.Err() != nil {
@@ -165,7 +224,9 @@ func (j Journal) RunReliable(ctx context.Context, options JournalOptions, consum
 			cursor = ""
 			forceSince = started
 		}
-		emit("retrying", reason, started, 1)
+		status := JournalStatus{State: "retrying", Reason: reason, Since: started, Count: 1}
+		status.setDiagnostic(failure.diagnostic)
+		publish(status)
 		if cursor != before || time.Since(started) >= time.Minute {
 			backoff = options.RestartMin
 		}
@@ -185,7 +246,7 @@ func validJournalCursor(cursor string) bool {
 	return len(cursor) > 0 && len(cursor) <= 4096 && utf8.ValidString(cursor) && strings.IndexFunc(cursor, func(r rune) bool { return r < 0x21 || r == 0x7f }) < 0
 }
 
-func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, started time.Time, maxBackfill int, recoveryPending *bool, consume func(JournalEntry) error, emit func(string, string, time.Time, uint64) error) error {
+func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, started time.Time, maxBackfill int, recoveryPending *bool, consume func(JournalEntry) error, emit func(string, string, time.Time, uint64, ...string) error) error {
 	args := append([]string{"--follow", "--no-tail", "--system", "--boot=all", "--output=json", "--no-pager"}, journalSelectionArguments()...)
 	if cursor != "" {
 		// journalctl may silently approximate a vacuumed --after-cursor. Read
@@ -198,17 +259,17 @@ func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, s
 	child, cancel := context.WithCancel(ctx)
 	defer cancel()
 	command := exec.CommandContext(child, j.Path, args...)
-	command.Env = append(os.Environ(), "LC_ALL=C")
+	command.Env = append(os.Environ(), "LC_ALL=C", "SYSTEMD_COLORS=0", "SYSTEMD_URLIFY=0")
 	command.WaitDelay = time.Second
 	var stderr boundedJournalStderr
 	command.Stderr = &stderr
 	stdout, err := command.StdoutPipe()
 	if err != nil {
-		return journalAttemptError{reason: "start_failed"}
+		return journalFailure("start_failed", err, nil)
 	}
 	defer stdout.Close()
 	if err := command.Start(); err != nil {
-		return journalAttemptError{reason: "start_failed"}
+		return journalFailure("start_failed", err, nil)
 	}
 	waited := false
 	defer func() {
@@ -283,7 +344,7 @@ func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, s
 				}
 				if entry.SkipReason != "" && entry.SkipReason != "unrecognized_message" {
 					*recoveryPending = true
-					if err := emit("degraded", entry.SkipReason, entry.ReceivedAt, 1); err != nil {
+					if err := emit("degraded", entry.SkipReason, entry.ReceivedAt, 1, entry.SkipCause); err != nil {
 						return err
 					}
 				}
@@ -310,7 +371,7 @@ func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, s
 		}
 		if readErr != nil {
 			if !errors.Is(readErr, io.EOF) {
-				return journalAttemptError{reason: "read_failed"}
+				return journalFailure("read_failed", readErr, nil)
 			}
 			break
 		}
@@ -318,35 +379,43 @@ func (j Journal) runReliableAttempt(ctx context.Context, cursor string, since, s
 	err = command.Wait()
 	waited = true
 	if err != nil && cursor != "" && stderr.cursorUnavailable() {
-		return journalAttemptError{reason: "cursor_unavailable"}
+		return journalFailure("cursor_unavailable", err, &stderr)
 	}
-	return journalAttemptError{reason: "process_exited"}
+	return journalFailure("process_exited", err, &stderr)
 }
 
 func decodeJournalEntry(raw []byte, now time.Time) (JournalEntry, bool) {
 	// Decode addressing metadata separately so a binary/array MESSAGE cannot
 	// hide a valid journal cursor. No sender-provided field is an authority for
 	// checkpoint advancement: these two fields are generated by journalctl.
-	var address struct {
-		Cursor   string `json:"__CURSOR"`
-		Received string `json:"__REALTIME_TIMESTAMP"`
+	// MESSAGE is checked separately below: binary/array values must not make
+	// journal-assigned addressing metadata impossible to checkpoint.
+	var metadata struct {
+		Cursor   string          `json:"__CURSOR"`
+		Received string          `json:"__REALTIME_TIMESTAMP"`
+		Message  json.RawMessage `json:"MESSAGE"`
 	}
-	if json.Unmarshal(raw, &address) != nil || !validJournalCursor(address.Cursor) {
+	if json.Unmarshal(raw, &metadata) != nil || !validJournalCursor(metadata.Cursor) {
 		return JournalEntry{}, false
 	}
-	microseconds, err := strconv.ParseInt(address.Received, 10, 64)
+	microseconds, err := strconv.ParseInt(metadata.Received, 10, 64)
 	if err != nil || microseconds <= 0 {
 		return JournalEntry{}, false
 	}
-	entry := JournalEntry{Cursor: address.Cursor, ReceivedAt: time.UnixMicro(microseconds).UTC()}
+	entry := JournalEntry{Cursor: metadata.Cursor, ReceivedAt: time.UnixMicro(microseconds).UTC()}
 	entry.ObservedAt = entry.ReceivedAt
 	var record journalRecord
-	if json.Unmarshal(raw, &record) != nil {
+	if json.Unmarshal(raw, &record) != nil || len(metadata.Message) == 0 || bytes.Equal(bytes.TrimSpace(metadata.Message), []byte("null")) {
+		// journalctl represents omitted oversized fields as null. An absent
+		// or null MESSAGE is missing evidence, not a trusted empty string;
+		// treating it as unrecognized_message could falsely clear recovery.
 		entry.SkipReason = "malformed_record"
+		entry.SkipCause = "malformed_record"
 		return entry, true
 	}
-	if !record.trustedSSHOrigin() {
+	if cause := record.sshOriginFailure(); cause != "" {
 		entry.SkipReason = "untrusted_origin"
+		entry.SkipCause = cause
 		return entry, true
 	}
 	entry.ObservedAt = record.observedAt(now)
@@ -377,18 +446,4 @@ func readJournalLine(reader *bufio.Reader) ([]byte, bool, error) {
 			return line, oversized, err
 		}
 	}
-}
-
-type boundedJournalStderr struct{ data []byte }
-
-func (b *boundedJournalStderr) Write(data []byte) (int, error) {
-	if left := 8192 - len(b.data); left > 0 {
-		b.data = append(b.data, data[:min(len(data), left)]...)
-	}
-	return len(data), nil
-}
-
-func (b *boundedJournalStderr) cursorUnavailable() bool {
-	message := strings.ToLower(string(b.data))
-	return strings.Contains(message, "failed to seek to cursor") || strings.Contains(message, "cannot seek to cursor") || strings.Contains(message, "cursor not found")
 }

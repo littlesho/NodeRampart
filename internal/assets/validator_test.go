@@ -27,6 +27,30 @@ func TestMain(m *testing.M) {
 		input := os.NewFile(3, "synthetic-validator-input")
 		prefix := make([]byte, 256)
 		n, _ := input.ReadAt(prefix, 0)
+		if bytes.HasPrefix(prefix[:n], []byte("noderampart-validator-drop-block\n")) {
+			base := strings.TrimSpace(string(prefix[len("noderampart-validator-drop-block\n"):n]))
+			ready, readyErr := os.OpenFile(filepath.Join(base, "ready"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+			descendant, descendantErr := os.OpenFile(filepath.Join(base, "descendant"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+			if readyErr != nil || descendantErr != nil || constrainValidator() != nil || os.Geteuid() == 0 || !validatorFixtureCapabilitiesCleared() {
+				os.Exit(1)
+			}
+			// Retained fixture descriptors permit readiness reporting after the
+			// real privilege drop, without writable paths for nobody. Both this
+			// process and its descendant now require the parent's CAP_KILL.
+			child := exec.Command("/bin/sleep", "2")
+			child.Stdout, child.Stderr = os.Stdout, os.Stderr
+			if child.Start() != nil {
+				os.Exit(1)
+			}
+			_, _ = descendant.WriteString(strconv.Itoa(child.Process.Pid))
+			_ = descendant.Close()
+			_, _ = ready.WriteString(strconv.Itoa(os.Getpid()))
+			_ = ready.Close()
+			// A broken cancellation still self-terminates this synthetic fixture.
+			time.Sleep(2 * time.Second)
+			_ = child.Wait()
+			os.Exit(1)
+		}
 		if bytes.HasPrefix(prefix[:n], []byte("noderampart-validator-block\n")) {
 			base := strings.TrimSpace(string(prefix[len("noderampart-validator-block\n"):n]))
 			child := exec.Command("/bin/sh", "-c", `echo $$ > "$1/descendant"; sleep 1 & grandchild=$!; echo "$grandchild" > "$1/grandchild"; wait "$grandchild"; echo late > "$1/late"`, "fixture", base)
@@ -49,14 +73,42 @@ func TestMain(m *testing.M) {
 		if err := ValidatorCommand(os.Args[3:], os.Stdout); err != nil {
 			os.Exit(1)
 		}
+		capabilitiesCleared := validatorFixtureCapabilitiesCleared()
 		runtime.KeepAlive(input)
 		var cpu unix.Rlimit
-		if os.Geteuid() == 0 || unix.Getrlimit(unix.RLIMIT_CPU, &cpu) != nil || cpu.Max > 30 {
+		if os.Geteuid() == 0 || !capabilitiesCleared || unix.Getrlimit(unix.RLIMIT_CPU, &cpu) != nil || cpu.Max > 30 {
 			os.Exit(1)
 		}
 		os.Exit(0)
 	}
 	os.Exit(m.Run())
+}
+
+// The validator must lose authority after its real UID transition even when
+// systemd starts the updater with ambient CAP_SETUID. Inheritable and bounding
+// sets may remain nonempty; they do not grant the nobody parser effective caps.
+func validatorFixtureCapabilitiesCleared() bool {
+	header := unix.CapUserHeader{Version: unix.LINUX_CAPABILITY_VERSION_3}
+	var capabilities [2]unix.CapUserData
+	if unix.Capget(&header, &capabilities[0]) != nil {
+		return false
+	}
+	for _, capability := range capabilities {
+		if capability.Permitted != 0 || capability.Effective != 0 {
+			return false
+		}
+	}
+	status, err := os.ReadFile("/proc/self/status")
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(string(status), "\n") {
+		if value, ok := strings.CutPrefix(line, "CapAmb:"); ok {
+			ambient, err := strconv.ParseUint(strings.TrimSpace(value), 16, 64)
+			return err == nil && ambient == 0
+		}
+	}
+	return false
 }
 
 func TestMMDBValidatorFailureDiagnosticsAreBoundedAndAllowlisted(t *testing.T) {
@@ -237,9 +289,17 @@ func TestMMDBValidatorCancellationStopsOwnedChildAndDescendant(t *testing.T) {
 	}
 	defer file.Close()
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	done := make(chan error, 1)
-	go func() { _, err := verifyMMDBFile(ctx, file, "GeoLite2-City"); done <- err }()
+	finished := make(chan struct{})
+	defer func() {
+		cancel()
+		<-finished // Cancellation alone does not synchronize File.Fd with Close.
+	}()
+	go func() {
+		defer close(finished)
+		_, err := verifyMMDBFile(ctx, file, "GeoLite2-City")
+		done <- err
+	}()
 	parentData := waitValidatorFixture(t, filepath.Join(base, "ready"))
 	childData := waitValidatorFixture(t, filepath.Join(base, "descendant"))
 	grandchildData := waitValidatorFixture(t, filepath.Join(base, "grandchild"))

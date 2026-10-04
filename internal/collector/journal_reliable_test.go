@@ -369,6 +369,8 @@ func TestJournalSessionScopeRejectsUntrustedFields(t *testing.T) {
 		{"_EXE", `"/usr/lib/openssh/../openssh/sshd-session"`, "untrusted_origin"},
 		{"_EXE", `"/usr/lib/openssh/sshd-session\u0000"`, "untrusted_origin"},
 		{"_SYSTEMD_UNIT", `"user@1000.service"`, "untrusted_origin"},
+		{"_SYSTEMD_UNIT", `""`, "untrusted_origin"},
+		{"_SYSTEMD_UNIT", `null`, "untrusted_origin"},
 		{"_SYSTEMD_USER_UNIT", `"sshd.service"`, "untrusted_origin"},
 		{"_SYSTEMD_USER_UNIT", `"session-42.scope"`, "untrusted_origin"},
 		{"_TRANSPORT", `"stdout"`, "untrusted_origin"},
@@ -408,7 +410,9 @@ func TestJournalSessionScopeRejectsUntrustedFields(t *testing.T) {
 			}
 		}
 	}
-	for _, field := range []string{"_UID", "_EXE", "_SYSTEMD_UNIT", "_TRANSPORT"} {
+	// _SYSTEMD_UNIT is optional only when absent. Explicit empty/null values
+	// remain covered by the rejection cases above.
+	for _, field := range []string{"_UID", "_EXE", "_TRANSPORT"} {
 		for _, value := range []string{"", `""`, "null"} {
 			var fields map[string]json.RawMessage
 			if err := json.Unmarshal([]byte(valid), &fields); err != nil {
@@ -456,7 +460,7 @@ func TestReliableJournalSessionCloseThenIdle(t *testing.T) {
 					done <- (Journal{Path: path}).runReliableAttempt(ctx, "", at.Add(-time.Second), time.Now().UTC(), 100, &pending, func(entry JournalEntry) error {
 						consumed <- entry
 						return nil
-					}, func(state, reason string, since time.Time, count uint64) error {
+					}, func(state, reason string, since time.Time, count uint64, _ ...string) error {
 						statuses <- JournalStatus{State: state, Reason: reason, Since: since, Count: count}
 						return nil
 					})

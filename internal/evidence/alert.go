@@ -30,5 +30,12 @@ func projectAlert(kind string, value *model.AlertContext) *model.AlertContext {
 	copy.BaselineDays = copyAlertPointer(value.BaselineDays)
 	copy.GrowthRatio = copyAlertPointer(value.GrowthRatio)
 	copy.ConditionSince = copyAlertPointer(value.ConditionSince)
+	if value.Diagnostic != nil {
+		diagnostic := *value.Diagnostic
+		diagnostic.HTTPStatus = copyAlertPointer(value.Diagnostic.HTTPStatus)
+		diagnostic.JournalExitCode = copyAlertPointer(value.Diagnostic.JournalExitCode)
+		diagnostic.DiagnosticAt = copyAlertPointer(value.Diagnostic.DiagnosticAt)
+		copy.Diagnostic = &diagnostic
+	}
 	return &copy
 }

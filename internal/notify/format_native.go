@@ -40,6 +40,9 @@ func FormatNativeEvent(hostname string, event model.Event, language string, loca
 		lines = append(lines, localText(zh, "WARNING: incomplete coverage.", "警告：覆盖不足。"))
 	}
 	lines = append(lines, localText(zh, "Evidence: ", "证据：")+nativeField(eventSummary(event, supported, zh), 420))
+	for _, field := range healthDiagnostic(event, location, zh).fields {
+		lines = append(lines, field.label.local(zh)+": "+nativeField(field.value, 256))
+	}
 	if reason, ok := reasonText[event.Evidence["reason"]]; ok {
 		lines = append(lines, line("Reason", "原因", reason.local(zh)))
 	}

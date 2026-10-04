@@ -180,6 +180,14 @@ func openManagedFileAt(parent *os.File, path string, maximum int64, secret bool,
 // RENAME_NOREPLACE. Replacements are guarded by the management lock and, for
 // config, a fresh fingerprint comparison immediately before this call.
 func writeFile(path string, content io.Reader, maximum int64, mode uint32, uid, gid int, replace bool) error {
+	return writeFileExpected(path, content, maximum, mode, uid, gid, replace, nil)
+}
+
+// An expected identity additionally protects a recognized managed artifact
+// from observed replacement or edits while its new bytes are being staged.
+// Like writeFile, this relies on trusted directories and the management lock;
+// it is not a compare-and-swap primitive against an uncooperative root writer.
+func writeFileExpected(path string, content io.Reader, maximum int64, mode uint32, uid, gid int, replace bool, expected *unix.Stat_t) error {
 	if !cleanPath(path) {
 		return errors.New("invalid management output path")
 	}
@@ -191,6 +199,9 @@ func writeFile(path string, content io.Reader, maximum int64, mode uint32, uid, 
 	base := filepath.Base(path)
 	var stat unix.Stat_t
 	err = unix.Fstatat(int(parent.Fd()), base, &stat, unix.AT_SYMLINK_NOFOLLOW)
+	if expected != nil && (!replace || err != nil || !sameManagedFile(*expected, stat)) {
+		return errors.New("recognized management output changed before replacement")
+	}
 	if err == nil {
 		if !replace || stat.Mode&unix.S_IFMT != unix.S_IFREG || stat.Nlink != 1 || stat.Mode&0o022 != 0 ||
 			stat.Uid != uint32(os.Geteuid()) && stat.Uid != uint32(uid) {
@@ -218,6 +229,12 @@ func writeFile(path string, content io.Reader, maximum int64, mode uint32, uid, 
 	if replace {
 		flags = 0
 	}
+	if expected != nil {
+		var current unix.Stat_t
+		if unix.Fstatat(int(parent.Fd()), base, &current, unix.AT_SYMLINK_NOFOLLOW) != nil || !sameManagedFile(*expected, current) {
+			return errors.New("recognized management output changed before publication")
+		}
+	}
 	if unix.Renameat2(int(parent.Fd()), temporary, int(parent.Fd()), base, flags) != nil {
 		return errors.New("management output could not be published")
 	}
@@ -225,6 +242,11 @@ func writeFile(path string, content io.Reader, maximum int64, mode uint32, uid, 
 		return errors.New("management output was saved but its directory could not be synchronized")
 	}
 	return nil
+}
+
+func sameManagedFile(a, b unix.Stat_t) bool {
+	return a.Dev == b.Dev && a.Ino == b.Ino && a.Mode == b.Mode && a.Uid == b.Uid && a.Gid == b.Gid &&
+		a.Nlink == b.Nlink && a.Size == b.Size && a.Mtim == b.Mtim && a.Ctim == b.Ctim
 }
 
 func removeFile(path string) error {

@@ -57,11 +57,14 @@ func (m *Manager) updateGeo(ctx context.Context, input map[string]string, refres
 		health.CheckedAt = previous.CheckedAt
 	}
 	health.Result = updateResult
+	health.Diagnostic = nil
 	// Scheduling is a separate outcome even when setup performs it immediately
 	// after a verified update. An operation error must not erase that success.
 	if updateResult == "ok" || updateResult == "unchanged" {
 		health.LastSuccessAt, health.ConsecutiveFailures = health.CheckedAt, 0
 	} else {
+		diagnostic := geoUpdateFailureDiagnostic(updateResult, updateErr)
+		health.Diagnostic = &diagnostic
 		health.ConsecutiveFailures = previous.ConsecutiveFailures
 		if health.ConsecutiveFailures < math.MaxUint32 {
 			health.ConsecutiveFailures++
@@ -71,6 +74,30 @@ func (m *Manager) updateGeo(ctx context.Context, input map[string]string, refres
 		return result, errors.New("GeoIP update completed, but sanitized health metadata could not be saved")
 	}
 	return result, updateErr
+}
+
+func geoUpdateFailureDiagnostic(result string, err error) assets.GeoDiagnostic {
+	if diagnostic, ok := assets.GeoUpdateDiagnostic(err); ok {
+		return diagnostic
+	}
+	switch {
+	case errors.Is(err, errGeoRecoveryPending):
+		return assets.GeoDiagnostic{Stage: "activation", Reason: "recovery_pending"}
+	case errors.Is(err, errGeoMetadataSave):
+		return assets.GeoDiagnostic{Stage: "activation", Reason: "metadata_save_failed"}
+	case errors.Is(err, errGeoCleanup):
+		return assets.GeoDiagnostic{Stage: "cleanup", Reason: "failed"}
+	}
+	switch result {
+	case "credentials_unavailable":
+		return assets.GeoDiagnostic{Stage: "credentials", Reason: "unavailable"}
+	case "download_failed":
+		return assets.GeoDiagnostic{Stage: "download", Reason: "failed"}
+	case "activation_failed":
+		return assets.GeoDiagnostic{Stage: "activation", Reason: "failed"}
+	default:
+		return assets.GeoDiagnostic{Stage: "configuration", Reason: "unavailable"}
+	}
 }
 
 func (m *Manager) scheduleGeo(ctx context.Context, enabled bool) (string, error) {

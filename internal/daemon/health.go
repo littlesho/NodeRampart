@@ -145,3 +145,53 @@ func (a *App) recordJournalDegradation(ctx context.Context, status collector.Jou
 	a.recordWrite(err, "coverage_gap", false)
 	return err
 }
+
+func (a *App) recordJournalStatus(ctx context.Context, status collector.JournalStatus) {
+	a.mu.Lock()
+	previous := a.journalStatus
+	a.journalStatus = status
+	a.mu.Unlock()
+	a.logJournalTransition(previous, status)
+	state := "degraded"
+	if status.State == "running" {
+		state = "running"
+	}
+	a.recordWrite(a.options.Store.SetComponentStatus(ctx, "ssh_journal", state, time.Now().UTC()), "coverage", false)
+	if status.State == "gap" && !status.QualityDegraded() {
+		a.recordWrite(a.options.Store.RecordCoverageGap(ctx, journalCoverageGap(status)), "coverage_gap", false)
+	}
+}
+
+// Log category changes so the underlying reason remains inspectable after a
+// process restart. Never log journal messages, stderr, paths or raw errors.
+func (a *App) logJournalTransition(previous, status collector.JournalStatus) {
+	if a.options.Logger == nil || status.State == "starting" {
+		return
+	}
+	diagnostic, old := status.SafeDiagnostic(), previous.SafeDiagnostic()
+	if previous.State == status.State && previous.Reason == status.Reason && old.Cause == diagnostic.Cause && old.Scope == diagnostic.Scope && old.Signal == diagnostic.Signal && equalJournalExit(old.ExitCode, diagnostic.ExitCode) {
+		return
+	}
+	attrs := []any{"state", collector.SafeJournalState(status.State), "reason", collector.SafeJournalReason(status.Reason)}
+	if diagnostic.Cause != "" {
+		attrs = append(attrs, "cause", diagnostic.Cause, "diagnostic_scope", diagnostic.Scope, "detail", diagnostic.Detail)
+		if !diagnostic.At.IsZero() {
+			attrs = append(attrs, "diagnostic_at_utc", diagnostic.At.Format(time.RFC3339Nano))
+		}
+		if diagnostic.ExitCode != nil {
+			attrs = append(attrs, "exit_code", *diagnostic.ExitCode)
+		}
+		if diagnostic.Signal != "" {
+			attrs = append(attrs, "signal", diagnostic.Signal)
+		}
+	}
+	if status.State == "running" {
+		a.options.Logger.Info("SSH journal reader state changed", attrs...)
+	} else {
+		a.options.Logger.Warn("SSH journal collection degraded", attrs...)
+	}
+}
+
+func equalJournalExit(a, b *int) bool {
+	return a == nil && b == nil || a != nil && b != nil && *a == *b
+}

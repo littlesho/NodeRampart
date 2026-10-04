@@ -113,6 +113,8 @@ elif name == "dpkg-query":
         sys.exit(1)
 elif name == "rpm":
     sys.exit(0 if os.environ.get("MOCK_RPM_INSTALLED") else 1)
+elif name == "noderampart" and args == ["assets", "reconcile-schedule"]:
+    sys.exit(1 if os.environ.get("MOCK_GEO_RECONCILE_FAIL") else 0)
 elif name == "mountpoint":
     sys.exit(0 if args[-1] == os.environ.get("MOCK_MOUNT") else 32)
 elif name == "userdel" and os.environ.get("MOCK_USERDEL_FAIL"):
@@ -209,7 +211,10 @@ class PackagingTests(unittest.TestCase):
         content = (REPO / source).read_text()
         if section:
             _, content = self.rpm_section(content, section)
-            content = content.split("\n%", 1)[0]
+            # Native systemd macros have separate RPM coverage. Do not stop
+            # at executable path macros: that would silently omit the actual
+            # config-validation and GeoIP-reconciliation shell commands.
+            content = content.split("\n%systemd_", 1)[0]
             content = "#!/bin/sh\n" + content.replace("%{_sysconfdir}", "/etc").replace("%{_bindir}", "/usr/bin")
         if source == "packaging/debian/postinst" or section == "post":
             self.write(self.root / "usr/bin/noderampart", self.cli_mock, executable=True)
@@ -400,6 +405,40 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
         self.assertEqual(restarts, [["systemctl", "restart", "noderampartd.service", "noderampart-sensor.service"],
                                     ["systemctl", "restart", "noderampartd.service"],
                                     ["systemctl", "restart", "noderampart-sensor.service"]])
+
+    def assert_geo_reconcile_hook(self, source, *args, section=None, fail=False):
+        if fail:
+            self.env["MOCK_GEO_RECONCILE_FAIL"] = "1"
+        result = self.run_script(source, *args, section=section)
+        calls = self.commands()
+        self.assertEqual(calls.count(["noderampart", "assets", "reconcile-schedule"]), 1)
+        self.assertFalse(any(row[:3] == ["noderampart", "assets", "update"] for row in calls))
+        self.assertFalse(any(row[0] == "systemctl" and any(unit in row for unit in (
+            "noderampart-geoip-update.service", "noderampart-geoip-update.timer")) for row in calls))
+        if fail:
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("GeoIP updater unit reconciliation failed", result.stderr)
+            self.assertFalse(any(row[:2] in (["systemctl", "start"], ["systemctl", "restart"]) for row in calls))
+        else:
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_debian_reconciles_geoip_unit_without_running_update(self):
+        self.assert_geo_reconcile_hook("packaging/debian/postinst", "configure", "0.4.0~alpha.6")
+
+    def test_debian_geoip_reconciliation_failure_is_visible(self):
+        self.assert_geo_reconcile_hook("packaging/debian/postinst", "configure", "0.4.0~alpha.6", fail=True)
+
+    def test_rpm_reconciles_geoip_unit_without_running_update(self):
+        self.assert_geo_reconcile_hook("packaging/rpm/noderampart.spec", section="post")
+
+    def test_rpm_geoip_reconciliation_failure_is_visible(self):
+        self.assert_geo_reconcile_hook("packaging/rpm/noderampart.spec", section="post", fail=True)
+
+    def test_source_reconciles_geoip_unit_without_running_update(self):
+        self.assert_geo_reconcile_hook("scripts/install.sh")
+
+    def test_source_geoip_reconciliation_failure_is_visible(self):
+        self.assert_geo_reconcile_hook("scripts/install.sh", fail=True)
 
     def test_debian_upgrade_preserves_disabled_and_stopped_services(self):
         self.env.update(MOCK_DISABLED="1", MOCK_INACTIVE="1")
@@ -946,7 +985,7 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
 
     def test_public_alpha_suffix_native_versions_keep_release_order(self):
         native_versions = []
-        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9'):
+        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9', '.10'):
             with self.subTest(suffix=suffix):
                 version = '0.4.0-alpha' + suffix
                 self.write(self.project / 'VERSION', version + '\n')
@@ -1036,6 +1075,20 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
         result = self.run_script("scripts/build-rpm.sh")
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any(row[0] == "rpmbuild" or row[:3] == ["go", "mod", "vendor"] for row in self.commands()))
+
+    def test_reviewed_manifest_includes_all_product_go_sources(self):
+        # Inspect the product trees independently of the archive allowlist so
+        # adding a Go file without updating the manifest fails before RPM build.
+        # Include tests and every platform variant, without depending on Git or
+        # the host's Go build tags. The staging tool still copies only reviewed
+        # paths; this check never adds local files to the source archive.
+        sources = {path.relative_to(REPO).as_posix()
+                   for directory in ("cmd", "internal")
+                   for path in (REPO / directory).rglob("*.go") if path.is_file()}
+        self.assertTrue(sources)
+        manifest = {line for line in (REPO / "packaging/source-files.txt").read_text().splitlines()
+                    if line and not line.startswith("#") and line.endswith(".go")}
+        self.assertEqual(sources, manifest, "update the reviewed Go source manifest")
 
     def test_reviewed_manifest_stages_current_product_without_git(self):
         destination = self.lab / "reviewed-source"

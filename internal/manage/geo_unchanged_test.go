@@ -199,6 +199,10 @@ func TestGeoPendingRecoveryCannotTakeUnchangedPath(t *testing.T) {
 	if _, err := os.Stat(m.journalPath()); err != nil {
 		t.Fatal("blocked refresh removed the pending recovery journal")
 	}
+	health := m.previousGeoHealth()
+	if health.Diagnostic == nil || health.Diagnostic.Stage != "activation" || health.Diagnostic.Reason != "recovery_pending" {
+		t.Fatal("pending recovery did not explain the blocked update")
+	}
 }
 
 func TestGeoUnchangedRejectsExternalConfigurationChange(t *testing.T) {

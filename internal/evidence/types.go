@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	// The outer bundle contract is unchanged; recorded alert contexts carry
+	// their own explicit schema version, including optional v2 diagnostics.
 	FormatVersion         = 1
 	MaxJSONBytes          = 1 << 20
 	MaxHTMLBytes          = 4 << 20

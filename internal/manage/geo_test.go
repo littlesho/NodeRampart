@@ -141,6 +141,11 @@ func TestGeoTimerIsDataOnlyAndExplicit(t *testing.T) {
 	if !strings.Contains(unit, "ExecStart=/usr/bin/noderampart assets update") || strings.Contains(unit, "CAP_SYS_ADMIN") || strings.Contains(unit, "synthetic-only") {
 		t.Fatal("unsafe data updater unit")
 	}
+	if !strings.Contains(unit, "\nCapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_KILL CAP_SETGID CAP_SETUID CAP_DAC_OVERRIDE\n") ||
+		!strings.Contains(unit, "\nAmbientCapabilities=CAP_SETUID\n") || strings.Count(unit, "\nAmbientCapabilities=") != 1 ||
+		!strings.Contains(unit, "\nNoNewPrivileges=yes\n") {
+		t.Fatal("updater must retain only its required capabilities across systemd seccomp setup and exec")
+	}
 	if len(fake.calls) == 0 || fake.calls[len(fake.calls)-1] != "enable --now noderampart-geoip-update.timer" {
 		t.Fatal("timer not activated explicitly")
 	}

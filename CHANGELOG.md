@@ -2,6 +2,22 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.10 - Development candidate
+
+- Restore trusted OpenSSH journal records with genuinely absent unit metadata;
+  retain root/executable/transport checks and durable-ACK recovery semantics.
+- Add allowlisted SSH and GeoIP failure diagnostics to health, notifications
+  and JSON/HTML evidence. Upgrade the CLI and daemon together; strict older
+  readers may reject diagnostic fields and alert-context v2. Config/API/sensor/DB
+  versions remain 1/1/5/14.
+- Correct the GeoIP updater's privilege-drop, cancellation and authenticated
+  readiness capabilities. Migrate only the exact old generated service while
+  preserving custom units, masks, drop-ins, timer state and failure history.
+- Include all 21 new Go files in the explicit RPM source manifest and retain
+  its completeness regression and main's installer/documentation checks.
+- Prepare DEB `0.4.0~alpha.10` and RPM `0.4.0-0.alpha.11.fc43/fc44` identities.
+  The newest published release remains alpha.9 until this candidate is public.
+
 ## 0.4.0-alpha.9 - 2026-10-04 (UTC)
 
 - Publish [v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9)

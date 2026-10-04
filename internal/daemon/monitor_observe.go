@@ -267,6 +267,7 @@ func (a *App) observeHealth(ctx context.Context, now time.Time, values []monitor
 		values[2].Condition = "failed"
 		values[2].Status.Reason = "journal_unavailable"
 		values[2].Since = journal.Since
+		values[2].Diagnostic = monitorDiagnostic{journal: &journal}
 	} else if a.auth == nil {
 		values[2].Condition = "failed"
 		values[2].Status.Reason = "auth_state_unknown"
@@ -325,6 +326,7 @@ func (a *App) observeGeoHealth(now time.Time, health assets.Health, err error, p
 	if int(health.ConsecutiveFailures) >= a.options.Config.Alerts.Health.GeoIPFailureThreshold {
 		value.Condition = "failed"
 		value.Status.Reason = "update_failed"
+		value.Diagnostic = monitorDiagnostic{geo: &health}
 		return value
 	}
 	if health.Scheduled && (health.LastSuccessAt.IsZero() || now.Sub(health.LastSuccessAt) > a.options.Config.Alerts.Health.GeoIPStaleAfter.Duration) {
@@ -384,6 +386,10 @@ func (a *App) monitorWorkerStopped(name string, now time.Time) {
 		a.journalStatus.State = "degraded"
 		a.journalStatus.Reason = "worker_stopped"
 		a.journalStatus.At = now
+		// The worker's final exit is a new observation. A prior record or
+		// subprocess failure cannot explain why the worker stopped.
+		a.journalStatus.Cause, a.journalStatus.Detail, a.journalStatus.DiagnosticScope = "", "", ""
+		a.journalStatus.DiagnosticAt, a.journalStatus.ExitCode, a.journalStatus.Signal = time.Time{}, nil, ""
 	case "interface_counter":
 		a.interfaceCounterState = "degraded"
 	}

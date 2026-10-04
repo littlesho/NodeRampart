@@ -741,11 +741,11 @@ class InstallerTests(unittest.TestCase):
                 self.assertFalse(list((self.root / 'tmp').iterdir()))
 
     def test_future_release_without_its_mapping_cannot_dispatch_recursively(self):
-        self.release_pages([self.published('v0.4.0-alpha.10')])
+        self.release_pages([self.published('v0.4.0-alpha.11')])
         result = self.run_script('bootstrap.sh', '--no-setup')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('recursive dispatch is refused', result.stderr)
-        self.assert_pinned_assets('v0.4.0-alpha.10')
+        self.assert_pinned_assets('v0.4.0-alpha.11')
         self.assertEqual(sum(row[0] == 'curl' for row in self.commands()), 4)
         self.assert_no_install()
         self.assertFalse(list((self.root / 'tmp').iterdir()))
@@ -1211,13 +1211,13 @@ class ReleaseAssetTests(unittest.TestCase):
         (self.project / 'scripts').mkdir()
         for name in ('build-release.sh', 'bootstrap.sh', 'release_sbom.py'):
             shutil.copyfile(REPO / 'scripts' / name, self.project / 'scripts' / name)
-        (self.project / 'VERSION').write_text('0.4.0-alpha.9\n')
+        (self.project / 'VERSION').write_text('0.4.0-alpha.10\n')
         self.input = self.project / 'input'
         self.input.mkdir()
-        names = [f'noderampart_0.4.0-alpha.9_{arch}.deb' for arch in ('amd64', 'arm64')]
-        names += [f'noderampart-0.4.0-0.alpha.10.fc{fedora}.{arch}.rpm'
+        names = [f'noderampart_0.4.0-alpha.10_{arch}.deb' for arch in ('amd64', 'arm64')]
+        names += [f'noderampart-0.4.0-0.alpha.11.fc{fedora}.{arch}.rpm'
                   for fedora in (43, 44) for arch in ('x86_64', 'aarch64')]
-        names += ['noderampart-0.4.0-0.alpha.10.fc44.src.rpm']
+        names += ['noderampart-0.4.0-0.alpha.11.fc44.src.rpm']
         for name in names:
             (self.input / name).write_text('synthetic package\n')
         # This is a synthetic clean revision, not a Git mutation or an assertion
@@ -1251,10 +1251,10 @@ elif args[:1] not in (['diff'], ['ls-files']):
                          'build_settings': {'GOARCH': arch, 'GOOS': 'linux'}} for path in paths]
             (self.input / (name + '.buildinfo.json')).write_text(json.dumps({'format': 1, 'package': name,
                 'sha256': sha, 'architecture': arch, 'scope': scope, 'binaries': binaries,
-                'declared_build': {'version': '0.4.0-alpha.9', 'commit': self.env['COMMIT'], 'build_date': self.env['BUILD_DATE']}}))
+                'declared_build': {'version': '0.4.0-alpha.10', 'commit': self.env['COMMIT'], 'build_date': self.env['BUILD_DATE']}}))
             (self.input / (name + '.spdx.json')).write_text(json.dumps({'spdxVersion': 'SPDX-2.3',
                 'dataLicense': 'CC0-1.0', 'comment': f'{scope} Package: {name}; SHA256: {sha}.',
-                'packages': [{'name': name, 'versionInfo': '0.4.0~alpha.9' if name.endswith('.deb') else name.removeprefix('noderampart-').rsplit('.', 2)[0]}],
+                'packages': [{'name': name, 'versionInfo': '0.4.0~alpha.10' if name.endswith('.deb') else name.removeprefix('noderampart-').rsplit('.', 2)[0]}],
                 'files': [{'fileName': path, 'checksums': [{'algorithm': 'SHA256', 'checksumValue': 'a' * 64}]} for path in paths]}))
 
     def run_collect(self):
@@ -1271,7 +1271,7 @@ elif args[:1] not in (['diff'], ['ls-files']):
             digest, name = line.split()
             self.assertEqual(digest, hashlib.sha256((release / name).read_bytes()).hexdigest())
         metadata = json.loads((release / 'release.json').read_text())
-        self.assertEqual(metadata['version'], '0.4.0-alpha.9')
+        self.assertEqual(metadata['version'], '0.4.0-alpha.10')
         self.assertEqual(metadata['commit'], self.commit)
         self.assertEqual(metadata['build_date'], self.env['BUILD_DATE'])
         self.assertEqual(metadata['package_count'], 6)

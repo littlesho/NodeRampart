@@ -24,6 +24,7 @@ type Health struct {
 	Result              string          `json:"result"`
 	Scheduled           bool            `json:"scheduled"`
 	Schedule            *ScheduleHealth `json:"schedule,omitempty"`
+	Diagnostic          *GeoDiagnostic  `json:"diagnostic,omitempty"`
 }
 
 // ScheduleHealth records timer configuration attempts independently from
@@ -89,6 +90,9 @@ func (h Health) Validate() error {
 	}
 	if (h.Result == "ok" || h.Result == "unchanged") && (h.CheckedAt.IsZero() || h.LastSuccessAt.IsZero() || h.ConsecutiveFailures != 0) {
 		return errors.New("asset success requires a verified successful check")
+	}
+	if h.Diagnostic != nil && (h.Diagnostic.Validate() != nil || h.Result == "ok" || h.Result == "unchanged") {
+		return errors.New("invalid asset failure diagnostic")
 	}
 	return nil
 }

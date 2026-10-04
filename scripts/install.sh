@@ -137,6 +137,10 @@ sha256sum /usr/local/bin/noderampart /usr/local/bin/noderampartd /usr/local/bin/
 install -m 0644 "$TEMP_DIR/source-install.manifest" /usr/local/share/doc/noderampart/source-install.manifest
 
 /usr/local/bin/noderampart config test --config /etc/noderampart/config.json
+if ! /usr/local/bin/noderampart assets reconcile-schedule; then
+  echo "GeoIP updater unit reconciliation failed; retry /usr/local/bin/noderampart assets reconcile-schedule and systemctl daemon-reload before running the updater. The new binaries remain installed." >&2
+  exit 1
+fi
 
 systemctl daemon-reload
 if [ "$SOURCE_UPGRADE" = false ]; then

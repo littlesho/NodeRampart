@@ -238,6 +238,9 @@ type monitorObservation struct {
 	GeoScheduled bool
 	MonthPolicy  *monitorMonthPolicy
 	Closing      bool
+	// Diagnostics belong to this exact observation. They enter the durable
+	// event with its existing transaction, not the monitor-state schema.
+	Diagnostic monitorDiagnostic
 }
 
 func evaluateMonitor(previous monitorData, in monitorObservation, cfg config.AlertsConfig, started time.Time) (monitorData, []model.Event) {
@@ -292,12 +295,12 @@ func evaluateMonitor(previous monitorData, in monitorObservation, cfg config.Ale
 			next.IncidentID = model.NewID("monitor")
 			next.LastNotification = in.Now
 			next.Status.State = "alert"
-			return healthStatus(next), []model.Event{healthEvent(next, in.Now, "start")}
+			return healthStatus(next), []model.Event{healthEvent(next, in.Now, "start", in.Diagnostic)}
 		}
 		next.Status.State = "alert"
 		if !startup && h.ReminderInterval.Duration > 0 && in.Now.Sub(next.LastNotification) >= h.ReminderInterval.Duration {
 			next.LastNotification = in.Now
-			return healthStatus(next), []model.Event{healthEvent(next, in.Now, "update")}
+			return healthStatus(next), []model.Event{healthEvent(next, in.Now, "update", in.Diagnostic)}
 		}
 		return healthStatus(next), nil
 	}
@@ -319,7 +322,7 @@ func evaluateMonitor(previous monitorData, in monitorObservation, cfg config.Ale
 		next.Active = false
 		next.LastNotification = in.Now
 		next.Status.State = "healthy"
-		event := healthEvent(next, in.Now, "recovery")
+		event := healthEvent(next, in.Now, "recovery", in.Diagnostic)
 		next.ConditionSince = time.Time{}
 		next.RecoverySince = time.Time{}
 		return healthStatus(next), []model.Event{event}
@@ -336,14 +339,16 @@ func healthStatus(data monitorData) monitorData {
 	return data
 }
 
-func healthEvent(data monitorData, now time.Time, phase string) model.Event {
+func healthEvent(data monitorData, now time.Time, phase string, diagnostic monitorDiagnostic) model.Event {
 	severity := model.SeverityMedium
 	summary := "Monitoring health condition requires attention"
 	if phase == "recovery" {
 		severity = model.SeverityInfo
 		summary = "Monitoring health condition recovered"
 	}
-	return model.Event{ID: model.NewID("evt"), IncidentID: data.IncidentID, ObservedAt: now, Kind: data.Status.Key, Phase: phase, Severity: severity, Summary: summary, Evidence: map[string]string{"reason": data.Status.Reason, "condition_since_utc": data.ConditionSince.Format(time.RFC3339Nano), "observation": "recorded component health; does not guarantee complete collection or notification delivery"}}
+	event := model.Event{ID: model.NewID("evt"), IncidentID: data.IncidentID, ObservedAt: now, Kind: data.Status.Key, Phase: phase, Severity: severity, Summary: summary, Evidence: map[string]string{"reason": data.Status.Reason, "condition_since_utc": data.ConditionSince.Format(time.RFC3339Nano), "observation": "recorded component health; does not guarantee complete collection or notification delivery"}}
+	diagnostic.addEvidence(&event)
+	return event
 }
 
 func evaluateBudget(next, previous monitorData, in monitorObservation) (monitorData, []model.Event) {

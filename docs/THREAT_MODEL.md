@@ -42,7 +42,16 @@ An attacker who already has root is outside the confidentiality boundary. NodeRa
 ## Security invariants
 
 1. Network content beyond headers is not sent from the sensor or stored.
-2. Only the sensor has a Linux capability; the daemon and CLI have none.
+2. The sensor service has only `CAP_NET_RAW`; the daemon service has empty
+   capability sets. The root GeoIP updater's bounding set is `CAP_CHOWN`,
+   `CAP_DAC_READ_SEARCH`, `CAP_FOWNER`, `CAP_KILL`, `CAP_SETGID`, `CAP_SETUID`
+   and `CAP_DAC_OVERRIDE`.
+   Only `CAP_SETUID` is ambient for that updater, and `NoNewPrivileges=yes`
+   remains enabled.
+   `CAP_DAC_OVERRIDE` allows the root updater to connect to the daemon's control
+   socket (mode `0600`) for readiness checks during activation.
+   中文：`CAP_DAC_OVERRIDE` 用于让 root 更新进程连接 daemon 拥有的 0600 控制 socket，
+   在激活期间确认服务就绪状态。
 3. Sensor input is bounded before allocation and before state growth.
 4. A data-collection failure must be visible in status or report quality fields.
 5. NodeRampart never makes firewall changes in the alpha.
@@ -62,10 +71,25 @@ An attacker who already has root is outside the confidentiality boundary. NodeRa
 
 ## v0.2 reliability boundaries
 
-Journal-assigned root UID, executable and service identity authenticate supported
-OpenSSH origins. Complete log grammar isolates arbitrary usernames from endpoint
-fields. Custom SSH units/paths need explicit compatibility work; trusting a
-syslog tag or renamed process alone is insufficient.
+Supported OpenSSH origins require the journal-assigned root UID (`_UID=0`), an
+approved OpenSSH executable (`_EXE`) and direct `syslog` or `journal` transport
+(`_TRANSPORT`). When `_SYSTEMD_UNIT` is present, it must identify an approved SSH
+system service or recognized login session scope. A genuinely absent
+`_SYSTEMD_UNIT` is accepted only when those strong origin checks pass and no user
+service unit is identified by `_SYSTEMD_USER_UNIT`. Explicitly empty, null or
+unapproved unit values are rejected; missing UID, executable or transport
+metadata still fails origin validation. `_COMM` and `SYSLOG_IDENTIFIER` alone
+do not authenticate a sender.
+
+Complete log grammar isolates arbitrary usernames from endpoint fields. Custom
+SSH units/paths need explicit compatibility work; trusting a syslog tag or
+renamed process alone is insufficient.
+
+中文：SSH 来源验证仍要求 journal 记录的 root UID、允许的 OpenSSH 可执行程序，以及
+`syslog` 或 `journal` 直接传输。`_SYSTEMD_UNIT` 存在时必须属于允许的 SSH 系统服务或
+有效登录会话；只有该字段真正缺失、上述强来源条件均成立且没有用户服务单元身份时，
+才允许接受。显式空值、`null` 或错误单元仍被拒绝；缺少 UID、程序或传输元数据也不会
+放行。`_COMM` 和 `SYSLOG_IDENTIFIER` 等名称不能单独证明来源可信。
 
 The storage budget limits configured active database/journal files and rejects
 writes before reserved capacity is exhausted. Independent health preserves
