@@ -2,6 +2,7 @@
 # Update explicitly when adding product files; no directory or glob entries.
 .github/CODEOWNERS
 .github/dependabot.yml
+.github/workflows/artifact-download-compat.yml
 .github/workflows/ci.yml
 .github/workflows/release.yml
 .github/workflows/safety.yml
@@ -517,6 +518,7 @@ scripts/bootstrap.sh
 scripts/build-deb.sh
 scripts/build-release.sh
 scripts/build-rpm.sh
+scripts/check-artifact-download.py
 scripts/check-current-release.py
 scripts/install.sh
 scripts/lab-check.py
