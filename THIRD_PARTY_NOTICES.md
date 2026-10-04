@@ -16,7 +16,7 @@ NodeRampart's original source code is licensed under MIT. Compiled binaries also
 | `github.com/rivo/uniseg` | `v0.4.7` | MIT |
 | `golang.org/x/sys` | `v0.48.0` | BSD-3-Clause |
 | `golang.org/x/term` | `v0.28.0` | BSD-3-Clause |
-| `golang.org/x/text` | `v0.21.0` | BSD-3-Clause |
+| `golang.org/x/text` | `v0.42.0` | BSD-3-Clause |
 | `modernc.org/libc` | `v1.77.1` | BSD-3-Clause |
 | `modernc.org/mathutil` | `v1.7.1` | BSD-3-Clause |
 | `modernc.org/memory` | `v1.12.1` | BSD-3-Clause |
