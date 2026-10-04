@@ -6,7 +6,7 @@ umask 022
 
 command -v rpmbuild >/dev/null 2>&1 || { echo "rpmbuild is required (install rpm-build)" >&2; exit 1; }
 command -v tar >/dev/null 2>&1 || { echo "tar is required" >&2; exit 1; }
-command -v go >/dev/null 2>&1 || { echo "Go 1.25 or newer is required" >&2; exit 1; }
+command -v go >/dev/null 2>&1 || { echo "Go 1.26 or newer is required" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "Python 3 is required to stage the reviewed source manifest" >&2; exit 1; }
 
 ARCH=${ARCH:-$(go env GOARCH)}

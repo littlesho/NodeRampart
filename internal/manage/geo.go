@@ -438,6 +438,77 @@ func removeGeneration(path string) error {
 	return nil
 }
 
+// geoScheduleState reads the timer's current enablement for form defaults.
+// Historical health metadata cannot reflect manual systemctl changes, and an
+// enabled timer may be inactive or failed without losing its saved enablement.
+// This read must not repair units, update health, or acquire a management lock.
+func (m *Manager) geoScheduleState(ctx context.Context) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	work, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	output, err := m.command(work, "/usr/bin/systemctl", "show", "--property=LoadState,UnitFileState,ActiveState", "--all", "noderampart-geoip-update.timer")
+	if err := work.Err(); err != nil {
+		return "", err
+	}
+	if err != nil {
+		return "", errors.New("daily GeoIP update schedule could not be read from systemd; inspect GeoIP status / 无法从 systemd 读取每日 GeoIP 更新计划，请检查 GeoIP 状态")
+	}
+	invalid := errors.New("systemd returned an unsupported GeoIP timer state; inspect GeoIP status / systemd 返回了不受支持的 GeoIP 定时器状态，请检查 GeoIP 状态")
+	if len(output) > 4096 {
+		return "", invalid
+	}
+	properties := make(map[string]string, 3)
+	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			return "", invalid
+		}
+		switch key {
+		case "LoadState", "UnitFileState", "ActiveState":
+		default:
+			return "", invalid
+		}
+		if _, exists := properties[key]; exists {
+			return "", invalid
+		}
+		properties[key] = value
+	}
+	if len(properties) != 3 {
+		return "", invalid
+	}
+	switch properties["ActiveState"] {
+	case "active", "reloading", "inactive", "failed", "activating", "deactivating", "maintenance", "refreshing":
+	default:
+		return "", invalid
+	}
+	enabled := false
+	switch properties["LoadState"] {
+	case "not-found":
+		// A missing local unit file alone does not exclude a loaded/vendor
+		// timer. Only systemd's complete absent+inactive response means off.
+		if properties["ActiveState"] != "inactive" || properties["UnitFileState"] != "" {
+			return "", invalid
+		}
+	case "loaded", "masked":
+		switch properties["UnitFileState"] {
+		case "enabled", "enabled-runtime":
+			enabled = true
+		case "disabled", "masked", "masked-runtime":
+		default:
+			// Static, generated, indirect, linked and unknown states do not
+			// prove that this managed daily schedule is disabled.
+			return "", invalid
+		}
+	default:
+		return "", invalid
+	}
+	return pretty(struct {
+		Enabled bool `json:"enabled"`
+	}{Enabled: enabled}), nil
+}
+
 func (m *Manager) scheduleGeoService(ctx context.Context, enabled bool) (string, error) {
 	if !enabled {
 		_, err := m.command(ctx, "/usr/bin/systemctl", "disable", "--now", "noderampart-geoip-update.timer")

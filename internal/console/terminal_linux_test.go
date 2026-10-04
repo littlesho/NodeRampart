@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
-	"regexp"
 	"strings"
 	"syscall"
 	"testing"
@@ -21,11 +20,6 @@ import (
 	"github.com/rivo/tview"
 	"golang.org/x/sys/unix"
 )
-
-// Cursor/style sequences may separate adjacent Chinese glyphs in a redraw.
-// Strip only terminal controls when matching text; verify the captured wire
-// bytes are valid UTF-8 separately. This cannot turn ASCII '?' into Chinese.
-var terminalControls = regexp.MustCompile("\x1b\\[[0-?]*[ -/]*[@-~]|\x1b\\][^\x1b\x07]*(?:\x07|\x1b\\\\)|\x1b[()][0-2A-Z]")
 
 // Each child owns a real controlling PTY and tcell encoder/decoder. Stdin is
 // /dev/null, so these tests also guard against reading bootstrap's script pipe.
@@ -127,13 +121,35 @@ func TestTerminalUTF8PTY(t *testing.T) {
 				}
 			}
 			var output []byte
-			phase, start := 0, 0
+			words := []string{"中文", "↑", "—", "·"}
+			if tc.mode == "timezone" {
+				words = []string{"↑", "—", "·"} // This screen has no interface-language toggle label.
+			}
+			switch tc.mode {
+			case "setup":
+				words = append(words, "欢迎", "基本设置", "网络")
+			case "tui":
+				words = append(words, "主菜单", "当前运行状态", "采集")
+			case "input":
+				words = append(words, "编辑设置", "主机显示名称", "中文主机")
+			case "timezone":
+				words = append(words, "选择报告时区", "当前配置", "上海", "日报")
+			}
+			seen := map[string]bool{}
+			screen := newTerminalScreenObserver(int(size.Col), int(size.Row), func(row string) {
+				for _, word := range words {
+					if strings.Contains(row, word) {
+						seen[word] = true
+					}
+				}
+			})
+			phase, fence := 0, uint64(0)
 			for !waited {
 				select {
 				case err := <-done:
 					waited = true
 					if err != nil {
-						t.Fatalf("terminal child: %v; phase %d/%d; tail %q; process %.300s", err, phase, len(actions), terminalControls.ReplaceAll(output[max(0, len(output)-500):], nil), process.String())
+						t.Fatalf("terminal child: %v; phase %d/%d; tail %q; process %.300s", err, phase, len(actions), output[max(0, len(output)-500):], process.String())
 					}
 				default:
 				}
@@ -151,35 +167,27 @@ func TestTerminalUTF8PTY(t *testing.T) {
 					if len(output) > 256<<10 {
 						t.Fatal("terminal output exceeded test bound")
 					}
+					if err := screen.feed(buf[:n]); err != nil {
+						t.Fatal("terminal display observer: ", err)
+					}
 				}
-				if phase < len(actions) && bytes.Contains(terminalControls.ReplaceAll(output[start:], nil), []byte(actions[phase].text)) {
+				if phase < len(actions) && screen.containsAfter(actions[phase].text, fence) {
 					if _, err := master.Write([]byte(actions[phase].keys)); err != nil {
 						t.Fatal(err)
 					}
-					start = len(output)
+					fence = screen.revision
 					phase++
 				}
 			}
 			if phase != len(actions) || !utf8.Valid(output) {
 				t.Fatalf("incomplete UTF-8 interaction: %d/%d, bytes=%d", phase, len(actions), len(output))
 			}
+			if err := screen.finish(); err != nil {
+				t.Fatal("terminal display observer: ", err)
+			}
 			if tc.wantError == "" {
-				words := []string{"中文", "↑", "—", "·"}
-				if tc.mode == "timezone" {
-					words = []string{"↑", "—", "·"} // This screen has no interface-language toggle label.
-				}
-				switch tc.mode {
-				case "setup":
-					words = append(words, "欢迎", "基本设置", "网络")
-				case "tui":
-					words = append(words, "主菜单", "当前运行状态", "采集")
-				case "input":
-					words = append(words, "编辑设置", "主机显示名称", "中文主机")
-				case "timezone":
-					words = append(words, "选择报告时区", "当前配置", "上海", "日报")
-				}
 				for _, word := range words {
-					if !bytes.Contains(terminalControls.ReplaceAll(output, nil), []byte(word)) {
+					if !seen[word] {
 						t.Fatalf("real UTF-8 output lacks %q", word)
 					}
 				}

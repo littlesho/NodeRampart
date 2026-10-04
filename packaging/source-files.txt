@@ -2,6 +2,7 @@
 # Update explicitly when adding product files; no directory or glob entries.
 .github/CODEOWNERS
 .github/dependabot.yml
+.github/workflows/artifact-download-compat.yml
 .github/workflows/ci.yml
 .github/workflows/release.yml
 .github/workflows/safety.yml
@@ -157,6 +158,7 @@ internal/console/console.go
 internal/console/console_test.go
 internal/console/features_test.go
 internal/console/fields.go
+internal/console/geo_schedule_test.go
 internal/console/geo_validation_test.go
 internal/console/native.go
 internal/console/native_test.go
@@ -168,6 +170,7 @@ internal/console/reliability_test.go
 internal/console/results.go
 internal/console/retention.go
 internal/console/terminal_linux_test.go
+internal/console/terminal_screen_linux_test.go
 internal/console/threshold.go
 internal/console/threshold_test.go
 internal/console/timezone.go
@@ -517,6 +520,7 @@ scripts/bootstrap.sh
 scripts/build-deb.sh
 scripts/build-release.sh
 scripts/build-rpm.sh
+scripts/check-artifact-download.py
 scripts/check-current-release.py
 scripts/install.sh
 scripts/lab-check.py
@@ -555,3 +559,5 @@ third_party/licenses/modernc.org_libc_LICENSE
 third_party/licenses/modernc.org_mathutil_LICENSE
 third_party/licenses/modernc.org_memory_LICENSE
 third_party/licenses/modernc.org_sqlite_LICENSE
+third_party/licenses/modernc.org_sqlite_LICENSE-3RD-PARTY.md
+third_party/licenses/modernc.org_sqlite_LICENSE-SQLITE
