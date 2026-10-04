@@ -1,15 +1,33 @@
 # NodeRampart alpha limitations
 
-Published alpha.8 is a non-latest prerelease. Its independent
+<!-- current-release:start -->
+The newest published product release is
+[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9),
+an alpha prerelease without GitHub's “Latest” badge.
+<!-- current-release:end -->
+Its [publication record](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)
+binds 22 anonymous downloads/checksums and reused provenance/SPDX results to
+hosted bytes. At publication, final hosted-package VM runtime and final 18
+hosted-program binary vulnerability scans were NOT RUN. Same-source local
+preflight candidates passed bounded runtime checks; their evidence remains separate.
+Real vendor APIs / human receipt, actual fees, native ARM64 and production remain
+NOT RUN. GO-2026-5970 is still a required-module finding; stripped symbols,
+Fedora Go suffix coverage gaps and tool advisories remain disclosed.
+
+Published alpha.8 is also a non-latest prerelease. Its independent
 [distribution record](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)
 separates new anonymous downloads and public bootstrap from reused hosted
 runtime evidence. Six real vendor APIs / human receivers, native ARM64 and
 production operation remain NOT RUN. GO-2026-5970 module findings, stripped
 symbol / Fedora Go suffix coverage gaps and tool advisories remain disclosed.
-The alpha.7 and earlier results below retain their historical scope.
+The alpha.8, alpha.7 and earlier results below retain their historical scope.
+Current recommendations follow the newest published release while keeping these
+unrun checks and risks visible; a rollback or withdrawal requires an explicit
+maintainer decision.
 
-中文：alpha.8 已公开为非 latest 的预发布版本；公开不代表稳定或生产就绪。
-六平台实网/人工接收、原生 ARM64 与生产仍未验证，漏洞发现和扫描覆盖缺口继续保留。
+中文：当前安装推荐跟随最新公开版，同源本地候选运行证据与最终公开包证据分开。
+未执行项、漏洞发现及扫描覆盖缺口继续披露；它们不自动把推荐版本回退为旧版。
+以下 alpha.8 及更早结果保留历史范围。
 
 The limited [post-publication diagnostic increment](RELEASE_VERIFICATION.md#post-publication-diagnostic-increment-2026-10-02)
 identified a conditional sensor diagnostic precision defect in the unchanged
@@ -17,7 +35,7 @@ alpha.8 source: a nanosecond receipt can compare later than the same fully
 committed microsecond watermark and yield `sensor_commit_unavailable` / strict
 exit2. Real pending or missing commits can produce the same reason, so unknown
 must not be ignored or called healthy. Published alpha.8 remains affected; the
-subsequent alpha.9 development fix is described below and does not repair those
+subsequent fix included in published alpha.9 is described below and does not repair those
 released bytes or change the historical results. The original full Debian doctor/health JSON was
 in temporary guest storage and was absent after the new normal start; retained
 check/exit/digest and backup evidence does not establish its unique historical
@@ -25,7 +43,7 @@ cause. Snapshot inspection also requires a safe standalone file with
 invoking-user/root ownership, separately from successful backup verification.
 
 中文：有限增量核验确认已发布 alpha.8 有条件性的 sensor 诊断精度误判；下述
-alpha.9 开发修复不改变旧发行包或历史结果。真实未提交也可能产生相同 reason，
+已包含在公开 alpha.9 中的修复不改变旧 alpha.8 发行包或历史结果。真实未提交也可能产生相同 reason，
 不能忽略 unknown 或改称健康。
 原 Debian 完整诊断 JSON 的临时目录已不存在，剩余摘要不能证明原时点唯一成因。
 快照检查的安全归属契约和 backup verify 也须分开；详见上述增量记录。
@@ -46,7 +64,9 @@ coverage or a healthy strict diagnosis.
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
 
-## Validation scope
+<a id="validation-scope"></a>
+
+## Historical alpha.7 validation scope
 
 [alpha.7](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7)
 was published as an alpha prerelease at `2026-10-01T08:33:06Z`
@@ -59,10 +79,10 @@ STOPPED. Strict snapshots remained **unknown / exit 2**: Debian 13 retained
 `sensor_commit_unavailable`. Later advancing watermarks do not change those
 snapshots; unknown is not healthy. Fedora Services Start enabled and started both
 units, observed active/enabled afterward; boot execution remains **NOT RUN**.
-Current alpha.7 Debian 12/Fedora 43 runtime, native ARM64, VM race, sustained
+At that alpha.7 check, Debian 12/Fedora 43 runtime, native ARM64, VM race, sustained
 pressure, 72-hour soak, real MMDB and optional outgoing targets remain **NOT RUN**.
 Natural SSH pending/recovery remains unproved/BLOCKED; earlier known-pending
-independent-copy results remain separate. See the [current distribution record](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
+independent-copy results remain separate. See the [historical distribution record](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
 Schema 12 adds saved outbox language/timezone; older programs require matching
 verified earlier DB/configuration/key dependencies for rollback. No in-place
 schema downgrade is provided. Config/API 1 and protocol v5 remain unchanged.
@@ -274,7 +294,7 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
   not install a receiver, timer or background broker.
 - Published alpha.8 and the failed alpha.9 preflight source `2ec534be8d78` can
   create Fedora service accounts through RPM's implicit sysusers processing
-  before `%pre` rejects a filesystem conflict. Alpha.9 Unreleased adds a
+  before `%pre` rejects a filesystem conflict. Published alpha.9 includes a
   dependency-free embedded Lua `%pretrans` guard before that stage, preserving
   `%pre` as a later recheck. It rejects pre-existing guarded conflicts without
   package-controlled account creation; it does not prevent hostile concurrent
@@ -342,9 +362,11 @@ Keep the matching backup; refused unknown credentials are preserved.
 可能先删除包拥有的 conffile。拒绝未知凭据会保留该文件，但不保证配置完整回滚，
 应提前备份。
 
-## Alpha.9 official account development candidate
+<a id="alpha9-official-account-development-candidate"></a>
 
-Alpha.9 remains Unreleased: four additional one-target official APIs, disabled by
+## Published alpha.9 official account channels
+
+Published alpha.9 is a non-latest prerelease: four additional one-target official APIs, disabled by
 default, with local consent/cost controls and schema14 durable unknown/acceptance
 states. [Account-channel prerequisites](OFFICIAL_NOTIFICATION_CHANNELS.md) are
 required; account approval/active-send rights, real API calls, human receipt,
@@ -357,7 +379,7 @@ Twilio sent is not delivered; polling is bounded and uncertainty remains held.
 Local quotas do not cap an entire platform account's money charges.
 
 The published alpha.8 sensor precision defect remains in its immutable packages.
-Alpha.9 development diagnosis now requires matching receipt session/interface/
+Alpha.9 diagnosis requires matching receipt session/interface/
 sequence and compares that observation in persisted `UnixMicro` units. There is
 no time tolerance: a new identity within the same microsecond, a newer receipt,
 missing identity/watermark or unreadable state remains unknown. Latest partial
@@ -365,7 +387,7 @@ commits remain degraded. A snapshot spanning sequence advancement can still be
 unknown: a later watermark does not prove that an earlier sequence committed.
 The additive `sensor_receipts` status field carries identity to CLI diagnosis;
 install matching CLI/daemon programs. A new CLI cannot infer identity from an
-old daemon's timestamp-only status. This is an Unreleased development fix,
+old daemon's timestamp-only status. This fix is included in published alpha.9,
 not an alpha.8 replacement or a guarantee that every sensor unknown is gone.
 See [diagnostic semantics](V0.4_OPERATIONS.md#sensor-commit-watermarks).
 
@@ -375,13 +397,16 @@ PASS. The GO-2026-5970 module finding, stripped symbol / Fedora version-suffix
 scan gaps and tool advisories remain separate from new source reachability tests.
 First-batch Teams confirms Workflow request acceptance only; new/native channels
 are direct without proxies, rollback needs matching backups and purge is not
-atomic. No new public release, tag or production readiness claim follows from
-merging this development candidate.
+atomic. The published alpha.9 source remains `9cc75b6936d08099847655b5046c57a485c82ff7`;
+later main documentation commits do not rebuild or reissue it. Publication does
+not establish production readiness. The retained P3 Chinese Telegram hidden-input
+wording ambiguity remains an open nonblocking item, not a fix in this record.
 
-中文：alpha.9 为未发布开发候选；四平台真实请求／人工接收／收费、账户授权、
+中文：alpha.9 已作为非 latest 的预发布版公开；四平台真实请求／人工接收／收费、账户授权、
 原生 ARM64 与生产仍未测。模板／主动权限与真实订阅须操作者落实，本地声明不
 替代平台审批，额度也不保证全账户金额上限。不确定提交保留，不自动重发。
-已发布 alpha.8 的精度缺陷仍保留；alpha.9 开发候选按会话/接口/序号匹配后以
+已发布 alpha.8 的精度缺陷仍保留；公开 alpha.9 按会话/接口/序号匹配后以
 持久化微秒比较，不放宽时间容差。新批次、缺失身份/水位及部分提交仍如实诊断；
 跨采样点序号变化也可能保守 unknown。历史根因未建立、Fedora 公开下载阻塞和安全扫描缺口不改为
-通过；候选合并不代表已发布或生产就绪。
+通过；最终 hosted 包 VM 运行及 18 个程序二进制漏洞新扫描仍为 NOT RUN，
+公开不代表生产就绪。P3 中文 Telegram 隐藏输入措辞歧义仍为未修复的非阻塞意见。

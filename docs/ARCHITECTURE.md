@@ -161,19 +161,21 @@ and cumulative collector-health baselines; schema11 records event delivery
 decisions per Telegram/Webhook channel. Migrations retain historical bodies and
 refuse unsupported future schemas. Heartbeat uses no outbox or persistent state;
 Webhook shares outbox bounds and immutable target/privacy isolation. Neither
-adds a listener. The unreleased alpha.7 timezone/language candidate adds schema12 outbox
+adds a listener. The timezone/language feature introduced in alpha.7 adds schema12 outbox
 presentation fields so retries keep their saved body and coalescing cannot mix
 language/timezone contexts; unknown and Local contexts cannot coalesce. Recipient identity and privacy policy are unchanged.
 
 已发布 alpha.6 的 schema9 保存有界完整报告文档、schema10 保存v5采集提交水位和累计
 采集健康基线、schema11 按Telegram/Webhook通道记录事件投递决策。迁移保留历史
 正文并拒绝未来schema。心跳无持久队列；Webhook复用已有发件队列及目标/隐私隔离。
-均不增加监听端口；未发布 alpha.7 时区/推送语言候选新增 schema12 队列呈现字段，重试沿用
+均不增加监听端口；alpha.7 已发布的时区/推送语言功能新增 schema12 队列呈现字段，重试沿用
 已保存正文，合并不混合语言/时区上下文；目标身份及隐私策略不变。
 
-## alpha.8 development candidate: native outbound channels
+<a id="alpha8-development-candidate-native-outbound-channels"></a>
 
-The fixed notification set is Telegram, generic Webhook, Feishu, WeCom, Discord,
+## Native outbound channels introduced in alpha.8
+
+The original eight-channel set is Telegram, generic Webhook, Feishu, WeCom, Discord,
 Slack, Teams Workflows and Google Chat, with one target per channel. Six new
 channels default disabled. Each uses the existing persistent outbox and leased
 worker; the shared event transaction records admission and per-target decisions

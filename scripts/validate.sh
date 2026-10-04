@@ -19,6 +19,8 @@ if [ -n "${GITHUB_SHA:-}" ]; then
 fi
 
 make fmt-check
+python3 scripts/check-current-release.py
+python3 scripts/test-current-release.py
 go mod verify
 go vet ./...
 go test -count=1 ./...

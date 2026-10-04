@@ -41,6 +41,17 @@
   [release verification](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification);
   prior alpha.6 acceptance does not certify the new package bytes.
 
+<!-- current-release:start -->
+## `v0.4.0-alpha.9` — current published alpha
+
+- Twelve optional notification channels through the shared terminal menu,
+  including four official-account channels with persistent consent/cost controls.
+- Identity-aware sensor receipt diagnosis and early RPM installation conflict
+  checks; see the [publication scope](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification).
+- Current install and verification examples track this published release; the
+  maintained bootstrap resolves future published versions when actively invoked.
+<!-- current-release:end -->
+
 ## `v0.5.0-beta`
 
 - TC/eBPF collector and independently reviewed loader: independent research,
@@ -55,5 +66,5 @@
 
 Automatic blocking remains a separate opt-in component considered only after false-positive data is available.
 
-TC/eBPF 是独立研究，不是本轮 alpha.6 的前置条件。SBOM/provenance 已有实现，
+TC/eBPF 是独立研究，不是当前 alpha 的前置条件。SBOM/provenance 已有实现，
 本轮只验证准确候选的构建与证明，不新增发布系统。

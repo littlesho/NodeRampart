@@ -9,6 +9,7 @@
 .gitleaks.toml
 CHANGELOG.md
 CONTRIBUTING.md
+LATEST_RELEASE
 LICENSE
 Makefile
 README.md
@@ -516,6 +517,7 @@ scripts/bootstrap.sh
 scripts/build-deb.sh
 scripts/build-release.sh
 scripts/build-rpm.sh
+scripts/check-current-release.py
 scripts/install.sh
 scripts/lab-check.py
 scripts/manage-remove.sh
@@ -524,6 +526,7 @@ scripts/release_sbom.py
 scripts/source-to-package.sh
 scripts/stage-source.py
 scripts/test-bootstrap.py
+scripts/test-current-release.py
 scripts/test-lab-check.py
 scripts/test-multi-interface.py
 scripts/test-netns.py

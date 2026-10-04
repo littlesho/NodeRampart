@@ -1,10 +1,15 @@
 # Budget alerts, health alerts and local evidence / 告警与离线证据
 
-These features are included in the unpublished `0.4.0-alpha` working version.
+Budget/health alerts and local evidence are included in published alpha.9.
+The SSH/GeoIP diagnostic additions below belong to the `0.4.0-alpha.10`
+development candidate. Current public installation selects alpha.9.
 Both new alert groups are **off by default**. Open `sudo noderampart tui
 --language zh` for Chinese or `sudo noderampart tui --language en` for English.
 All settings below are available under **Configuration / 功能配置**. Validate,
 review and save the draft to apply it.
+
+预算、健康告警与离线证据已包含在公开 alpha.9 中。下文新增 SSH/GeoIP 诊断属于
+`0.4.0-alpha.10` 开发候选；当前公开安装仍选择 alpha.9。
 
 这四项功能分别解决“费用是否快超预算”“采集是否还正常”“怎么分享排障材料”
 和“历史数据为什么不见了”。预算与健康告警需要主动开启；证据导出、裁剪台账
@@ -371,18 +376,16 @@ exists, without proving continuous coverage.
 
 ## Upgrade / 升级
 
-Back up and verify the database before upgrading. SQLite automatically migrates
-to **schema 6**, adding durable monitor state and the retention ledger. Config
-and API remain schema 1, with optional alert fields and additive commands.
-Older binaries refuse the migrated database and may reject new configuration
-fields. Restoring previous configuration alone is not a database downgrade;
-use a verified matching pre-upgrade backup for a planned rollback.
+Back up and verify the database before upgrading. The alpha.9 to alpha.10 upgrade
+keeps SQLite schema **14**, config/control API **1**, and sensor protocol **5**.
+Upgrades from older supported schemas use the existing transactional migrations.
+Older binaries refuse newer database schemas and may reject new configuration
+fields. Use a verified matching database/configuration backup for a planned rollback.
 
-This follow-up keeps SQLite schema 6 and export format 1. Monitor JSON advances to
-version 2, with v1 read compatibility and explicit missing-history limits. Older
-strict monitor readers cannot evaluate v2 state; older GeoIP health readers may
-reject the separate scheduling metadata and show unknown. Use a matching verified
-backup for rollback instead of editing version fields.
+Evidence export format remains 1 and monitor JSON remains version 2, with v1 read
+compatibility and explicit missing-history limits. A validated health diagnostic
+uses alert-context v2; events without it retain v1. Older strict health/evidence
+readers may reject the new fields or v2 context. Upgrade the CLI and daemon together.
 
 升级前先备份并验证。不要让旧程序直接打开新数据库，也不要把普通数据库备份当作可公开
 分享的脱敏证据包。公开发布和下载入口仍以 README 中的发布状态为准。

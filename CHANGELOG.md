@@ -2,7 +2,42 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-## 0.4.0-alpha.9 - Unreleased / development candidate
+## 0.4.0-alpha.10 - Development candidate
+
+- Restore trusted OpenSSH journal records with genuinely absent unit metadata;
+  retain root/executable/transport checks and durable-ACK recovery semantics.
+- Add allowlisted SSH and GeoIP failure diagnostics to health, notifications
+  and JSON/HTML evidence. Upgrade the CLI and daemon together; strict older
+  readers may reject diagnostic fields and alert-context v2. Config/API/sensor/DB
+  versions remain 1/1/5/14.
+- Correct the GeoIP updater's privilege-drop, cancellation and authenticated
+  readiness capabilities. Migrate only the exact old generated service while
+  preserving custom units, masks, drop-ins, timer state and failure history.
+- Include all 21 new Go files in the explicit RPM source manifest and retain
+  its completeness regression and main's installer/documentation checks.
+- Prepare DEB `0.4.0~alpha.10` and RPM `0.4.0-0.alpha.11.fc43/fc44` identities.
+  The newest published release remains alpha.9 until this candidate is public.
+
+## 0.4.0-alpha.9 - 2026-10-04 (UTC)
+
+- Publish [v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9)
+  as a non-latest alpha prerelease at `2026-10-04T04:17:49Z`, Release ID
+  `402649106`. The permanent source/tag commit is
+  `9cc75b6936d08099847655b5046c57a485c82ff7`; release workflow
+  [37144860038 / attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/37144860038/attempts/1)
+  succeeded with 17/17 jobs and exactly 22 hosted assets.
+- Anonymous 22/22 downloads and 21-entry SHA256SUMS verification passed. The
+  authenticated draft's 22 provenance and six runtime-package SPDX subject
+  verifications passed and were reused by exact digest identity after publication.
+  Official distribution evidence binds hosted bytes, not the earlier local
+  candidate, which differed for 20/22 asset digests. Later main documentation
+  commits do not change the published source or reissue its assets.
+- Final hosted-package VM runtime and 18 hosted-program binary vulnerability
+  scans, native ARM64, real platforms / human receipt, actual fees and production
+  remain NOT RUN. GO-2026-5970 remains a required-module finding; scanner coverage
+  gaps remain. See the [publication record](docs/RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification).
+
+### Development and repair history before publication
 
 - Check RPM filesystem conflicts in a dependency-free embedded Lua `%pretrans`
   guard before RPM 6's implicit sysusers stage. Retain `%pre` rechecks, service
