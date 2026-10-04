@@ -101,6 +101,9 @@ func TestReconcileGeoSchedulePreservesStateAndIsIdempotent(t *testing.T) {
 			if !bytes.Contains(data, []byte("\nAmbientCapabilities=CAP_SETUID\n")) {
 				t.Fatal("migration omitted the ambient SETUID capability required by systemd sandbox setup")
 			}
+			if !bytes.Contains(data, []byte("\nCapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_KILL CAP_SETGID CAP_SETUID CAP_DAC_OVERRIDE\n")) {
+				t.Fatal("migration omitted the capability required to connect to the daemon-owned control socket")
+			}
 			for _, name := range []string{timer, health, m.ConfigPath} {
 				after, _ := os.ReadFile(name)
 				info, _ := os.Stat(name)
@@ -120,7 +123,7 @@ func TestReconcileGeoSchedulePreservesStateAndIsIdempotent(t *testing.T) {
 }
 
 func TestReconcileGeoScheduleLeavesUnownedOrCustomizedUnits(t *testing.T) {
-	for _, kind := range []string{"absent", "masked", "symlink", "custom", "unpublished_six_capabilities", "custom_ambient", "other_install", "hardlink", "permissions"} {
+	for _, kind := range []string{"absent", "masked", "symlink", "custom", "unpublished_six_capabilities", "unpublished_six_capabilities_with_ambient", "custom_ambient", "other_install", "hardlink", "permissions"} {
 		t.Run(kind, func(t *testing.T) {
 			m, fake, path := geoReconcileFixture(t)
 			if kind != "absent" && kind != "masked" && kind != "symlink" {
@@ -138,10 +141,13 @@ func TestReconcileGeoScheduleLeavesUnownedOrCustomizedUnits(t *testing.T) {
 				err = os.Symlink(canary, path)
 			case "custom":
 				err = os.WriteFile(path, []byte(fmt.Sprintf(legacyGeoUpdateService, m.binary)+"# administrator change\n"), 0o644)
-			case "unpublished_six_capabilities":
+			case "unpublished_six_capabilities", "unpublished_six_capabilities_with_ambient":
 				data := strings.Replace(fmt.Sprintf(legacyGeoUpdateService, m.binary),
 					"CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER\n",
 					"CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_KILL CAP_SETGID CAP_SETUID\n", 1)
+				if kind == "unpublished_six_capabilities_with_ambient" {
+					data = strings.Replace(data, "\nProtectSystem=strict\n", "\nAmbientCapabilities=CAP_SETUID\nProtectSystem=strict\n", 1)
+				}
 				err = os.WriteFile(path, []byte(data), 0o644)
 			case "custom_ambient":
 				err = os.WriteFile(path, []byte(fmt.Sprintf(legacyGeoUpdateService, m.binary)+"AmbientCapabilities=CAP_NET_ADMIN\n"), 0o644)

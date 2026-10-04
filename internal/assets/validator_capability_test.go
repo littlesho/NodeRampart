@@ -5,8 +5,10 @@ package assets
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -28,7 +30,7 @@ func TestMMDBValidatorServiceCapabilities(t *testing.T) {
 	if err := unix.Capget(&header, &capabilities[0]); err != nil {
 		t.Fatal("cannot inspect native capability prerequisites")
 	}
-	for _, capability := range []uint{unix.CAP_CHOWN, unix.CAP_DAC_READ_SEARCH, unix.CAP_FOWNER, unix.CAP_KILL, unix.CAP_SETGID, unix.CAP_SETUID, unix.CAP_SETPCAP} {
+	for _, capability := range []uint{unix.CAP_CHOWN, unix.CAP_DAC_READ_SEARCH, unix.CAP_FOWNER, unix.CAP_KILL, unix.CAP_SETGID, unix.CAP_SETUID, unix.CAP_DAC_OVERRIDE, unix.CAP_SETPCAP} {
 		if capabilities[capability/32].Effective&(1<<(capability%32)) == 0 {
 			t.Skip("requires root with the updater capabilities and CAP_SETPCAP; container root is insufficient")
 		}
@@ -41,13 +43,16 @@ func TestMMDBValidatorServiceCapabilities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, mode := range []string{"legacy", "fixed"} {
+	for _, mode := range []string{"legacy", "without_socket_write", "fixed"} {
 		t.Run(mode, func(t *testing.T) {
 			capabilities := "-all,+chown,+dac_read_search,+fowner"
 			inheritable, ambient := "-all", "-all"
-			if mode == "fixed" {
+			if mode != "legacy" {
 				capabilities += ",+kill,+setgid,+setuid"
 				inheritable, ambient = "-all,+setuid", "-all,+setuid"
+			}
+			if mode == "fixed" {
+				capabilities += ",+dac_override"
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
@@ -64,7 +69,7 @@ func TestMMDBValidatorServiceCapabilities(t *testing.T) {
 
 func TestMMDBValidatorServiceCapabilitiesFixture(t *testing.T) {
 	mode := os.Getenv("NODERAMPART_GEO_CAPABILITY_FIXTURE")
-	if mode != "legacy" && mode != "fixed" {
+	if mode != "legacy" && mode != "without_socket_write" && mode != "fixed" {
 		t.Skip("invoked only by the isolated capability regression")
 	}
 	path := filepath.Join(t.TempDir(), "fixture.mmdb")
@@ -87,6 +92,7 @@ func TestMMDBValidatorServiceCapabilitiesFixture(t *testing.T) {
 	if err != nil || result.BuildEpoch != 1767225600 {
 		t.Fatalf("corrected capability set did not validate the synthetic MMDB: %v", err)
 	}
+	assertGeoUpdaterControlSocketAccess(t, mode)
 
 	base := t.TempDir()
 	blocking := filepath.Join(base, "blocking.mmdb")
@@ -129,4 +135,72 @@ func TestMMDBValidatorServiceCapabilitiesFixture(t *testing.T) {
 		t.Fatalf("corrected capability set could not promptly cancel the nobody process group: %v", err)
 	}
 	waitValidatorProcessesStopped(t, base, []validatorFixtureProcess{parentState, childState})
+}
+
+func assertGeoUpdaterControlSocketAccess(t *testing.T, mode string) {
+	t.Helper()
+	if os.Geteuid() != 0 {
+		t.Fatal("control socket fixture must exercise the root updater identity")
+	}
+	// Both cases retain the MMDB privilege-drop/cancellation capabilities and
+	// ambient SETUID. Only the fixed case can bypass the daemon socket's DAC.
+	expected := uint32(1<<unix.CAP_CHOWN | 1<<unix.CAP_DAC_READ_SEARCH | 1<<unix.CAP_FOWNER |
+		1<<unix.CAP_KILL | 1<<unix.CAP_SETGID | 1<<unix.CAP_SETUID)
+	if mode == "fixed" {
+		expected |= 1 << unix.CAP_DAC_OVERRIDE
+	}
+	header := unix.CapUserHeader{Version: unix.LINUX_CAPABILITY_VERSION_3}
+	var capabilities [2]unix.CapUserData
+	if err := unix.Capget(&header, &capabilities[0]); err != nil ||
+		capabilities[0].Permitted != expected || capabilities[0].Effective != expected ||
+		capabilities[0].Inheritable != 1<<unix.CAP_SETUID || capabilities[1] != (unix.CapUserData{}) {
+		t.Fatal("control socket fixture did not retain exactly the requested capability set")
+	}
+	ambient, ambientErr := unix.PrctlRetInt(unix.PR_CAP_AMBIENT, unix.PR_CAP_AMBIENT_IS_SET, unix.CAP_SETUID, 0, 0)
+	noNewPrivileges, noNewPrivilegesErr := unix.PrctlRetInt(unix.PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0)
+	if ambientErr != nil || ambient != 1 || noNewPrivilegesErr != nil || noNewPrivileges != 1 {
+		t.Fatal("control socket fixture lost ambient SETUID or NoNewPrivileges")
+	}
+	account, err := user.Lookup("nobody")
+	if err != nil {
+		t.Fatal("control socket fixture requires an unprivileged owner:", err)
+	}
+	uid, uidErr := strconv.Atoi(account.Uid)
+	gid, gidErr := strconv.Atoi(account.Gid)
+	if uidErr != nil || gidErr != nil || uid <= 0 || gid <= 0 {
+		t.Fatal("control socket fixture requires non-root ownership")
+	}
+	path := filepath.Join(t.TempDir(), "control.sock")
+	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
+	if err != nil {
+		t.Fatal("create real control socket fixture:", err)
+	}
+	defer listener.Close()
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal("restrict control socket fixture permissions:", err)
+	}
+	if err := os.Chown(path, uid, gid); err != nil {
+		t.Fatal("assign control socket fixture ownership:", err)
+	}
+	checkSocket := func() {
+		t.Helper()
+		var state unix.Stat_t
+		if unix.Lstat(path, &state) != nil || state.Mode&unix.S_IFMT != unix.S_IFSOCK ||
+			state.Mode&0o7777 != 0o600 || state.Uid != uint32(uid) || state.Gid != uint32(gid) {
+			t.Fatal("control socket fixture ownership or owner-only permissions changed")
+		}
+	}
+	checkSocket()
+	connection, err := net.DialTimeout("unix", path, time.Second)
+	if connection != nil {
+		_ = connection.Close()
+	}
+	if mode == "without_socket_write" {
+		if !errors.Is(err, unix.EACCES) {
+			t.Fatalf("six-capability updater must fail the daemon-owned 0600 socket's write check: %v", err)
+		}
+	} else if err != nil || connection == nil {
+		t.Fatal("seven-capability updater could not connect to the daemon-owned 0600 socket:", err)
+	}
+	checkSocket()
 }

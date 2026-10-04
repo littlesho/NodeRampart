@@ -44,9 +44,14 @@ An attacker who already has root is outside the confidentiality boundary. NodeRa
 1. Network content beyond headers is not sent from the sensor or stored.
 2. The sensor service has only `CAP_NET_RAW`; the daemon service has empty
    capability sets. The root GeoIP updater's bounding set is `CAP_CHOWN`,
-   `CAP_DAC_READ_SEARCH`, `CAP_FOWNER`, `CAP_KILL`, `CAP_SETGID` and `CAP_SETUID`.
+   `CAP_DAC_READ_SEARCH`, `CAP_FOWNER`, `CAP_KILL`, `CAP_SETGID`, `CAP_SETUID`
+   and `CAP_DAC_OVERRIDE`.
    Only `CAP_SETUID` is ambient for that updater, and `NoNewPrivileges=yes`
    remains enabled.
+   `CAP_DAC_OVERRIDE` allows the root updater to connect to the daemon's control
+   socket (mode `0600`) for readiness checks during activation.
+   中文：`CAP_DAC_OVERRIDE` 用于让 root 更新进程连接 daemon 拥有的 0600 控制 socket，
+   在激活期间确认服务就绪状态。
 3. Sensor input is bounded before allocation and before state growth.
 4. A data-collection failure must be visible in status or report quality fields.
 5. NodeRampart never makes firewall changes in the alpha.

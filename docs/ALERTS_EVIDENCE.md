@@ -414,18 +414,23 @@ sudo noderampart status
 
 Reconciliation migrates only the recognized, canonical old generated
 `noderampart-geoip-update.service` to the current template. The template retains
-`NoNewPrivileges=yes`, includes the six bounding capabilities below, and requests
+`NoNewPrivileges=yes`, includes the seven bounding capabilities below, and requests
 only `CAP_SETUID` as an ambient capability for the validator privilege-drop path:
 
 ```ini
 NoNewPrivileges=yes
-CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_KILL CAP_SETGID CAP_SETUID
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_KILL CAP_SETGID CAP_SETUID CAP_DAC_OVERRIDE
 AmbientCapabilities=CAP_SETUID
 ```
 
+`CAP_DAC_OVERRIDE` is included so the root updater can connect to the daemon's
+control socket (mode `0600`) and confirm readiness during activation.
+
 迁移只更新能够确认由 NodeRampart 生成的标准旧版
 `noderampart-geoip-update.service`。当前模板保留 `NoNewPrivileges=yes`，使用上面的
-六项能力边界，并且仅将 `CAP_SETUID` 加入 ambient 集合，用于验证器降权路径。
+七项能力边界，并且仅将 `CAP_SETUID` 加入 ambient 集合，用于验证器降权路径。
+`CAP_DAC_OVERRIDE` 用于让 root 更新进程连接 daemon 拥有的 0600 控制 socket，
+在激活期间确认服务就绪状态。
 不能仅检查 `User=root` 或能力边界中是否列出了 `CAP_SETUID` 就认定服务实际保留了
 该能力。
 

@@ -484,6 +484,9 @@ func (m *Manager) geoUpdateService() string {
 	// The MMDB child must clear supplementary groups and become nobody. The
 	// parent retains CAP_KILL to cancel its owned process group after that UID
 	// transition; otherwise a timeout cannot terminate the unprivileged child.
+	// Activation/readiness checks connect to the daemon-owned 0600 control
+	// socket. CAP_DAC_OVERRIDE supplies the required socket write permission;
+	// CAP_DAC_READ_SEARCH cannot authorize that connection.
 	// systemd v257's seccomp setup drops CAP_SETUID unless it is ambient, even
 	// with User=root. NoNewPrivileges then prevents exec from restoring it from
 	// the bounding set. Keep only CAP_SETUID ambient; the child's setuid(nobody)
@@ -500,7 +503,7 @@ User=root
 Group=root
 UMask=0077
 NoNewPrivileges=yes
-CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_KILL CAP_SETGID CAP_SETUID
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_KILL CAP_SETGID CAP_SETUID CAP_DAC_OVERRIDE
 AmbientCapabilities=CAP_SETUID
 ProtectSystem=strict
 ReadWritePaths=/etc/noderampart /run/noderampart-management.lock
