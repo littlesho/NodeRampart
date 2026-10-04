@@ -150,12 +150,16 @@ func TestJournalProcessDiagnosisIsRetainedUntilNewTrustedAcknowledgement(t *test
 		t.Run(scenario, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			body := ""
+			quietReady := filepath.Join(t.TempDir(), "quiet-ready")
+			body := fmt.Sprintf("printf 'quiet-ready\\n' > '%s'\n", quietReady)
 			if scenario != "quiet" {
-				body = fmt.Sprintf("cat <<'RECORD'\n%s\nRECORD", reliableRecord(t, "replayed", at))
+				// A distinct second cursor witnesses completion of the first
+				// consumer return and its recovery status before cancellation.
+				body = fmt.Sprintf("cat <<'RECORD'\n%s\n%s\nRECORD", reliableRecord(t, "replayed", at), reliableRecord(t, "following", at.Add(time.Microsecond)))
 			}
 			path := recoveryJournal(t, "", body)
-			starts, recovered := 0, 0
+			starts, consumed, recovered := 0, 0, 0
+			quietObserved := false
 			var last JournalStatus
 			err := (Journal{Path: path}).RunReliable(ctx, JournalOptions{
 				InitialObservedAt: at.Add(-time.Second), RestartMin: time.Millisecond, RestartMax: time.Millisecond,
@@ -166,18 +170,63 @@ func TestJournalProcessDiagnosisIsRetainedUntilNewTrustedAcknowledgement(t *test
 						if starts > 1 && (status.Cause != "process_exited" || status.DiagnosticScope != "last_failure") {
 							t.Errorf("startup falsely erased failure evidence: %+v", status)
 						}
-						if starts == 3 {
-							time.AfterFunc(30*time.Millisecond, cancel)
+						if starts == 3 && scenario == "quiet" {
+							// Startup is published before stdout is read. Wait for
+							// the silent fixture itself, bounded by the same context.
+							ticker := time.NewTicker(time.Millisecond)
+							defer ticker.Stop()
+							for !quietObserved {
+								data, readErr := os.ReadFile(quietReady)
+								if string(data) == "quiet-ready\n" && readErr == nil {
+									quietObserved = true
+									cancel()
+									break
+								}
+								if readErr != nil && !os.IsNotExist(readErr) {
+									t.Errorf("read quiet fixture readiness: %v", readErr)
+									cancel()
+									return
+								}
+								select {
+								case <-ctx.Done():
+									return
+								case <-ticker.C:
+								}
+							}
 						}
 					}
 					if status.Reason == "record_persisted" {
 						recovered++
+						if scenario != "trusted" || consumed != 1 {
+							t.Errorf("recovery did not follow the first new trusted acknowledgement: consumed=%d status=%+v", consumed, status)
+						}
 						if status.Cause != "" || status.DiagnosticScope != "" || status.ExitCode != nil || status.Signal != "" {
 							t.Errorf("new durable acknowledgement retained stale failure: %+v", status)
 						}
 					}
 				},
-			}, func(context.Context, JournalEntry) error {
+			}, func(_ context.Context, entry JournalEntry) error {
+				consumed++
+				if scenario == "quiet" || starts != 3 || entry.Observation == nil || entry.SkipReason != "" {
+					t.Errorf("unexpected fixture consumption: starts=%d consumed=%d entry=%+v", starts, consumed, entry)
+				}
+				wantCursor := "replayed"
+				if consumed == 2 {
+					wantCursor = "following"
+				}
+				if entry.Cursor != wantCursor {
+					t.Errorf("fixture record order changed: consumed=%d cursor=%q", consumed, entry.Cursor)
+				}
+				wantRecovery := 0
+				if scenario == "trusted" && consumed == 2 {
+					wantRecovery = 1
+				}
+				if recovered != wantRecovery || wantRecovery == 0 && (last.Cause != "process_exited" || last.DiagnosticScope != "last_failure") {
+					t.Errorf("failure/recovery changed before consumer acknowledgement: consumed=%d recovered=%d last=%+v", consumed, recovered, last)
+				}
+				if consumed == 2 {
+					cancel()
+				}
 				if scenario == "duplicate" {
 					return ErrJournalAlreadyAcknowledged
 				}
@@ -187,8 +236,12 @@ func TestJournalProcessDiagnosisIsRetainedUntilNewTrustedAcknowledgement(t *test
 			if scenario == "trusted" {
 				want = 1
 			}
-			if err != nil || starts != 3 || recovered != want || last.State != "running" || scenario != "trusted" && last.DiagnosticScope != "last_failure" {
-				t.Fatalf("last failure/acknowledgement semantics changed: starts=%d recovered=%d last=%+v err=%v", starts, recovered, last, err)
+			wantConsumed := 2
+			if scenario == "quiet" {
+				wantConsumed = 0
+			}
+			if err != nil || ctx.Err() != context.Canceled || starts != 3 || consumed != wantConsumed || recovered != want || last.State != "running" || scenario == "quiet" && !quietObserved || scenario != "trusted" && (last.Cause != "process_exited" || last.DiagnosticScope != "last_failure") {
+				t.Fatalf("last failure/acknowledgement semantics changed: starts=%d consumed=%d recovered=%d quietObserved=%t last=%+v err=%v context=%v", starts, consumed, recovered, quietObserved, last, err, ctx.Err())
 			}
 		})
 	}
