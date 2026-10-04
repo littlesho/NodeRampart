@@ -22,6 +22,8 @@ PRODUCT_TAG = re.compile(
 START = "<!-- current-release:start -->"
 END = "<!-- current-release:end -->"
 REQUIRED = ("README.md", "README.zh-CN.md", "docs/RELEASE_VERIFICATION.md")
+MAX_RELEASES_BYTES = 20 * 1024 * 1024
+MAX_LATEST_BYTES = 1024 * 1024
 
 
 def version_key(tag):
@@ -35,8 +37,8 @@ def version_key(tag):
             stage or "", -1 if number is None else int(number))
 
 
-def newest_published(data):
-    """Accept one complete list, or gh api --paginate --slurp's page arrays."""
+def published_objects(data):
+    """Accept one complete list or bounded page arrays."""
     if not isinstance(data, list):
         raise ValueError("published release listing must be a JSON array")
     if data and all(isinstance(page, list) for page in data):
@@ -45,10 +47,23 @@ def newest_published(data):
         data = [release for page in data for release in page]
     if len(data) > 2000:
         raise ValueError("published release listing exceeds 2000 entries")
+    if any(not isinstance(release, dict) for release in data):
+        raise ValueError("invalid release object")
+    return data
+
+
+def publication_timestamp(value):
+    if not isinstance(value, str) or not re.fullmatch(
+            r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", value):
+        raise ValueError("invalid release publication timestamp")
+    datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return value
+
+
+def newest_published(data):
+    """Choose the highest published product version, including prereleases."""
     candidates = []
-    for release in data:
-        if not isinstance(release, dict):
-            raise ValueError("invalid release object")
+    for release in published_objects(data):
         tag = release.get("tag_name")
         key = version_key(tag)
         if key is None:
@@ -57,21 +72,26 @@ def newest_published(data):
             raise ValueError("release draft field must be a boolean")
         if release["draft"] or release.get("published_at") is None:
             continue
-        published = release["published_at"]
-        if not isinstance(published, str) or not re.fullmatch(
-                r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", published):
-            raise ValueError("invalid release publication timestamp")
-        datetime.datetime.fromisoformat(published.replace("Z", "+00:00"))
+        publication_timestamp(release["published_at"])
         candidates.append((key, tag))
     if not candidates:
         raise ValueError("no published product release in listing")
     return max(candidates)[1]
 
 
-def release_pages(raw):
+def unique_object(pairs):
+    result = {}
+    for name, value in pairs:
+        if name in result:
+            raise ValueError("duplicate JSON object field")
+        result[name] = value
+    return result
+
+
+def release_pages(raw, strict_objects=False):
     """Older gh --paginate writes adjacent page arrays, without --slurp."""
     text = raw.decode("utf-8")
-    decoder = json.JSONDecoder()
+    decoder = json.JSONDecoder(object_pairs_hook=unique_object if strict_objects else None)
     pages = []
     position = 0
     while position < len(text):
@@ -85,6 +105,54 @@ def release_pages(raw):
     if not pages:
         raise ValueError("empty published release JSON")
     return pages[0] if len(pages) == 1 else pages
+
+
+def positive_release_id(value):
+    if type(value) is not int or value <= 0:
+        raise ValueError("release ID must be a positive integer")
+    return value
+
+
+def check_published_latest(latest, listing, tag):
+    """Cross-check actual Latest and complete-list captures, not request metadata."""
+    if not isinstance(latest, dict):
+        raise ValueError("Latest release must be a single JSON object")
+    release_id = positive_release_id(latest.get("id"))
+    if latest.get("draft") is not False or latest.get("prerelease") is not False:
+        raise ValueError("Latest release must have draft=false and prerelease=false")
+    publication_timestamp(latest.get("published_at"))
+    newest = newest_published(listing)
+    if latest.get("tag_name") != tag or newest != tag:
+        raise ValueError("Latest tag must match LATEST_RELEASE and the newest published product version")
+    matches = []
+    seen_ids = set()
+    seen_tags = set()
+    for release in published_objects(listing):
+        product_tag = release.get("tag_name")
+        candidate_id = positive_release_id(release.get("id"))
+        if candidate_id == release_id or product_tag == tag:
+            matches.append(release)
+        if version_key(product_tag) is None:
+            continue
+        if release.get("draft") is False and release.get("published_at") is not None:
+            if candidate_id in seen_ids or product_tag in seen_tags:
+                raise ValueError("duplicate or conflicting published release identity")
+            seen_ids.add(candidate_id)
+            seen_tags.add(product_tag)
+    if len(matches) != 1:
+        raise ValueError("Latest must identify exactly one object in the complete release listing")
+    corresponding = matches[0]
+    for name in ("id", "tag_name", "draft", "prerelease", "published_at"):
+        if corresponding.get(name) != latest.get(name) or type(corresponding.get(name)) is not type(latest.get(name)):
+            raise ValueError("Latest identity/state/publication timestamp disagrees with the release listing")
+
+
+def read_bounded(path, limit, description):
+    with open(path, "rb") as stream:
+        raw = stream.read(limit + 1)
+    if len(raw) > limit:
+        raise ValueError(description + " exceeds " + ("20 MiB" if limit == MAX_RELEASES_BYTES else "1 MiB"))
+    return raw
 
 
 def release_identity(source, tag):
@@ -149,7 +217,9 @@ def check_regions(text, name, identity):
     return len(regions), errors
 
 
-def check(root, published_file=None):
+def check(root, published_file=None, latest_file=None):
+    if latest_file is not None and published_file is None:
+        raise ValueError("--published-latest-json requires --published-releases-json")
     tag = (root / "LATEST_RELEASE").read_text().strip()
     if version_key(tag) is None:
         raise ValueError("LATEST_RELEASE must contain one canonical product tag")
@@ -171,13 +241,15 @@ def check(root, published_file=None):
         if name not in marked:
             errors.append(name + ": missing current-release example region")
     if published_file:
-        with open(published_file, "rb") as stream:
-            raw = stream.read(20 * 1024 * 1024 + 1)
-        if len(raw) > 20 * 1024 * 1024:
-            raise ValueError("published release JSON exceeds 20 MiB")
-        online_tag = newest_published(release_pages(raw))
+        raw = read_bounded(published_file, MAX_RELEASES_BYTES, "published release JSON")
+        listing = release_pages(raw, strict_objects=latest_file is not None)
+        online_tag = newest_published(listing)
         if online_tag != tag:
             errors.append(f"LATEST_RELEASE is {tag}; actual newest published release is {online_tag}")
+        if latest_file is not None:
+            latest_raw = read_bounded(latest_file, MAX_LATEST_BYTES, "Latest release JSON")
+            latest = json.loads(latest_raw, object_pairs_hook=unique_object)
+            check_published_latest(latest, listing, tag)
     if errors:
         raise ValueError("\n".join(errors))
     return f"Current release documentation PASS: {tag}, {total} regions in {len(marked)} documents"
@@ -188,9 +260,11 @@ def main():
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent)
     parser.add_argument("--published-releases-json", type=Path,
                         help="complete GitHub release listing captured during publication sync")
+    parser.add_argument("--published-latest-json", type=Path,
+                        help="actual GitHub Latest response; requires the complete release listing")
     args = parser.parse_args()
     try:
-        print(check(args.root, args.published_releases_json))
+        print(check(args.root, args.published_releases_json, args.published_latest_json))
     except (OSError, ValueError) as error:
         print("Current release documentation: " + str(error), file=sys.stderr)
         return 1

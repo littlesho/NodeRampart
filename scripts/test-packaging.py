@@ -985,7 +985,7 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
 
     def test_public_alpha_suffix_native_versions_keep_release_order(self):
         native_versions = []
-        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9', '.10'):
+        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9', '.10', '.11'):
             with self.subTest(suffix=suffix):
                 version = '0.4.0-alpha' + suffix
                 self.write(self.project / 'VERSION', version + '\n')
