@@ -10,11 +10,11 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 ## 版本状态与验收范围
 
-**v0.4.0-alpha.9 是 main 上的 Unreleased 开发候选。** 四个官方账户渠道与已有八个渠道并行，均为可选。alpha.9 尚无公开安装资产；[验收记录](docs/ALPHA9_ACCEPTANCE.md)区分契约测试、候选包和仍未执行的检查。
+**[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) 已作为非 latest 的 alpha 预发布版本公开。** 四个官方账户渠道与已有八个渠道并行，均为可选。公开分发核验通过：22/22 项匿名下载、21 条 checksum；原 22 项 provenance 与 6 项包级 SPDX 验签结果在公开后按精确摘要一致性复用。最终 hosted 包 VM 运行、18 个 hosted 程序的二进制漏洞新扫描、平台实网／人工接收、实际收费、原生 ARM64 与生产仍为 **NOT RUN**。[公开记录](docs/RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)和[开发验收历史](docs/ALPHA9_ACCEPTANCE.md)区分这些范围；漏洞发现和扫描覆盖缺口继续披露。
 
 **[v0.4.0-alpha.8](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) 已作为非 latest 的 alpha 预发布版本公开。** 六个原生渠道包含在其安装包中。平台实网／人工接收、原生 ARM64 和生产仍为 **NOT RUN**；Fedora 44 公开 bootstrap 仍为 **BLOCKED_NETWORK**，历史 strict doctor unknown 继续保留在[公开分发与诊断记录](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。已知漏洞发现和扫描覆盖缺口见[当前限制](docs/ALPHA_LIMITATIONS.md)。
 
-以下固定安装示例仍为 alpha.7；省略 `--version` 仍选择 alpha.5。[alpha.7](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)、[alpha.6](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification)和 [GeoIP 验收](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)保留原有范围，版本历史见 [CHANGELOG](CHANGELOG.md)。已发布包的程序与文档保持其冻结源码快照；更新 main 不会改变已安装的旧发行包。
+以下固定安装示例有意保留此前选定的 alpha.7 公开运行路径；省略 `--version` 仍选择 alpha.5。选择预发布版的用户可获取明确版本的 alpha.9 资产；静态公开分发通过不代表最终 hosted 字节已完成运行验收。[alpha.7](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)、[alpha.6](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification)和 [GeoIP 验收](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)保留原有范围，版本历史见 [CHANGELOG](CHANGELOG.md)。已发布包的程序与文档保持其冻结源码快照；更新 main 不会改变已安装的旧发行包。
 
 ## 能帮你做什么？
 
@@ -35,7 +35,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。ARM64 安装包已提供，但真实 ARM64 运行尚未验收。
 
-**这是旧版 alpha.7 的安装路径。** 下文当前 main 的新菜单和新增渠道需要对应的新构建；此命令不会安装全部 12 个渠道。先下载到独立目录，查看脚本后再决定是否执行：
+**这是旧版 alpha.7 的安装路径。** 下文统一菜单和全部 12 个渠道已包含在公开 alpha.9 中，此 alpha.7 命令不会安装这些新功能。由于最终 alpha.9 hosted 包 VM 运行仍为 NOT RUN，示例继续固定旧版本。先下载到独立目录，查看脚本后再决定是否执行：
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
@@ -110,10 +110,10 @@ sudo noderampart tui --language zh
 | Slack／`slack` | Slack App Incoming Webhook | Slack 设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#slack) | 已发布 alpha.8 及以后 |
 | Microsoft Teams Workflows／`teams` | 所支持的 Adaptive Card 工作流，仅确认请求接受 | Teams 设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#microsoft-teams-workflows) | 已发布 alpha.8 及以后 |
 | Google Chat／`google_chat` | Space Incoming Webhook | Google Chat 设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#google-chat) | 已发布 alpha.8 及以后 |
-| QQ Bot／`qqbot` | 官方主动 C2C／群文本，须有已授权的平台 ID | QQ Bot 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#qq-bot主动-c2c-或群通知) | alpha.9 main；Unreleased |
-| LINE Messaging API Push／`line` | Official Account 向获授权用户／群／room 推送 | LINE 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#lineofficial-account-的-messaging-api-push) | alpha.9 main；Unreleased |
-| Twilio SMS／`twilio_sms` | Programmable Messaging SMS 向一个 E.164 收件人发送 | Twilio SMS 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#twilio-sms分段同意与有限费用预留) | alpha.9 main；Unreleased |
-| WhatsApp Cloud API／`whatsapp_cloud` | Meta Cloud API 向一个收件人发送批准模板 | WhatsApp 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#whatsapp直接-meta-cloud-api仅批准-body-模板) | alpha.9 main；Unreleased |
+| QQ Bot／`qqbot` | 官方主动 C2C／群文本，须有已授权的平台 ID | QQ Bot 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#qq-bot主动-c2c-或群通知) | 已发布 alpha.9 及以后版本 |
+| LINE Messaging API Push／`line` | Official Account 向获授权用户／群／room 推送 | LINE 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#lineofficial-account-的-messaging-api-push) | 已发布 alpha.9 及以后版本 |
+| Twilio SMS／`twilio_sms` | Programmable Messaging SMS 向一个 E.164 收件人发送 | Twilio SMS 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#twilio-sms分段同意与有限费用预留) | 已发布 alpha.9 及以后版本 |
+| WhatsApp Cloud API／`whatsapp_cloud` | Meta Cloud API 向一个收件人发送批准模板 | WhatsApp 操作 · [指南](docs/OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md#whatsapp直接-meta-cloud-api仅批准-body-模板) | 已发布 alpha.9 及以后版本 |
 
 渠道通过持久 outbox 发送符合规则的事件开始／更新／恢复及短日报。Telegram、六个原生 Webhook 和四个账户渠道可独立选择 English／简体中文；通用 Webhook 保持既有英文 JSON 契约。WhatsApp 必须有相应语言的批准模板，SMS 使用有分段上限的紧凑摘要；付费渠道日报默认关闭。修改语言或时区不会重写旧队列正文。
 
