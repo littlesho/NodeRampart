@@ -115,14 +115,16 @@ numbering is independent of the project prerelease index. Use each build script'
 reported output path; ordinary validation/package builds create no tag or Release.
 
 <!-- current-release:start -->
-The current published release is `v0.4.0-alpha.9`, with public DEB filename
-`noderampart_0.4.0-alpha.9_ARCH.deb`, Debian internal `0.4.0~alpha.9`, and RPM
-`0.4.0-0.alpha.10.fc43/fc44`. Its permanent source is
-`9cc75b6936d08099847655b5046c57a485c82ff7`; see the [hosted publication record](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification).
+The current published release is `v0.4.0-alpha.10`, with public DEB filename
+`noderampart_0.4.0-alpha.10_ARCH.deb`, Debian internal `0.4.0~alpha.10`, and RPM
+`0.4.0-0.alpha.11.fc43/fc44`. Its permanent source is
+`79ae500106e5d89b0b65b04bfa48e010dcdb39ac`; see the [hosted publication record](RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification).
 <!-- current-release:end -->
 
 Same-source local runtime evidence and final hosted-byte evidence are separate.
-The publication-time hosted VM runtime and 18-program binary scans were NOT RUN.
+The final hosted Debian13 amd64 and Fedora44 x86_64 packages passed bounded
+upgrade/service/SSH/GeoIP smoke checks. The other four hosted package runtime
+cases and the 18-program binary vulnerability scans remain NOT RUN.
 Local/CI artifacts do not inherit release provenance by sharing a version or
 source tree. [LATEST_RELEASE](../LATEST_RELEASE) records the current documentation
 pin; the maintained bootstrap resolves public Releases online independently of

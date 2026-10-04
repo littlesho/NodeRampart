@@ -42,12 +42,15 @@
   prior alpha.6 acceptance does not certify the new package bytes.
 
 <!-- current-release:start -->
-## `v0.4.0-alpha.9` — current published alpha
+## `v0.4.0-alpha.10` — current published alpha
 
 - Twelve optional notification channels through the shared terminal menu,
   including four official-account channels with persistent consent/cost controls.
-- Identity-aware sensor receipt diagnosis and early RPM installation conflict
-  checks; see the [publication scope](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification).
+- Trusted SSH records with absent unit metadata, durable-ACK recovery and
+  allowlisted SSH/GeoIP diagnostics; updater privilege-drop/readiness and guarded
+  unit migration fixes. Config/API/sensor/DB remain 1/1/5/14; upgrade CLI/daemon
+  together. Identity-aware sensor receipt diagnosis and early RPM installation
+  conflict checks remain included; see the [publication scope](RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification).
 - Current install and verification examples track this published release; the
   maintained bootstrap resolves future published versions when actively invoked.
 <!-- current-release:end -->

@@ -2,17 +2,19 @@
 
 <!-- current-release:start -->
 The newest published product release is
-[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9),
+[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10),
 an alpha prerelease without GitHub's “Latest” badge.
 <!-- current-release:end -->
-Its [publication record](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)
-binds 22 anonymous downloads/checksums and reused provenance/SPDX results to
-hosted bytes. At publication, final hosted-package VM runtime and final 18
-hosted-program binary vulnerability scans were NOT RUN. Same-source local
-preflight candidates passed bounded runtime checks; their evidence remains separate.
-Real vendor APIs / human receipt, actual fees, native ARM64 and production remain
-NOT RUN. GO-2026-5970 is still a required-module finding; stripped symbols,
-Fedora Go suffix coverage gaps and tool advisories remain disclosed.
+Its [publication record](RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification)
+binds the original 22 hosted assets to the frozen release source. Authenticated
+22 provenance and six package-subject SPDX checks passed. Final hosted Debian13
+amd64 and Fedora44 x86_64 packages passed bounded upgrade/service/SSH/GeoIP smoke;
+other hosted runtime cases and scans of the 18 hosted programs remain NOT RUN.
+Fresh anonymous downloads of all 22 assets and 21 checksum entries passed; the
+28 proof results were reused by exact digest. Real vendor APIs / human
+receipt, actual fees, native ARM64 and production remain NOT RUN. GO-2026-5970
+is still a required-module finding; stripped symbols, Fedora Go suffix coverage
+gaps and tool advisories remain disclosed.
 
 Published alpha.8 is also a non-latest prerelease. Its independent
 [distribution record](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)

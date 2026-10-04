@@ -2,17 +2,17 @@
 
 <!-- current-release:start -->
 Current download and verification examples select published
-[v0.4.0-alpha.9](#alpha9-publication-and-public-distribution-verification).
-Its frozen source is `9cc75b6936d08099847655b5046c57a485c82ff7`, Debian native
-version is `0.4.0~alpha.9`, and RPM is `0.4.0-0.alpha.10.fc43/fc44`.
+[v0.4.0-alpha.10](#alpha10-publication-and-public-distribution-verification).
+Its frozen source is `79ae500106e5d89b0b65b04bfa48e010dcdb39ac`, Debian native
+version is `0.4.0~alpha.10`, and RPM is `0.4.0-0.alpha.11.fc43/fc44`.
 Later main installer/documentation commits do not become the source of these
 published assets or attestations.
 <!-- current-release:end -->
 
 Use the [maintained entry](../README.md#install-the-newest-published-release)
-for default-latest installation. A Release's frozen bootstrap retains its
-original default: always pass an explicit version when using the pinned
-Release-asset example. The current documentation record is [LATEST_RELEASE](../LATEST_RELEASE),
+for default-latest installation. The alpha.10 Release bootstrap is a frozen
+source snapshot with dynamic default resolution; pass an explicit version when
+using the pinned Release-asset example. The current documentation record is [LATEST_RELEASE](../LATEST_RELEASE),
 separate from development `VERSION` and never an online fallback.
 
 中文：当前下载与验签示例随最新公开版本更新；默认安装使用 main 维护入口。
@@ -61,11 +61,11 @@ complete the download set.
 
 <!-- current-release:start -->
 For the current published release, public DEB names are
-`noderampart_0.4.0-alpha.9_ARCH.deb`, with native version `0.4.0~alpha.9`.
-RPM names contain `0.4.0-0.alpha.10.fc43` or `0.4.0-0.alpha.10.fc44`;
+`noderampart_0.4.0-alpha.10_ARCH.deb`, with native version `0.4.0~alpha.10`.
+RPM names contain `0.4.0-0.alpha.11.fc43` or `0.4.0-0.alpha.11.fc44`;
 the source RPM uses Fedora 44. SBOM/buildinfo names append `.spdx.json` and
 `.buildinfo.json` to the exact public package filename. Checksums and
-attestations bind those filenames and bytes. The [publication record](#alpha9-publication-and-public-distribution-verification)
+attestations bind those filenames and bytes. The [publication record](#alpha10-publication-and-public-distribution-verification)
 identifies the hosted source, run and evidence scope.
 <!-- current-release:end -->
 
@@ -115,25 +115,25 @@ source you have reviewed; do not treat a value downloaded beside the package as
 independent evidence of the expected source.
 
 <!-- current-release:start -->
-The example selects published `v0.4.0-alpha.9`, whose reviewed source is
-`9cc75b6936d08099847655b5046c57a485c82ff7`. Confirm that identity against the
+The example selects published `v0.4.0-alpha.10`, whose reviewed source is
+`79ae500106e5d89b0b65b04bfa48e010dcdb39ac`. Confirm that identity against the
 public source before using it as an expected value. Missing statements cannot
 pass verification; do not substitute another release's attestations.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.9 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.10 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.9_amd64.deb
-EXPECTED_COMMIT='9cc75b6936d08099847655b5046c57a485c82ff7'
+PACKAGE=noderampart_0.4.0-alpha.10_amd64.deb
+EXPECTED_COMMIT='79ae500106e5d89b0b65b04bfa48e010dcdb39ac'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.9 \
+  --source-ref refs/tags/v0.4.0-alpha.10 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
@@ -143,7 +143,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.9 \
+  --source-ref refs/tags/v0.4.0-alpha.10 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document/v2.3 \
@@ -153,7 +153,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.9 \
+  --source-ref refs/tags/v0.4.0-alpha.10 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
@@ -193,13 +193,13 @@ reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 <!-- current-release:start -->
 For the current published release, the exact asset set is 22 files:
 
-- `noderampart_0.4.0-alpha.9_amd64.deb` and `noderampart_0.4.0-alpha.9_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.10.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.10.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.10.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.10.fc44.aarch64.rpm`.
+- `noderampart_0.4.0-alpha.10_amd64.deb` and `noderampart_0.4.0-alpha.10_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.11.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.11.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.11.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.11.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.10.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.11.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
 
 <!-- current-release:end -->
@@ -1376,3 +1376,184 @@ source. The tag and Release are not moved, edited or republished by this record.
 本地运行证据保留其范围；最终 hosted 包 VM 运行及 18 个程序二进制漏洞新扫描
 仍 NOT RUN。平台实网／人工接收／收费、原生 ARM64、生产及所有历史未知、网络
 阻塞和安全扫描缺口均保留；公开分发通过不代表生产就绪。
+
+
+## Alpha.10 publication and public distribution verification
+
+[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10)
+was published as an alpha prerelease from the final merged main source. The tag,
+source and hosted bytes below remain its permanent identity; later documentation
+commits on main are not the source of these packages.
+
+| Field | Value |
+| --- | --- |
+| Tag | `v0.4.0-alpha.10` (lightweight; ref object type `commit`) |
+| Release ID | `402977099` |
+| Published UTC | `2026-10-04T11:54:33Z` |
+| Source commit | `79ae500106e5d89b0b65b04bfa48e010dcdb39ac` |
+| Source tree | `51f4b3f3778ac1ba46a5dddd65b13b6c2201602e` |
+| Original BUILD_DATE | `2026-10-04T17:56:33+08:00` (raw Git commit timestamp, unchanged) |
+| Workflow | [37195901702 / attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/37195901702/attempts/1), `.github/workflows/release.yml` |
+| Workflow result | SUCCESS, 17/17 jobs |
+| Release state | `draft=false`, `prerelease=true` |
+| Latest | No `make_latest` change requested |
+| Assets | Exactly 22, 107622742 bytes |
+| Authenticated draft checks | 22 identities, six package/SPDX/buildinfo pairs and 21 checksum entries PASS |
+| Provenance / SPDX subjects | 22 hosted asset subjects + six runtime-package subjects PASS |
+| Anonymous public distribution | 22/22 fresh downloads PASS, 107622742 bytes; 21 checksum entries PASS |
+| Project / DEB / RPM | `0.4.0-alpha.10` / `0.4.0~alpha.10` / `0.4.0-0.alpha.11.fc43/fc44` |
+| Config / control API / sensor / database | 1 / 1 / 5 / 14 |
+| Alert context | v2 for validated diagnostics, otherwise v1; upgrade CLI and daemon together |
+
+### Draft-to-public byte continuity
+
+A successful complete anonymous Release-list read returned nine Releases on one
+page and selected alpha.10 as the highest published product version. Numeric-ID
+and tag readback matched Release ID `402977099`, source, state and published time.
+A fresh anonymous direct-HTTPS client used no Authorization, token, cookie, netrc
+or proxy environment. All 22 downloads returned HTTP 200, totaling 107622742
+bytes, in 37.813 seconds; download child exit 0, without failures or retries.
+Their IDs, original names, sizes and SHA256 values matched the independently
+accepted draft set. Actual `sha256sum --strict --check SHA256SUMS` exited 0 with
+21 OK entries. The independent inventory also covers SHA256SUMS. Public
+release.json and bootstrap match the frozen source identity. No tag movement,
+asset replacement, rebuild or re-signing was used for publication.
+
+### Fixes and source acceptance
+
+PR [#39](https://github.com/littlesho/NodeRampart/pull/39) was integrated with the
+current main installation and fuzz-toolchain fixes before final validation. The
+SSH collector distinguishes a genuinely absent journal unit from explicit empty,
+null or unapproved units. An absent unit still requires a root sender, an allowed
+OpenSSH executable and direct journal/syslog transport; user-service and inherited
+stdout sources are rejected. Missing/null MESSAGE remains a collection-quality
+failure until a new trusted record receives a durable ACK. Cursor, pending and
+restart recovery retain their real-gap semantics.
+
+GeoIP diagnostics use fixed allowlists through health events, notifications and
+JSON/HTML evidence. The updater alone receives the capabilities needed for child
+privilege dropping, cancellation and authenticated control-socket readiness.
+Mode-0600 socket permissions, NoNewPrivileges, sandbox/SELinux boundaries and
+child exit constraints remain enforced. Exact old generated units can migrate;
+custom units, masks, drop-ins, timer state and failure history remain protected.
+Migration does not download GeoIP, enable a disabled timer or clear health errors;
+pending configuration uses guarded recovery.
+
+The final candidate ran `make validate` once: exit 0, 906.18 seconds. The final
+integration and merged main have the same source tree, so that matching local
+suite and independent code review were reused. Hosted PR checks and the new main
+CI/CodeQL checks were read separately; main
+[CI 37193754860/1](https://github.com/littlesho/NodeRampart/actions/runs/37193754860/attempts/1)
+and [CodeQL 37193754606/1](https://github.com/littlesho/NodeRampart/actions/runs/37193754606/attempts/1)
+passed. Ordinary/race/coverage/Ubuntu and release-validation checks retain Go
+1.26.8; the seven bounded fuzz targets alone use Go 1.27.1, and Fedora keeps its
+native toolchain. Historical fuzz failure `37186197174/1` and PR #39's original
+RPM source-manifest failure remain recorded.
+
+### Hosted bytes, proof and runtime scope
+
+The tag-triggered hosted workflow ran once. Authenticated draft downloads matched
+all 22 actual API asset identities. Inspection of the six runtime payloads and
+18 packaged programs matched their SPDX/buildinfo pairs and frozen source.
+DEB programs report Go 1.26.8 and Fedora RPM programs Go
+`1.26.8-X:nodwarf5`. The Fedora44 SRPM contains the 555 explicit source paths and
+2261 vendor files, including the complete Go manifest, updater template and unit
+capability inputs. Unit/capability inspection is static evidence, separate from
+runtime execution.
+
+The original cryptographic verification passed for 22 provenance subjects and six
+runtime-package SPDX subjects against repository `littlesho/NodeRampart`, signer
+`.github/workflows/release.yml`, tag ref `refs/tags/v0.4.0-alpha.10`, source/signer
+digest `79ae500106e5d89b0b65b04bfa48e010dcdb39ac`, GitHub Actions OIDC identity,
+GitHub-hosted runners and run/attempt `37195901702/1`. Predicates were
+`https://slsa.dev/provenance/v1` and `https://spdx.dev/Document/v2.3`; signed SPDX
+semantics and program digests matched the downloaded documents. Fresh anonymous
+public downloads matched every accepted draft subject digest, so all 28 successful
+proof results were **REUSED by exact subject digest identity**. No new
+cryptographic verification commands were executed.
+
+The first private static-audit harness exited 1 because its file-size resource
+limit caused `dpkg-deb` to exit 2. That failure and original logs were preserved.
+Correcting only that private tool limit produced exit 0 on the same unchanged
+assets; no package was rebuilt or replaced. The initial authenticated by-tag
+HTTP 404 was preserved and resolved through the complete Release list and numeric
+ID. Separately, the body-only draft-note update returned an untagged placeholder
+in `tag_name`; that original readback failure was preserved. After confirming the
+frozen Git tag, an explicit same-ID metadata PATCH restored `tag_name`,
+`target_commitish`, body, draft and prerelease identity. The Git tag and all 22
+asset IDs/bytes remained unchanged; no new tag or Release was created.
+
+| Evidence or operation | Actual scope / result |
+| --- | --- |
+| Final hosted Debian13 amd64 package | PASS: bounded alpha.9 upgrade, services, SSH collection and production-sandbox GeoIP MMDB entry/authenticated readiness smoke |
+| Final hosted Fedora44 x86_64 package | PASS: bounded alpha.9 upgrade, services, SSH collection and production-sandbox GeoIP MMDB entry/authenticated readiness smoke |
+| Other four hosted package runtime cases | NOT RUN |
+| Licensed external MMDB download/account pipeline | NOT RUN; controlled fixtures do not establish account/download acceptance |
+| Final 18 hosted-program binary vulnerability scans | NOT RUN |
+| Real notification APIs / human receipt / actual fees | NOT RUN |
+| Native ARM64 / production | NOT RUN |
+
+The same-source candidate child privilege-drop/cancellation results and journal
+trust/quality/durable-ACK recovery fixture results were **REUSED within their
+unchanged source-input scope**; these cases were not rerun on the final hosted
+packages.
+
+Both authorized guests were stopped and exclusive ownership released. Synthetic
+fixtures cover missing-unit/untrusted-source and diagnostic boundaries; they are
+not real-network observations. The two hosted smokes are limited package/runtime
+evidence, not a repeated full lab matrix or real notification delivery.
+GO-2026-5970 in `golang.org/x/text v0.21.0`, stripped-binary coverage limitations,
+Fedora toolchain suffix matching gaps and existing scan advisories remain disclosed;
+this release does not claim zero vulnerabilities.
+
+The alpha.9 publication-time NOT RUN records above remain historical facts.
+PR [#40](https://github.com/littlesho/NodeRampart/pull/40) later added two limited
+public alpha.9 package-install smoke PASS records on Debian13/Fedora44; those
+later results do not rewrite the earlier publication-time record.
+
+### Frozen hosted asset inventory
+
+These actual authenticated hosted-draft rows independently matched all 22 new
+anonymous public byte streams and API IDs/names/sizes/digests after numeric-ID
+publication. GitHub automatic source ZIP/TAR
+links are excluded. SHA256SUMS covers the other 21 assets; this external inventory
+also covers SHA256SUMS itself.
+
+| Asset ID | Original name | Bytes | SHA256 |
+| ---: | --- | ---: | --- |
+| 609674214 | `SHA256SUMS` | 2372 | `f4b3b5a75651b3f5415119de79ec7147f7f47387fa3b686fcd2b61a4bcba0149` |
+| 609674217 | `bootstrap.sh` | 18494 | `7e3cd01d49ccc7977e5f1f1b3d27e99fcd6d7d25a1903e619f270bc4163448f4` |
+| 609674206 | `noderampart-0.4.0-0.alpha.11.fc43.aarch64.rpm` | 12223763 | `dea72e229b6932082dba7498ff81b5d05125fe58404caa62901c9eef16f7e7af` |
+| 609674218 | `noderampart-0.4.0-0.alpha.11.fc43.aarch64.rpm.buildinfo.json` | 5548 | `41cf06050c3b2a0a4cf0356314ca2b934abafe50d1e603d408a6e5f01a39e3ca` |
+| 609674215 | `noderampart-0.4.0-0.alpha.11.fc43.aarch64.rpm.spdx.json` | 60756 | `6362bd366e5da1b7e83f88ac9ab8dd7f416624eeb8b65373c605de35acbb5849` |
+| 609674232 | `noderampart-0.4.0-0.alpha.11.fc43.x86_64.rpm` | 13158968 | `7d39f4c8dbe5697a197cabc6647c5d509da72d4ab8b94583c47b4515487fed45` |
+| 609674240 | `noderampart-0.4.0-0.alpha.11.fc43.x86_64.rpm.buildinfo.json` | 5541 | `86ded10dbbfd9e76a4d200eb4af23ed18329ff2ec9f23b66e66e812c552e6488` |
+| 609674243 | `noderampart-0.4.0-0.alpha.11.fc43.x86_64.rpm.spdx.json` | 60716 | `37b4a30bfff35a519d4d301415bd0da0cf2a795ec36522f270f6ea2ede318575` |
+| 609674244 | `noderampart-0.4.0-0.alpha.11.fc44.aarch64.rpm` | 12223763 | `b18905d972a9ff0e6c2e6aa3b511e7a390ceca84cafc4d360ff8c317823dd993` |
+| 609674258 | `noderampart-0.4.0-0.alpha.11.fc44.aarch64.rpm.buildinfo.json` | 5548 | `67b8576ab8bc9ab07c9a14f07064cbfc3bc957bfb6c23777397019a6d5cb82f6` |
+| 609674259 | `noderampart-0.4.0-0.alpha.11.fc44.aarch64.rpm.spdx.json` | 60756 | `5b4d1decd84820420deb9956d648d49afe139b6e90e5faa0961e4b266da7df3f` |
+| 609674261 | `noderampart-0.4.0-0.alpha.11.fc44.src.rpm` | 31920838 | `4bd6b96f820e4db2e764c9fc55b95f2509324692441b06d1b2b35cf6534d4b71` |
+| 609674269 | `noderampart-0.4.0-0.alpha.11.fc44.x86_64.rpm` | 13158968 | `4c969ac940d4701e873f27c77858a0dfb410aec54e914f08225b61be7864ed6c` |
+| 609674273 | `noderampart-0.4.0-0.alpha.11.fc44.x86_64.rpm.buildinfo.json` | 5541 | `eacb7cb07234f2c0c197631a9a69544f7e0110df2b455832de5a821487b0327a` |
+| 609674275 | `noderampart-0.4.0-0.alpha.11.fc44.x86_64.rpm.spdx.json` | 60716 | `a797ac662ad0d95b4132db223c71cd70d2cd9dc53167e0a017b7f28dd36774c2` |
+| 609674285 | `noderampart_0.4.0-alpha.10_amd64.deb` | 12727950 | `cc38b96d19d78fdb494e402e58e46c606433b88ec884bbc0a52d6a34f6607476` |
+| 609674296 | `noderampart_0.4.0-alpha.10_amd64.deb.buildinfo.json` | 7296 | `97975b7659ff8651fc2baa2475e66d7b2e8f44e4673e1c019eb5bac56c27d46e` |
+| 609674295 | `noderampart_0.4.0-alpha.10_amd64.deb.spdx.json` | 65273 | `171ad78b52d767c921b377240cdb168dc4c3c9b58f0701df06bcd0723aaf47d8` |
+| 609674299 | `noderampart_0.4.0-alpha.10_arm64.deb` | 11777062 | `e914c3ddfa19856b77a8607a04b2136f0f8ec9404b14223821e72e2de4f79629` |
+| 609674301 | `noderampart_0.4.0-alpha.10_arm64.deb.buildinfo.json` | 7302 | `cee2d6af8970ce6e4be1190ed26f6b628253e678d129673a55416427d541d573` |
+| 609674309 | `noderampart_0.4.0-alpha.10_arm64.deb.spdx.json` | 65273 | `96af96355366da39afdc6ac159eb7f9b433b9588e44e46ebe305c8db98796792` |
+| 609674308 | `release.json` | 298 | `c5ae7354bfe016b55653b53d2b33e261d0c3e3bf6d49dd42220aa6c089a66a68` |
+
+The maintained raw-main bootstrap resolves the highest published product version,
+including prereleases, without consulting development VERSION or LATEST_RELEASE.
+The alpha.10 asset freezes this implementation's code, while an omitted version
+can select a later public release. Explicit `--version v0.4.0-alpha.10` pins these
+bytes; an explicit alpha.9 pin still names the old release and obeys downgrade
+checks. API, pagination, package or checksum failures do not fall back to alpha.9.
+
+中文：alpha.10 已以同一 Release ID 公开，发行源永久为上表 main SHA/tree，
+BUILD_DATE 保留原 Git 字符串。真实草稿 22 项身份、六组配对、21 条 checksum 与
+22+6 验签通过；Debian13/Fedora44 两个正式 hosted 包完成有限升级与修复 smoke。
+其他运行组合、18 程序新二进制扫描、真实通知、收费、ARM64 和生产仍 NOT RUN。
+公开后 22 项新匿名下载、21 条 checksum 均通过，按完全相同的 subject digest
+复用原 28 项验签，未重跑密码学命令；旧失败和漏洞披露保留。

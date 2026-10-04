@@ -11,10 +11,10 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 ## 版本状态与验收范围
 
 <!-- current-release:start -->
-**[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) 是当前最新公开产品版本**，包含预发布版。这个 alpha 没有 GitHub “Latest” 徽标；安装器不以该徽标判断最新版本。此版本包含统一通知菜单及全部十二个可选渠道。
+**[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10) 是当前最新公开产品版本**，包含预发布版。这个 alpha 没有 GitHub “Latest” 徽标；安装器不以该徽标判断最新版本。此版本修复可信 SSH journal 采集和 GeoIP 更新诊断，并包含统一通知菜单及全部十二个可选渠道。
 <!-- current-release:end -->
 
-同发行源码的本地候选已完成有限运行验收。最终公开构建有独立证据：22/22 项匿名下载、21 条 checksum，原 22 项 provenance 与 6 项包级 SPDX 验签按精确摘要一致性复用。发布时，最终 hosted 包 VM 运行与 18 个 hosted 程序的二进制新扫描为 **NOT RUN**；平台实网／人工接收、实际收费、原生 ARM64 与生产仍为 **NOT RUN**。详见[公开记录](docs/RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)、[开发验收历史](docs/ALPHA9_ACCEPTANCE.md)与[当前限制](docs/ALPHA_LIMITATIONS.md)。
+最终 hosted Debian13 amd64 与 Fedora44 x86_64 包已通过有限升级、服务、SSH 和 GeoIP smoke；同源完整验证与独立审查通过，22 项草稿 provenance 与 6 项包级 SPDX 验签通过。公开后 22 项匿名下载及 21 条 checksum 通过；按完全相同的 subject digest 复用原 28 项验签，未重复执行密码学验证。其余 hosted 包运行场景、18 个 hosted 程序的二进制新扫描、平台实网／人工接收、实际收费、原生 ARM64 与生产仍为 **NOT RUN**。详见[公开记录](docs/RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification)、[早期开发验收历史](docs/ALPHA9_ACCEPTANCE.md)与[当前限制](docs/ALPHA_LIMITATIONS.md)。
 
 当前安装示例随最新公开版本更新。历史验收与已知风险在[发布验证](docs/RELEASE_VERIFICATION.md)和 [CHANGELOG](CHANGELOG.md)中保留原范围；已发布的程序、包内文档、tag 和资产保持冻结快照。
 
@@ -39,7 +39,7 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要 systemd，以及具有 root 或 sudo 权限的终端。维护入口需要 curl、有效 HTTPS 证书、Python 3 和 util-linux 中的 `prlimit`，以有界解析 JSON。这些是安装器依赖，daemon 不新增 Python 依赖；安装无需 Go、Node、Docker 或 GitHub CLI。ARM64 包已提供，原生 ARM64 运行尚未验收。
 
-本修订的维护入口在省略 `--version` 时，按版本优先级选择最高的公开产品版本，包含 alpha/beta/RC 预发布版。在 PR 分支查看本说明时，下面的 main 地址会在该修订合并后具有此行为。先下载到独立目录并查看脚本：
+维护入口在省略 `--version` 时，按版本优先级选择最高的公开产品版本，包含 alpha/beta/RC 预发布版。先下载到独立目录并查看脚本：
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
@@ -57,15 +57,15 @@ sudo noderampart setup --language zh
 ### 固定版本以便复现
 
 <!-- current-release:start -->
-用 `--version v0.4.0-alpha.9` 精确固定当前公开版；显式版本不查询默认 Release 列表，也不静默换版。alpha.9 Release 中的 bootstrap 是冻结资产，保留其历史默认值，因此使用它时**必须显式传入版本**：
+用 `--version v0.4.0-alpha.10` 精确固定当前公开版；显式版本不查询默认 Release 列表，也不静默换版。alpha.10 Release 的 bootstrap 是冻结源码快照，省略版本仍可跟随以后公开的新版本。使用该资产复现 alpha.10 安装时，**必须显式传入版本**：
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.9/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.10/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.9 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.10 --no-setup
 sudo noderampart setup --language zh
 ~~~
 <!-- current-release:end -->
