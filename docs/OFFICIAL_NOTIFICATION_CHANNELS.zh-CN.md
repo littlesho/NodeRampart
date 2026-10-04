@@ -1,8 +1,12 @@
-# 官方账户通知渠道——alpha.9
+# 官方账户通知渠道
 
 [English](OFFICIAL_NOTIFICATION_CHANNELS.md) · [第一批六个渠道](NOTIFICATION_CHANNELS.zh-CN.md) · [隐私政策](PRIVACY.md) · [用户协议](USER_AGREEMENT.md)
 
-alpha.9 已作为 **[非 latest 的 alpha 预发布版本](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9)** 公开，包含 `qqbot`、`line`、`twilio_sms`、
+<!-- current-release:start -->
+本指南面向最新公开版 **[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9)**（alpha 预发布版）。
+<!-- current-release:end -->
+
+本版包含 `qqbot`、`line`、`twilio_sms`、
 `whatsapp_cloud`，每个渠道一个独立目标，与旧八渠道并行；heartbeat 不计入分发。
 四项默认关闭。自动化只使用合成账户和受控 transport；四平台实网、人工接收、
 实际收费、原生 ARM64 和生产运行均为 **NOT RUN**。接口受理不代表送达或已读。

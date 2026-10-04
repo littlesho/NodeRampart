@@ -16,7 +16,8 @@ make build
 
 `make validate` is the shared local/CI/release required entry: formatting,
 dependency verification, vet, uncached ordinary/race/coverage tests, static
-builds, packaging/bootstrap/SBOM and lab-harness safety regressions, and the
+builds, packaging/bootstrap/SBOM, current-documentation version checks and
+lab-harness safety regressions, and the
 existing fixed `govulncheck@v1.7.0` scanner. It stops on failures; unavailable
 tools or network checks are not treated as success. Run a package's targeted
 tests while iterating, then this entry for the final candidate. Hosted checks
@@ -89,7 +90,7 @@ ARCH=amd64 COMMIT=unknown ./scripts/build-rpm.sh
 
 A clean local/CI candidate requires a reviewed clean commit and exact metadata.
 An official release separately requires its matching tag and publication workflow;
-published alpha.8 has a separate frozen source and hosted asset set. Local
+each published release has a separate frozen source and hosted asset set. Local
 build commands below do not create a tag or inherit release provenance.
 Read and verify its metadata before setting the exact values for every build:
 
@@ -107,28 +108,31 @@ DEB output or collected release directory are rejected. The release workflow rea
 and passes them to all package, SBOM, and collection jobs. Locally verify the
 helper's output before building; the local command does not create a tag.
 
-Ordinary local alpha.9 DEBs retain the filename
-`noderampart_0.4.0~alpha.9_amd64.deb`; the clean build entry renames its own output to
-`noderampart_0.4.0-alpha.9_amd64.deb`. Both have Debian version
-`0.4.0~alpha.9`; these ordinary local outputs are unpublished development candidates. Current RPM is
-`0.4.0-0.alpha.10%{?dist}`; project alpha numbering and RPM Release are distinct.
-Earlier explicit mappings remain fixed. `VERSION` identifies alpha.9 and no
-alpha.9 tag/Release is created by ordinary validation/package builds.
-Published alpha.9 is a non-latest prerelease whose permanent source is
-`9cc75b6936d08099847655b5046c57a485c82ff7`; its [hosted publication record](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)
-remains distinct from later main documentation commits and ordinary local/CI
-artifacts. Final hosted-package VM runtime and 18 hosted-program binary scans
-remain NOT RUN.
-Published alpha.7 remains `0.4.0~alpha.7` / `0.4.0-0.alpha.8%{?dist}`. The frozen tag/source
-and exact alpha.8 release bytes are recorded in [release verification](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification).
-Ordinary local/CI packages remain experimental artifacts and do not inherit
-release provenance merely by sharing a version or source tree. Bootstrap still
-defaults to alpha.5. The alpha.8 public-bootstrap matrix remains incomplete;
-see the publication record before selecting it. SBOMs use each package's native version, inspect its final bytes,
-and bind the three program digests to those bytes. `--collect` requires the
-complete package/SBOM/buildinfo set; the separate hosted draft step checks the
-actual uploaded names and states after upload. Local checks do not establish
-that the GitHub workflow, upload, or attestation ran.
+Ordinary local package identities come from the checked-out `VERSION` and
+packaging mappings. The local Debian filename uses the native prerelease `~`;
+the clean release entry renames its output to the public `-` spelling. RPM Release
+numbering is independent of the project prerelease index. Use each build script's
+reported output path; ordinary validation/package builds create no tag or Release.
+
+<!-- current-release:start -->
+The current published release is `v0.4.0-alpha.9`, with public DEB filename
+`noderampart_0.4.0-alpha.9_ARCH.deb`, Debian internal `0.4.0~alpha.9`, and RPM
+`0.4.0-0.alpha.10.fc43/fc44`. Its permanent source is
+`9cc75b6936d08099847655b5046c57a485c82ff7`; see the [hosted publication record](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification).
+<!-- current-release:end -->
+
+Same-source local runtime evidence and final hosted-byte evidence are separate.
+The publication-time hosted VM runtime and 18-program binary scans were NOT RUN.
+Local/CI artifacts do not inherit release provenance by sharing a version or
+source tree. [LATEST_RELEASE](../LATEST_RELEASE) records the current documentation
+pin; the maintained bootstrap resolves public Releases online independently of
+that file and development `VERSION`. Run `python3 scripts/check-current-release.py`
+for the marked current examples; ordinary CI uses local fixtures.
+
+SBOMs use each package's native version, inspect its final bytes, and bind the
+three program digests to those bytes. `--collect` requires the complete
+package/SBOM/buildinfo set. The hosted draft step checks actual uploaded names and
+states. Local checks do not establish hosted upload or attestation execution.
 
 CI's static binaries cover amd64/arm64; its package artifacts cover Debian
 amd64 and Fedora 43/44 x86_64/aarch64. ARM64 packages are cross-built on the
@@ -222,7 +226,8 @@ transition with the checked-out script, then install the reviewed package:
 
 ```bash
 sudo ./scripts/source-to-package.sh --prepare
-sudo apt install ./dist/noderampart_0.4.0~alpha.9_amd64.deb
+LOCAL_DEB_VERSION=$(tr -d '\n' < VERSION | sed 's/-/~/')
+sudo apt install "./dist/noderampart_${LOCAL_DEB_VERSION}_amd64.deb"
 sudo /usr/bin/noderampart doctor
 sudo /usr/bin/noderampart status
 ```
@@ -318,34 +323,32 @@ Use an isolated management network and a separate no-NAT traffic network. High-r
 5. DEB/RPM lifecycle matrix and systemd sandbox tests pass.
 6. Changelog, compatibility matrix, known limitations, checksums, SBOM, and provenance are attached.
 7. No release is marked stable until the privileged VM matrix and soak exit criteria are met.
+8. Read back the actual published release, update `LATEST_RELEASE` and all current
+   guides/examples, run the [public-state and offline documentation checks](RELEASE_VERIFICATION.md#publication-completion),
+   complete independent review and normal PR merge, then read back main checks
+   and the maintained installer entry before declaring the release task complete.
+   This synchronization is part of the same authorized release task.
 
-当前 `VERSION` 为 alpha.9，已独立公开为非 latest 的 alpha 预发布版；DEB 原生版本
-`0.4.0~alpha.9`、RPM `0.4.0-0.alpha.10%{?dist}`，排序高于已发布 alpha.8。
-普通 local/CI 包仍是独立开发候选，相同版本或源码树不使其继承正式 Release provenance。
-alpha.9 发行源永久为 `9cc75b6936d08099847655b5046c57a485c82ff7`；后续 main 文档
-提交不重建、不重新签发这些资产。其最终 hosted 包 VM 运行和 18 个程序二进制新扫描
-仍未执行，实际公开分发身份见 [alpha.9 发布记录](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)。
-alpha.8 的 hosted prerelease 已独立公开，但其公开安装矩阵仍未闭环；无参数默认仍
-alpha.5。alpha.8 的冻结来源、发布日期及实际验收范围见
-[发布核验](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。
-alpha.9 在单次事务中将数据库 schema 13 升为 14，保留旧八渠道历史及消息呈现元数据，
-并增加账户渠道发送意图、额度与未决状态；配置/API 1、协议 v5 不变。回退需匹配的
-旧程序、数据库、配置及凭据备份，不能原地降低 schema，也不能把 purge 当成原子回滚。
+开发 `VERSION` 与最新公开版记录 `LATEST_RELEASE` 分开使用。当前公开版本与固定
+源码见上文；普通 local/CI 包仍有独立字节身份。发布任务包含核对真实公开版、同步
+当前文档／示例、必要检查、独立审查、正常合并与 main 检查读回，无需反复申请同一
+范围的文档同步授权。NOT RUN 保持真实，不作为静默保留旧默认或推荐版的理由。
 
-
-For alpha.8, use [acceptance](ALPHA8_ACCEPTANCE.md) and the bilingual
-[channel guide](NOTIFICATION_CHANNELS.md). Contract tests use synthetic protected
-files and injected transports/resolvers/certificates, never real vendor endpoints.
-The golden event matrix covers every notifyable kind and start/update/recovery
-in en/zh; daily tests preserve archived timezone/DST and language. Keep MMDB
-validator cancellation/descendant-exit regressions unchanged. Candidate builds
-are not official release provenance, even when clean and exactly commit-stamped.
+Account-channel migrations extend schema 13 to 14 transactionally, retaining
+prior channel history and presentation metadata while adding intent, quota and
+unknown-delivery state. Configuration/API 1 and sensor protocol v5 are unchanged.
+Rollback requires matching older program/database/configuration/credential
+backups; no in-place schema downgrade or atomic purge rollback is provided.
+Contract tests use synthetic protected files and injected transports/resolvers/
+certificates, never real vendor endpoints. Preserve the golden event matrix,
+archived timezone/language semantics and MMDB cancellation/descendant-exit tests.
 
 ## alpha.8 no-tag release preflight
 
 The [scoped preflight](ALPHA8_RELEASE_PREFLIGHT.md) retains its historical no-tag
-stage. Source supports explicit alpha.8, now separately published; the default
-remains alpha.5. For a future authorized local candidate, obtain source metadata
+stage, including its then-current installer default. Current installation follows
+the [maintained-entry policy](RELEASE_VERIFICATION.md#current-release-and-installer-policy).
+For a future authorized local candidate, obtain source metadata
 once as data; retain empty-value rejection, clean
 source and matching COMMIT/BUILD_DATE across all six packages and pairs. Collect
 exactly22 files locally; the external manifest includes SHA256SUMS itself, whose
@@ -353,5 +356,6 @@ contents cover only the other21 files. Do not run release.yml or create any tag
 to test local tools. Ordinary actual-Fedora43/44 CI package builds may supply
 matched-source local candidate inputs, without release provenance/attestations.
 
-公开安装默认不变。文档/sourceRPM 内容变化必须核对新包字节；source53 的旧包不能
+历史预检记录保留原有版本；当前默认由维护入口解析最新公开版。
+文档/sourceRPM 内容变化必须核对新包字节；source53 的旧包不能
 证明新包身份。最终冻结 main 和真实差量 VM 证据保存在仓库外，不为文档自 SHA 反复提交。

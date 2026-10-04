@@ -2,7 +2,11 @@
 
 ## Supported versions
 
-`0.4.0-alpha.6` is the current unpublished candidate; alpha.5 remains the latest published prerelease. Security fixes are applied to the latest alpha branch only until a stable support policy is published.
+<!-- current-release:start -->
+`v0.4.0-alpha.9` is the newest published release, an alpha prerelease. Security
+fixes are applied to the latest alpha branch only until a stable support policy
+is published.
+<!-- current-release:end -->
 
 ## Reporting a vulnerability
 
@@ -20,8 +24,9 @@ The alpha has not completed independent security review, the full distribution/a
 
 ## Installation and management boundaries
 
-The explicitly invoked installer retrieves fixed-version native packages over
-HTTPS and checks a manifest from the same release. This checks content/transport
+The explicitly invoked maintained installer resolves the newest published release
+(including prereleases), or honors an explicit `--version`, then pins that release
+for its checksum-verified bootstrap and native packages over HTTPS. This checks content/transport
 consistency; it is not an independent author signature. Release build provenance
 is prepared by the workflow for separate verification. The observer does not
 download executable updates, open network listeners or modify firewall rules.

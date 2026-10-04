@@ -100,6 +100,8 @@ class ValidationTests(unittest.TestCase):
         commands = self.commands()
         self.assertEqual(commands, [
             ["make", ["fmt-check"], None],
+            ["python3", ["scripts/check-current-release.py"], None],
+            ["python3", ["scripts/test-current-release.py"], None],
             ["go", ["mod", "verify"], None],
             ["go", ["vet", "./..."], None],
             ["go", ["test", "-count=1", "./..."], None],

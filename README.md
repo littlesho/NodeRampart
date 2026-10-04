@@ -10,11 +10,13 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 ## Version status and validation scope
 
-**[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) is published as a non-latest alpha prerelease.** Its four official account channels join the existing eight, all optional. Public distribution verification passed: 22/22 anonymous asset downloads and 21 checksum entries. The 22 provenance and six package-subject SPDX verifications were reused after publication by exact digest identity. Final hosted-package VM runtime, final 18 hosted-program binary vulnerability scans, real platform APIs / human receipt, actual fees, native ARM64 and production remain **NOT RUN**. See the [publication record](docs/RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification) and [development acceptance history](docs/ALPHA9_ACCEPTANCE.md); security findings and scanner coverage gaps remain disclosed.
+<!-- current-release:start -->
+**[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) is the newest published product release**, including prereleases. GitHub's “Latest” badge is unset for this alpha; it does not determine the installer's choice. The release includes the shared notification menu and all twelve optional channels.
+<!-- current-release:end -->
 
-**[v0.4.0-alpha.8](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) is published as a non-latest alpha prerelease.** Its six native channels are included in those packages. Real platform APIs / human receipt, native ARM64 and production remain **NOT RUN**. Public Fedora 44 bootstrap remains **BLOCKED_NETWORK**, and historical strict-doctor unknowns are preserved in the [publication and diagnostic record](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification). Known vulnerability findings and scanner coverage gaps remain disclosed in [limitations](docs/ALPHA_LIMITATIONS.md).
+Local candidates from the release source passed bounded runtime acceptance. The final hosted build has separate evidence: 22/22 anonymous asset downloads, 21 checksum entries, and reused 22 provenance / six package-subject SPDX verifications by exact digest identity. At publication, final hosted-package VM runtime and scans of the 18 hosted programs were **NOT RUN**. Real platform APIs / human receipt, actual fees, native ARM64 and production remain **NOT RUN**. See the [publication record](docs/RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification), [development acceptance history](docs/ALPHA9_ACCEPTANCE.md) and [current limitations](docs/ALPHA_LIMITATIONS.md).
 
-The pinned installation below intentionally remains the previously selected alpha.7 public runtime example; omitting `--version` still selects alpha.5. Explicit alpha.9 prerelease assets are available for users who choose them; static public-distribution PASS does not establish final hosted-byte runtime validation. Earlier [alpha.7](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification), [alpha.6](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification) and [GeoIP validation](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) retain their original scope. See [CHANGELOG](CHANGELOG.md) for version history. Published package documentation and programs remain their frozen snapshots; updating main does not change an installed release.
+Current installation examples follow the newest published release. Earlier acceptance results and known risks keep their original scope in [release verification](docs/RELEASE_VERIFICATION.md) and [CHANGELOG](CHANGELOG.md). Published package programs, documentation, tags and assets remain their frozen snapshots.
 
 ## What can it do?
 
@@ -31,30 +33,46 @@ The pinned installation below intentionally remains the previously selected alph
 
 You can also merge repeated alerts, set silences that expire automatically, fill missing daily reports, create database backups and compare detection thresholds using offline anonymized metadata.
 
-## Install a pinned release
+<a id="install-a-pinned-release"></a>
 
-The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. The download command needs curl and working HTTPS certificates; the installer and apt/dnf handle the remaining installation dependencies. Go is not needed. ARM64 packages are available but native ARM64 execution is not yet validated.
+## Install the newest published release
 
-**This is the older alpha.7 installation path.** The unified menus and all 12 channels described below are included in published alpha.9; this alpha.7 command does not install them. The example stays pinned because final alpha.9 hosted-package VM runtime remains NOT RUN. Download into a separate directory and inspect the script before deciding to execute it:
+The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. The maintained entry needs curl, working HTTPS certificates, Python 3 and `prlimit` (util-linux) for bounded JSON parsing. These are installer dependencies; the daemon gains no Python dependency. Go, Node, Docker and GitHub CLI are unnecessary for installation. ARM64 packages are available; native ARM64 runtime remains unvalidated.
+
+This revision's maintained entry resolves the highest published product version, including alpha/beta/RC prereleases, when `--version` is omitted. On a PR branch, the main URL below gains this behavior when the change is merged. Download into a separate directory and inspect the script:
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.7/bootstrap.sh \
+  https://raw.githubusercontent.com/littlesho/NodeRampart/main/scripts/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # Run separately, after reviewing and accepting the script:
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.7 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --no-setup
 sudo noderampart setup
 ~~~
 
-For manual package and provenance checks, see [release verification](docs/RELEASE_VERIFICATION.md#download-and-verify). HTTPS download, same-release SHA256 and GitHub attestation are distinct checks: bootstrap checks package checksums and identity but **does not automatically verify attestations**.
+The installer prints and fixes one selected Release for the whole invocation, verifies that Release's bootstrap against its SHA256SUMS, and passes the explicit selected version to it. Packages come from the published Release. Development `VERSION` and main-source binaries are not installation targets. A missing platform package, API limit, incomplete response or failed download/check fails the installation; it never falls back to an older release. Selection happens only when you actively run the installer; running daemons do not auto-upgrade.
 
-The installer downloads the package for your distribution and CPU, checks its SHA256 and package identity, and installs it with your package manager. `--no-setup` leaves the menu to the separate setup command. Existing configuration and service enable/disable choices are preserved. If the release is unavailable, installation stops with an explanation.
+### Pin a reproducible release
 
-The explicit alpha.7 download, `--no-setup` installation and separate setup passed on Debian 13 and Fedora 44. The supported curl-pipe interactive path was not exercised in this publication check. Omitting `--version` still selects alpha.5. Build targets do not imply that every distribution and ARM64 runtime has been tested; see [validation scope](docs/ALPHA_LIMITATIONS.md).
+<!-- current-release:start -->
+Use `--version v0.4.0-alpha.9` to pin the current published release exactly. A pin does not query the default Release list or silently substitute another version. The frozen alpha.9 Release bootstrap retains its historical default, so **always pass the version explicitly** when using that asset:
 
-**--no-setup** permits unattended installation; open setup separately afterward. No terminal answers or credentials are read from the script pipe. A fresh Debian package enables and starts observation with safe defaults, subject to system service policy; Fedora follows its service presets.
+~~~bash
+INSTALL_DIR=$(mktemp -d)
+curl --proto '=https' --tlsv1.2 -fsSL \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.9/bootstrap.sh \
+  -o "$INSTALL_DIR/bootstrap.sh"
+less "$INSTALL_DIR/bootstrap.sh"
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.9 --no-setup
+sudo noderampart setup
+~~~
+<!-- current-release:end -->
+
+For manual package and provenance checks, see [release verification](docs/RELEASE_VERIFICATION.md#download-and-verify). Bootstrap checks SHA256 and package version/architecture; **attestation verification is a separate step**. Existing source-install conflicts, unsupported platforms and downgrades are refused. Configuration and service enable/disable choices are preserved.
+
+**--no-setup** permits unattended installation; open setup separately afterward. Without it, setup uses a controlling terminal, independently of any script pipe; terminal answers and credentials are never read from that pipe. A fresh Debian package enables and starts observation with safe defaults, subject to system service policy; Fedora follows its service presets.
 
 ## First setup
 
@@ -88,7 +106,7 @@ Closing the menu leaves the background services running.
 | Configuration | Edit every configurable field, including advanced settings; validate and review before saving. |
 | Reports | Read the current report, open saved daily reports and fill missing dates. |
 | Events and incidents | Follow the timeline and inspect an incident. |
-| Notification channels | Reach all 12 current-main channels, inspect independent delivery outcomes and messages, choose a single test target and manage expiring silences. |
+| Notification channels | Reach all 12 published channels, inspect independent delivery outcomes and messages, choose a single test target and manage expiring silences. |
 | Local GeoIP databases | Download, refresh, inspect database age and enable/disable daily updates. |
 | Cloud egress cost estimates | Fetch public prices, compare cached AWS/OCI scenarios or enter a custom tariff. |
 | Backup, replay and privacy | Back up the database, verify backups and compare offline detection rules. |
@@ -100,14 +118,14 @@ alert status page distinguishes checks in progress, timeouts and pending writes.
 
 ## Notification channels
 
-Current main provides one shared entry: **setup → Notification channels (optional)** or **tui → Notification channels**. Choose the existing channel form or configuration editor there; channel-specific credentials and delivery rules remain separate. All channels are optional and default disabled.
+The published release provides one shared entry: **setup → Notification channels (optional)** or **tui → Notification channels**. Choose the existing channel form or configuration editor there; channel-specific credentials and delivery rules remain separate. All channels are optional and default disabled.
 
 <a id="native-channels-in-the-alpha8-prerelease"></a>
 
 | Channel / identifier | Sending method | Configuration and guide | Version range |
 | --- | --- | --- | --- |
-| Telegram / `telegram` | Bot API text to one chat | Telegram setup · [operations](docs/V0.4_OPERATIONS.md#telegram) | Existing; included in the pinned alpha.7 |
-| Generic HTTPS Webhook / `webhook` | Fixed receiver, JSON and Bearer credential | Notification configuration · [operations](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook) | Existing; included in the pinned alpha.7 |
+| Telegram / `telegram` | Bot API text to one chat | Telegram setup · [operations](docs/V0.4_OPERATIONS.md#telegram) | Included in the current release |
+| Generic HTTPS Webhook / `webhook` | Fixed receiver, JSON and Bearer credential | Notification configuration · [operations](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook) | Included in the current release |
 | Feishu / `feishu` | Custom group-bot Webhook, optional signing | Feishu setup · [guide](docs/NOTIFICATION_CHANNELS.md#feishu) | Published alpha.8 and later |
 | WeCom / `wecom` | Group-bot Webhook | WeCom setup · [guide](docs/NOTIFICATION_CHANNELS.md#wecom) | Published alpha.8 and later |
 | Discord / `discord` | Channel Incoming Webhook | Discord setup · [guide](docs/NOTIFICATION_CHANNELS.md#discord) | Published alpha.8 and later |

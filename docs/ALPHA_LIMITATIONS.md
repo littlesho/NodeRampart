@@ -1,10 +1,15 @@
 # NodeRampart alpha limitations
 
-[Published alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) is a non-latest alpha prerelease.
+<!-- current-release:start -->
+The newest published product release is
+[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9),
+an alpha prerelease without GitHub's “Latest” badge.
+<!-- current-release:end -->
 Its [publication record](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)
 binds 22 anonymous downloads/checksums and reused provenance/SPDX results to
-hosted bytes. Final hosted-package VM runtime and final 18 hosted-program binary
-vulnerability scans remain NOT RUN; local preflight runtime evidence is separate.
+hosted bytes. At publication, final hosted-package VM runtime and final 18
+hosted-program binary vulnerability scans were NOT RUN. Same-source local
+preflight candidates passed bounded runtime checks; their evidence remains separate.
 Real vendor APIs / human receipt, actual fees, native ARM64 and production remain
 NOT RUN. GO-2026-5970 is still a required-module finding; stripped symbols,
 Fedora Go suffix coverage gaps and tool advisories remain disclosed.
@@ -15,10 +20,14 @@ separates new anonymous downloads and public bootstrap from reused hosted
 runtime evidence. Six real vendor APIs / human receivers, native ARM64 and
 production operation remain NOT RUN. GO-2026-5970 module findings, stripped
 symbol / Fedora Go suffix coverage gaps and tool advisories remain disclosed.
-The alpha.7 and earlier results below retain their historical scope.
+The alpha.8, alpha.7 and earlier results below retain their historical scope.
+Current recommendations follow the newest published release while keeping these
+unrun checks and risks visible; a rollback or withdrawal requires an explicit
+maintainer decision.
 
-中文：alpha.8 已公开为非 latest 的预发布版本；公开不代表稳定或生产就绪。
-六平台实网/人工接收、原生 ARM64 与生产仍未验证，漏洞发现和扫描覆盖缺口继续保留。
+中文：当前安装推荐跟随最新公开版，同源本地候选运行证据与最终公开包证据分开。
+未执行项、漏洞发现及扫描覆盖缺口继续披露；它们不自动把推荐版本回退为旧版。
+以下 alpha.8 及更早结果保留历史范围。
 
 The limited [post-publication diagnostic increment](RELEASE_VERIFICATION.md#post-publication-diagnostic-increment-2026-10-02)
 identified a conditional sensor diagnostic precision defect in the unchanged
@@ -55,7 +64,9 @@ coverage or a healthy strict diagnosis.
 This milestone adds public installation and terminal management to an alpha
 observer. It does not establish production readiness.
 
-## Validation scope
+<a id="validation-scope"></a>
+
+## Historical alpha.7 validation scope
 
 [alpha.7](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.7)
 was published as an alpha prerelease at `2026-10-01T08:33:06Z`
@@ -68,10 +79,10 @@ STOPPED. Strict snapshots remained **unknown / exit 2**: Debian 13 retained
 `sensor_commit_unavailable`. Later advancing watermarks do not change those
 snapshots; unknown is not healthy. Fedora Services Start enabled and started both
 units, observed active/enabled afterward; boot execution remains **NOT RUN**.
-Current alpha.7 Debian 12/Fedora 43 runtime, native ARM64, VM race, sustained
+At that alpha.7 check, Debian 12/Fedora 43 runtime, native ARM64, VM race, sustained
 pressure, 72-hour soak, real MMDB and optional outgoing targets remain **NOT RUN**.
 Natural SSH pending/recovery remains unproved/BLOCKED; earlier known-pending
-independent-copy results remain separate. See the [current distribution record](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
+independent-copy results remain separate. See the [historical distribution record](RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification).
 Schema 12 adds saved outbox language/timezone; older programs require matching
 verified earlier DB/configuration/key dependencies for rollback. No in-place
 schema downgrade is provided. Config/API 1 and protocol v5 remain unchanged.
