@@ -14,15 +14,24 @@ NodeRampart's original source code is licensed under MIT. Compiled binaries also
 | `github.com/remyoudompheng/bigfft` | `v0.0.0-20230129092748-24d4a6f8daec` | BSD-3-Clause |
 | `github.com/rivo/tview` | `v0.42.0` | MIT |
 | `github.com/rivo/uniseg` | `v0.4.7` | MIT |
-| `golang.org/x/sys` | `v0.47.0` | BSD-3-Clause |
+| `golang.org/x/sys` | `v0.48.0` | BSD-3-Clause |
 | `golang.org/x/term` | `v0.28.0` | BSD-3-Clause |
 | `golang.org/x/text` | `v0.21.0` | BSD-3-Clause |
-| `modernc.org/libc` | `v1.74.4` | BSD-3-Clause |
+| `modernc.org/libc` | `v1.77.1` | BSD-3-Clause |
 | `modernc.org/mathutil` | `v1.7.1` | BSD-3-Clause |
-| `modernc.org/memory` | `v1.11.0` | BSD-3-Clause |
-| `modernc.org/sqlite` | `v1.56.0` | BSD-3-Clause |
+| `modernc.org/memory` | `v1.12.1` | BSD-3-Clause |
+| `modernc.org/sqlite` | `v1.60.1` | BSD-3-Clause |
 
 This inventory lists the modules linked into the command binaries, including the local terminal interface. Test-only and build-tool dependencies are not part of the distributed binaries. Regenerate and review the inventory whenever `go.mod` changes. The original license and applicable patent-grant files for the added terminal modules are bundled unchanged.
+
+SQLite 3.53.4 is public domain; its upstream dedication is bundled unchanged as
+`third_party/licenses/modernc.org_sqlite_LICENSE-SQLITE`. The unchanged
+`modernc.org/sqlite v1.60.1` upstream inventory is bundled as
+`third_party/licenses/modernc.org_sqlite_LICENSE-3RD-PARTY.md`, including the
+inherited notices for libc components such as musl. That upstream inventory
+also describes optional packages, tests and build tools; it does not imply
+those components are linked into NodeRampart. NodeRampart does not import
+`modernc.org/sqlite/vec`, `modernc.org/sqlite/vfs` or `modernc.org/sqlite/pcache`.
 
 The offline timezone name/link directory and test TZif files originate from
 IANA tzdata 2025c, as distributed in Go 1.26.8's `lib/time/zoneinfo.zip`.

@@ -555,3 +555,5 @@ third_party/licenses/modernc.org_libc_LICENSE
 third_party/licenses/modernc.org_mathutil_LICENSE
 third_party/licenses/modernc.org_memory_LICENSE
 third_party/licenses/modernc.org_sqlite_LICENSE
+third_party/licenses/modernc.org_sqlite_LICENSE-3RD-PARTY.md
+third_party/licenses/modernc.org_sqlite_LICENSE-SQLITE
