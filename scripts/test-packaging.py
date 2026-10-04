@@ -1076,6 +1076,20 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any(row[0] == "rpmbuild" or row[:3] == ["go", "mod", "vendor"] for row in self.commands()))
 
+    def test_reviewed_manifest_includes_all_product_go_sources(self):
+        # Inspect the product trees independently of the archive allowlist so
+        # adding a Go file without updating the manifest fails before RPM build.
+        # Include tests and every platform variant, without depending on Git or
+        # the host's Go build tags. The staging tool still copies only reviewed
+        # paths; this check never adds local files to the source archive.
+        sources = {path.relative_to(REPO).as_posix()
+                   for directory in ("cmd", "internal")
+                   for path in (REPO / directory).rglob("*.go") if path.is_file()}
+        self.assertTrue(sources)
+        manifest = {line for line in (REPO / "packaging/source-files.txt").read_text().splitlines()
+                    if line and not line.startswith("#") and line.endswith(".go")}
+        self.assertEqual(sources, manifest, "update the reviewed Go source manifest")
+
     def test_reviewed_manifest_stages_current_product_without_git(self):
         destination = self.lab / "reviewed-source"
         destination.mkdir()
