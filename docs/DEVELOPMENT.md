@@ -2,11 +2,15 @@
 
 ## Local checks
 
-The current module and dependency graph require **Go 1.25.0 or newer**:
-`go.mod`, `modernc.org/sqlite v1.56.0`, `modernc.org/libc v1.74.4`, and
-`golang.org/x/sys v0.47.0` declare Go 1.25.0. The source also uses `os.Root`
+The current module and dependency graph require **Go 1.26.0 or newer**:
+`go.mod`, `modernc.org/sqlite v1.60.1`, `golang.org/x/sys v0.48.0`, and
+`golang.org/x/text v0.42.0` declare Go 1.26.0. SQLite requires the matching
+`modernc.org/libc v1.77.1`.
+The source also uses `os.Root`
 (introduced in Go 1.24). CI pins Go 1.26.8 for validation; that tested toolchain
-is not the project's minimum, and it does not prove a Go 1.25 runtime test.
+is not the project's minimum, and it does not prove a Go 1.26.0 runtime test.
+This requirement applies to source builds; installing a prebuilt package does
+not require Go.
 Use the declared dependency versions; do not upgrade the graph to run checks.
 
 ```bash

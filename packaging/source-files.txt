@@ -168,6 +168,7 @@ internal/console/reliability_test.go
 internal/console/results.go
 internal/console/retention.go
 internal/console/terminal_linux_test.go
+internal/console/terminal_screen_linux_test.go
 internal/console/threshold.go
 internal/console/threshold_test.go
 internal/console/timezone.go
@@ -555,3 +556,5 @@ third_party/licenses/modernc.org_libc_LICENSE
 third_party/licenses/modernc.org_mathutil_LICENSE
 third_party/licenses/modernc.org_memory_LICENSE
 third_party/licenses/modernc.org_sqlite_LICENSE
+third_party/licenses/modernc.org_sqlite_LICENSE-3RD-PARTY.md
+third_party/licenses/modernc.org_sqlite_LICENSE-SQLITE

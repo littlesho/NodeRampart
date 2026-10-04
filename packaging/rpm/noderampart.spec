@@ -12,7 +12,7 @@ Summary:        Security monitoring and traffic reporting agent for Linux VPS ho
 License:        MIT AND BSD-3-Clause AND ISC AND Apache-2.0
 URL:            https://github.com/littlesho/NodeRampart
 Source0:        %{name}-%{noderampart_version}.tar.gz
-BuildRequires:  golang >= 1.25
+BuildRequires:  golang >= 1.26
 BuildRequires:  systemd-rpm-macros
 ExclusiveArch:  x86_64 aarch64
 Requires(pre):  systemd
