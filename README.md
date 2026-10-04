@@ -10,11 +10,11 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 
 ## Version status and validation scope
 
-**v0.4.0-alpha.9 is an Unreleased development candidate on main.** Its four official account channels join the existing eight, all optional. Alpha.9 has no published installation assets; the [acceptance record](docs/ALPHA9_ACCEPTANCE.md) distinguishes contract tests, candidate packages and remaining checks.
+**[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) is published as a non-latest alpha prerelease.** Its four official account channels join the existing eight, all optional. Public distribution verification passed: 22/22 anonymous asset downloads and 21 checksum entries. The 22 provenance and six package-subject SPDX verifications were reused after publication by exact digest identity. Final hosted-package VM runtime, final 18 hosted-program binary vulnerability scans, real platform APIs / human receipt, actual fees, native ARM64 and production remain **NOT RUN**. See the [publication record](docs/RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification) and [development acceptance history](docs/ALPHA9_ACCEPTANCE.md); security findings and scanner coverage gaps remain disclosed.
 
 **[v0.4.0-alpha.8](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) is published as a non-latest alpha prerelease.** Its six native channels are included in those packages. Real platform APIs / human receipt, native ARM64 and production remain **NOT RUN**. Public Fedora 44 bootstrap remains **BLOCKED_NETWORK**, and historical strict-doctor unknowns are preserved in the [publication and diagnostic record](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification). Known vulnerability findings and scanner coverage gaps remain disclosed in [limitations](docs/ALPHA_LIMITATIONS.md).
 
-The pinned installation below remains alpha.7; omitting `--version` still selects alpha.5. Earlier [alpha.7](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification), [alpha.6](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification) and [GeoIP validation](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) retain their original scope. See [CHANGELOG](CHANGELOG.md) for version history. Published package documentation and programs remain their frozen snapshots; updating main does not change an installed release.
+The pinned installation below intentionally remains the previously selected alpha.7 public runtime example; omitting `--version` still selects alpha.5. Explicit alpha.9 prerelease assets are available for users who choose them; static public-distribution PASS does not establish final hosted-byte runtime validation. Earlier [alpha.7](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification), [alpha.6](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification) and [GeoIP validation](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation) retain their original scope. See [CHANGELOG](CHANGELOG.md) for version history. Published package documentation and programs remain their frozen snapshots; updating main does not change an installed release.
 
 ## What can it do?
 
@@ -35,7 +35,7 @@ You can also merge repeated alerts, set silences that expire automatically, fill
 
 The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. The download command needs curl and working HTTPS certificates; the installer and apt/dnf handle the remaining installation dependencies. Go is not needed. ARM64 packages are available but native ARM64 execution is not yet validated.
 
-**This is the older alpha.7 installation path.** The current-main menus described below and the newer channels require a matching new build; this command does not install all 12 channels. Download into a separate directory and inspect the script before deciding to execute it:
+**This is the older alpha.7 installation path.** The unified menus and all 12 channels described below are included in published alpha.9; this alpha.7 command does not install them. The example stays pinned because final alpha.9 hosted-package VM runtime remains NOT RUN. Download into a separate directory and inspect the script before deciding to execute it:
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
@@ -114,10 +114,10 @@ Current main provides one shared entry: **setup → Notification channels (optio
 | Slack / `slack` | Slack App Incoming Webhook | Slack setup · [guide](docs/NOTIFICATION_CHANNELS.md#slack) | Published alpha.8 and later |
 | Microsoft Teams Workflows / `teams` | Supported Adaptive Card workflow, request acceptance only | Teams setup · [guide](docs/NOTIFICATION_CHANNELS.md#microsoft-teams-workflows) | Published alpha.8 and later |
 | Google Chat / `google_chat` | Space Incoming Webhook | Google Chat setup · [guide](docs/NOTIFICATION_CHANNELS.md#google-chat) | Published alpha.8 and later |
-| QQ Bot / `qqbot` | Official active C2C/group text with authorized platform IDs | QQ Bot actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#qq-bot-active-c2c-or-group-messages) | Alpha.9 main; Unreleased |
-| LINE Messaging API Push / `line` | Official Account push to an authorized user/group/room | LINE actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#line-official-account-messaging-api-push) | Alpha.9 main; Unreleased |
-| Twilio SMS / `twilio_sms` | Programmable Messaging SMS to one E.164 recipient | Twilio SMS actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#twilio-sms-individual-consent-and-finite-segment-budget) | Alpha.9 main; Unreleased |
-| WhatsApp Cloud API / `whatsapp_cloud` | Meta Cloud API approved templates to one recipient | WhatsApp actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#whatsapp-cloud-approved-body-templates-only) | Alpha.9 main; Unreleased |
+| QQ Bot / `qqbot` | Official active C2C/group text with authorized platform IDs | QQ Bot actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#qq-bot-active-c2c-or-group-messages) | Published alpha.9 and later |
+| LINE Messaging API Push / `line` | Official Account push to an authorized user/group/room | LINE actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#line-official-account-messaging-api-push) | Published alpha.9 and later |
+| Twilio SMS / `twilio_sms` | Programmable Messaging SMS to one E.164 recipient | Twilio SMS actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#twilio-sms-individual-consent-and-finite-segment-budget) | Published alpha.9 and later |
+| WhatsApp Cloud API / `whatsapp_cloud` | Meta Cloud API approved templates to one recipient | WhatsApp actions · [guide](docs/OFFICIAL_NOTIFICATION_CHANNELS.md#whatsapp-cloud-approved-body-templates-only) | Published alpha.9 and later |
 
 The channels send eligible events, start/update/recovery notices and short daily summaries using the durable outbox. Telegram, the six native Webhook channels and four account channels have independent English/Simplified Chinese choices; the generic Webhook retains its existing English JSON contract. WhatsApp requires approved templates in the chosen language, and SMS uses a compact summary with a segment limit. Paid daily summaries default off. Language/timezone changes do not rewrite queued content.
 

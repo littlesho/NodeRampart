@@ -1,7 +1,14 @@
-# Alpha.9 development candidate acceptance
+<a id="alpha9-development-candidate-acceptance"></a>
 
-Alpha.9 is **Unreleased / development candidate**. This work does not create a
-product tag, release, hosted release attestation or public installation default.
+# Alpha.9 development and pre-publication acceptance
+
+This document records the development/pre-publication acceptance that led to the
+published non-latest alpha.9 prerelease. The permanent publication identity and
+public distribution results are in the [release record](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification).
+The sections below retain the original development scope and results: at that
+stage alpha.9 was Unreleased, and that work did not create a product tag, Release,
+hosted attestation or change the installation default. Publication was a later,
+separately authorized stage; later main documentation commits are not its source.
 The specified development baseline is
 `936dbdbeb5658d1c1386557da4b4ac1239103913`; its actual main CI
 [36991385648 / attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/36991385648)
@@ -133,9 +140,15 @@ no network/ACL/Broker/SELinux changes are authorized to obtain a pass.
 
 ## Retained limits and security status
 
-The sensor nanosecond receipt versus microsecond watermark precision defect is
-**confirmed and UNFIXED** by this version. Existing strict unknown/exit2 evidence
-remains valid. Historical snapshot unique root cause is **UNESTABLISHED**.
+During the original four-channel development (PR #31), the sensor nanosecond
+receipt versus microsecond watermark precision defect remained **confirmed and
+UNFIXED** by that scoped work. The subsequent identity-aware fix (PR #32) is
+included in published alpha.9: it matches session/interface/sequence before
+comparing persisted microseconds, preserving pending/missing/partial diagnosis.
+See [current semantics](V0.4_OPERATIONS.md#sensor-commit-watermarks). Published
+alpha.8 bytes and their strict unknown/exit2 results remain historical evidence;
+no later fix makes them healthy. Historical snapshot unique root cause remains
+**UNESTABLISHED**.
 Fedora44 alpha.8 public checksum-download stage remains **BLOCKED_NETWORK**;
 a candidate RPM's local installation is not a public bootstrap pass.
 
@@ -151,11 +164,16 @@ direct without proxy, backups remain matched, purge remains non-atomic.
 
 Six alpha.8 platforms plus the four new real APIs/human receipts, account approvals,
 actual paid charges, native ARM64 and production execution are **NOT RUN**.
-Published alpha.8 tag/Release/source/22 asset identities stay frozen. No alpha.9
-tag/draft/Release, latest change, bootstrap-default change, production deployment
-or unauthorized real/charged test belongs to this development task.
+Published alpha.8 tag/Release/source/22 asset identities stay frozen. Historically,
+no alpha.9 tag/draft/Release, latest/default change, production deployment or
+unauthorized real/charged test belonged to the development task. Alpha.9 was
+subsequently published as Release 402649106 from permanent source
+`9cc75b6936d08099847655b5046c57a485c82ff7`, independently of later main docs.
+Final hosted-package VM runtime and 18 hosted-program binary vulnerability scans
+remain NOT RUN; local candidate identities do not certify hosted byte identities.
 
-本文件记录 alpha.9 开发候选范围与分层证据，不代表公开发行或生产就绪。
+本文件保留 alpha.9 当时开发／预发布阶段的范围与分层证据；后续已作为非 latest
+预发布版公开，实际发行身份与匿名分发结果见发布记录。这不代表生产就绪。
 四渠道实现、合成契约、真实账户/API、人工接收和实际计费必须分别报告；
 完整验收、独立审查、候选包与实验绑定实际来源。旧未知/失败不由后来通过回填，
 最终 PR 与 main 的检查分别记录，监看边界后仍运行即 PENDING 并停止。

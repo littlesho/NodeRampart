@@ -110,10 +110,15 @@ helper's output before building; the local command does not create a tag.
 Ordinary local alpha.9 DEBs retain the filename
 `noderampart_0.4.0~alpha.9_amd64.deb`; the clean build entry renames its own output to
 `noderampart_0.4.0-alpha.9_amd64.deb`. Both have Debian version
-`0.4.0~alpha.9`; these are unpublished development candidates. Current RPM is
+`0.4.0~alpha.9`; these ordinary local outputs are unpublished development candidates. Current RPM is
 `0.4.0-0.alpha.10%{?dist}`; project alpha numbering and RPM Release are distinct.
 Earlier explicit mappings remain fixed. `VERSION` identifies alpha.9 and no
 alpha.9 tag/Release is created by ordinary validation/package builds.
+Published alpha.9 is a non-latest prerelease whose permanent source is
+`9cc75b6936d08099847655b5046c57a485c82ff7`; its [hosted publication record](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)
+remains distinct from later main documentation commits and ordinary local/CI
+artifacts. Final hosted-package VM runtime and 18 hosted-program binary scans
+remain NOT RUN.
 Published alpha.7 remains `0.4.0~alpha.7` / `0.4.0-0.alpha.8%{?dist}`. The frozen tag/source
 and exact alpha.8 release bytes are recorded in [release verification](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification).
 Ordinary local/CI packages remain experimental artifacts and do not inherit
@@ -314,9 +319,12 @@ Use an isolated management network and a separate no-NAT traffic network. High-r
 6. Changelog, compatibility matrix, known limitations, checksums, SBOM, and provenance are attached.
 7. No release is marked stable until the privileged VM matrix and soak exit criteria are met.
 
-当前 `VERSION` 为 alpha.9，仍为 Unreleased / development candidate；DEB 原生版本
+当前 `VERSION` 为 alpha.9，已独立公开为非 latest 的 alpha 预发布版；DEB 原生版本
 `0.4.0~alpha.9`、RPM `0.4.0-0.alpha.10%{?dist}`，排序高于已发布 alpha.8。
-普通 local/CI 包是独立候选，相同版本或源码树不使其继承正式 Release provenance。
+普通 local/CI 包仍是独立开发候选，相同版本或源码树不使其继承正式 Release provenance。
+alpha.9 发行源永久为 `9cc75b6936d08099847655b5046c57a485c82ff7`；后续 main 文档
+提交不重建、不重新签发这些资产。其最终 hosted 包 VM 运行和 18 个程序二进制新扫描
+仍未执行，实际公开分发身份见 [alpha.9 发布记录](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)。
 alpha.8 的 hosted prerelease 已独立公开，但其公开安装矩阵仍未闭环；无参数默认仍
 alpha.5。alpha.8 的冻结来源、发布日期及实际验收范围见
 [发布核验](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。
