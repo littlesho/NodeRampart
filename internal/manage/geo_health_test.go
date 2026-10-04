@@ -6,7 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"math"
+	"net"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -55,7 +58,7 @@ func TestGeoPublicHealthTracksFailuresAndUnchangedRecovery(t *testing.T) {
 			t.Fatal("failure fixture unexpectedly succeeded")
 		}
 		value := read()
-		if value.Result != "download_failed" || value.ConsecutiveFailures != want || !value.LastSuccessAt.Equal(first.LastSuccessAt) {
+		if value.Result != "download_failed" || value.ConsecutiveFailures != want || !value.LastSuccessAt.Equal(first.LastSuccessAt) || value.Diagnostic == nil || value.Diagnostic.Stage != "download" || value.Diagnostic.Reason != "failed" || value.Diagnostic.Edition != "ASN" {
 			t.Fatalf("failure streak or successful timestamp lost: %+v", value)
 		}
 	}
@@ -64,7 +67,7 @@ func TestGeoPublicHealthTracksFailuresAndUnchangedRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	recovered := read()
-	if recovered.Result != "unchanged" || recovered.ConsecutiveFailures != 0 || !recovered.LastSuccessAt.After(first.LastSuccessAt) || !recovered.Scheduled {
+	if recovered.Result != "unchanged" || recovered.ConsecutiveFailures != 0 || !recovered.LastSuccessAt.After(first.LastSuccessAt) || !recovered.Scheduled || recovered.Diagnostic != nil {
 		t.Fatal("unchanged check did not recover health")
 	}
 	if _, err := m.Action(context.Background(), "geo_schedule", map[string]string{"enabled": "no"}); err != nil {
@@ -73,6 +76,46 @@ func TestGeoPublicHealthTracksFailuresAndUnchangedRecovery(t *testing.T) {
 	disabled := read()
 	if disabled.Scheduled || !disabled.LastSuccessAt.Equal(recovered.LastSuccessAt) {
 		t.Fatal("schedule action fabricated a successful download")
+	}
+}
+
+func TestGeoPublicHealthPersistsSafeFailureDetail(t *testing.T) {
+	m, _ := fixtureManager(t)
+	secret := "SYNTHETIC_PRIVATE_ACCOUNT_AND_KEY"
+	failDNS := false
+	m.Assets = &assets.Client{HTTP: &http.Client{Transport: fixtureTransport(func(request *http.Request) (*http.Response, error) {
+		if failDNS {
+			return nil, &net.DNSError{Name: secret, Err: secret}
+		}
+		return &http.Response{StatusCode: 429, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(secret)), ContentLength: int64(len(secret)), Request: request}, nil
+	})}}
+	input := map[string]string{"account_id": "123", "license_key": secret, "accepted_terms": "yes", "auto_update": "no"}
+	if _, err := m.Action(context.Background(), "geo_download", input); err == nil {
+		t.Fatal("HTTP failure fixture succeeded")
+	}
+	health := m.previousGeoHealth()
+	want := assets.GeoDiagnostic{Stage: "download", Reason: "http_status", Edition: "City", HTTPStatus: 429}
+	if health.Result != "download_failed" || health.Diagnostic == nil || *health.Diagnostic != want || health.ConsecutiveFailures != 1 || !health.LastSuccessAt.IsZero() {
+		t.Fatalf("HTTP failure did not persist its diagnostic: %+v", health)
+	}
+	if _, err := m.Action(context.Background(), "geo_schedule", map[string]string{"enabled": "no"}); err != nil {
+		t.Fatal(err)
+	}
+	health = m.previousGeoHealth()
+	if health.Diagnostic == nil || *health.Diagnostic != want || health.ConsecutiveFailures != 1 || health.Schedule == nil || health.Schedule.Result != "ok" {
+		t.Fatal("schedule-only action erased the update failure")
+	}
+	failDNS = true
+	if _, err := m.Action(context.Background(), "geo_download", input); err == nil {
+		t.Fatal("DNS failure fixture succeeded")
+	}
+	health = m.previousGeoHealth()
+	if health.Diagnostic == nil || health.Diagnostic.Reason != "dns_lookup_failed" || health.Diagnostic.HTTPStatus != 0 || health.ConsecutiveFailures != 2 {
+		t.Fatal("new failure retained stale HTTP details")
+	}
+	data, err := os.ReadFile(m.localPath("geoip-health.json"))
+	if err != nil || strings.Contains(string(data), secret) || strings.Contains(string(data), "account_id") || strings.Contains(string(data), "license_key") {
+		t.Fatal("public metadata exposed private input")
 	}
 }
 

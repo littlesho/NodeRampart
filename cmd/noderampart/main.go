@@ -52,6 +52,9 @@ func run(arguments []string) error {
 		if len(arguments) >= 2 && arguments[1] == "validate-mmdb" {
 			return assets.ValidatorCommand(arguments[2:], os.Stdout)
 		}
+		if len(arguments) >= 2 && arguments[1] == "reconcile-schedule" {
+			return managementCommand("assets-reconcile-schedule", arguments[2:])
+		}
 		if len(arguments) < 2 || arguments[1] != "update" {
 			return usageError()
 		}
@@ -467,7 +470,7 @@ func printJSON(output io.Writer, value any) error {
 }
 
 func usageError() error {
-	return errors.New("usage: noderampart {tui|setup|assets update|version|config test|doctor|status|health|alerts status|retention|metrics export|upgrade preflight/rehearse|threshold preview/feedback|evidence export|events list/show/timeline|incident list/show|report now/list/show/backfill|replay anonymize/compare|notify preview/test/status/list/retry/quarantine/discard-isolated/resume/reconcile-paid|notify silence add/list/remove|backup create/verify/restore} [flags]")
+	return errors.New("usage: noderampart {tui|setup|assets update/reconcile-schedule|version|config test|doctor|status|health|alerts status|retention|metrics export|upgrade preflight/rehearse|threshold preview/feedback|evidence export|events list/show/timeline|incident list/show|report now/list/show/backfill|replay anonymize/compare|notify preview/test/status/list/retry/quarantine/discard-isolated/resume/reconcile-paid|notify silence add/list/remove|backup create/verify/restore} [flags]")
 }
 
 // Explicit validation may inspect enabled credentials, but never resolves DNS

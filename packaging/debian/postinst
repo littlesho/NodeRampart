@@ -24,6 +24,10 @@ install -d -m 0750 -o noderampart -g noderampart /var/lib/noderampart
 chown root:noderampart /etc/noderampart/config.json
 chmod 0640 /etc/noderampart/config.json
 /usr/bin/noderampart config test --config /etc/noderampart/config.json >/dev/null
+if ! /usr/bin/noderampart assets reconcile-schedule; then
+  echo "GeoIP updater unit reconciliation failed; retry noderampart assets reconcile-schedule and systemctl daemon-reload before running the updater. New package files remain installed; package configuration may need to be retried." >&2
+  exit 1
+fi
 
 for unit in noderampartd.service noderampart-sensor.service; do
   if [ -L "/etc/systemd/system/$unit" ] && [ "$(readlink "/etc/systemd/system/$unit")" = /dev/null ]; then

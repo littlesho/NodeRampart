@@ -5,13 +5,15 @@ package assets
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -60,6 +62,12 @@ func (c *Client) requestStream(ctx context.Context, endpoint string, credentials
 			cancel()
 		}
 	}()
+	var tlsFailed atomic.Bool
+	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{TLSHandshakeDone: func(_ tls.ConnectionState, err error) {
+		if err != nil {
+			tlsFailed.Store(true)
+		}
+	}})
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, errors.New("cannot create asset request")
@@ -79,22 +87,32 @@ func (c *Client) requestStream(ctx context.Context, endpoint string, credentials
 	client.CheckRedirect = func(next *http.Request, previous []*http.Request) error {
 		next.Header.Del("Authorization")
 		if len(previous) >= 3 || !allowedURL(next.URL, geo) || (!geo && next.URL.Host != u.Host) {
-			return errors.New("asset redirect is not permitted")
+			return errAssetRedirectRejected
 		}
 		return nil
 	}
 	response, err := client.Do(req)
 	if err != nil {
 		// url.Error includes a full URL, potentially an R2 signature. Never wrap it.
-		return nil, errors.New("asset request failed or timed out")
+		failure := classifyAssetRequestError(err)
+		// Ordinary TLS alerts are unexported Go error types. Classify at the
+		// actual handshake boundary, never by matching a remote error string.
+		// Keep a more specific cancellation, timeout or network classification.
+		if failure.reason == "failed" && tlsFailed.Load() {
+			failure.reason = "tls_failed"
+		}
+		return nil, failure
 	}
 	if response.StatusCode != http.StatusOK {
 		_ = response.Body.Close()
-		return nil, fmt.Errorf("asset download returned HTTP %d", response.StatusCode)
+		if response.StatusCode < 100 || response.StatusCode > 599 {
+			return nil, &assetRequestError{reason: "failed"}
+		}
+		return nil, &assetRequestError{reason: "http_status", status: response.StatusCode}
 	}
 	if response.ContentLength > maximum {
 		_ = response.Body.Close()
-		return nil, errors.New("asset response exceeds size limit")
+		return nil, &assetRequestError{reason: "response_too_large"}
 	}
 	success = true
 	return &assetStream{body: response.Body, cancel: cancel, remaining: maximum + 1}, nil
@@ -104,11 +122,13 @@ type assetStream struct {
 	body      io.ReadCloser
 	cancel    context.CancelFunc
 	remaining int64
+	failure   *assetRequestError
 }
 
 func (s *assetStream) Read(p []byte) (int, error) {
 	if s.remaining <= 0 {
-		return 0, errors.New("asset response exceeds size limit")
+		s.failure = &assetRequestError{reason: "response_too_large"}
+		return 0, s.failure
 	}
 	if int64(len(p)) > s.remaining {
 		p = p[:s.remaining]
@@ -116,10 +136,15 @@ func (s *assetStream) Read(p []byte) (int, error) {
 	n, err := s.body.Read(p)
 	s.remaining -= int64(n)
 	if s.remaining <= 0 {
-		return n, errors.New("asset response exceeds size limit")
+		s.failure = &assetRequestError{reason: "response_too_large"}
+		return n, s.failure
 	}
 	if err != nil && !errors.Is(err, io.EOF) {
-		return n, errors.New("asset response could not be read")
+		s.failure = classifyAssetRequestError(err)
+		if s.failure.reason == "failed" {
+			s.failure.reason = "response_read_failed"
+		}
+		return n, s.failure
 	}
 	return n, err
 }

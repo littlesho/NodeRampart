@@ -243,6 +243,9 @@ func eventEvidence(event model.Event, location *time.Location, zh bool) []string
 		lines = append(lines, localText(zh, en, chinese)+": "+escapedField(value, 512))
 	}
 	fields := event.Evidence
+	for _, field := range healthDiagnostic(event, location, zh).fields {
+		add(field.label.en, field.label.zh, field.value)
+	}
 	if fields["interface"] != "" {
 		add("Interface (recorded name)", "接口（记录名称）", fields["interface"])
 	}

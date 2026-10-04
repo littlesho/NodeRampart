@@ -307,17 +307,7 @@ func (a *App) Run(ctx context.Context) error {
 		journal := collector.Journal{Path: a.options.Config.Auth.Journalctl}
 		start("ssh_journal", "degraded", false, func() error {
 			return journal.RunReliable(child, collector.JournalOptions{InitialCursor: checkpoint.Cursor, InitialObservedAt: checkpoint.ObservedAt, InitialRecoveryPending: checkpoint.RecoveryPending, OnDegradation: a.recordJournalDegradation, OnStatus: func(status collector.JournalStatus) {
-				a.mu.Lock()
-				a.journalStatus = status
-				a.mu.Unlock()
-				state := "degraded"
-				if status.State == "running" {
-					state = "running"
-				}
-				a.recordWrite(a.options.Store.SetComponentStatus(child, "ssh_journal", state, time.Now().UTC()), "coverage", false)
-				if status.State == "gap" && !status.QualityDegraded() {
-					a.recordWrite(a.options.Store.RecordCoverageGap(child, journalCoverageGap(status)), "coverage_gap", false)
-				}
+				a.recordJournalStatus(child, status)
 			}}, func(deliveryCtx context.Context, entry collector.JournalEntry) error {
 				delivery := journalDelivery{entry: entry, ack: make(chan error, 1)}
 				select {

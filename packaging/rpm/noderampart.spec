@@ -133,6 +133,10 @@ fi
 chown root:noderampart %{_sysconfdir}/noderampart/config.json
 chmod 0640 %{_sysconfdir}/noderampart/config.json
 %{_bindir}/noderampart config test --config %{_sysconfdir}/noderampart/config.json >/dev/null
+if ! %{_bindir}/noderampart assets reconcile-schedule; then
+  echo "GeoIP updater unit reconciliation failed; retry noderampart assets reconcile-schedule and systemctl daemon-reload before running the updater. New package files remain installed; package configuration may need to be retried." >&2
+  exit 1
+fi
 %systemd_post noderampartd.service noderampart-sensor.service
 
 %preun

@@ -39,6 +39,9 @@ type AlertContext struct {
 	Coverage          string     `json:"coverage,omitempty"`
 	Basis             string     `json:"basis,omitempty"`
 	ConditionSince    *time.Time `json:"condition_since_utc,omitempty"`
+	// Version 2 adds a fixed diagnostic projection. Historical contexts with
+	// no diagnostic retain version 1 and its original wire shape.
+	Diagnostic *HealthDiagnostic `json:"diagnostic,omitempty"`
 }
 
 func alertKind(kind string) bool {
@@ -87,7 +90,7 @@ func alertAmount(value *float64, maximum float64) bool {
 }
 
 func (a *AlertContext) hasFields() bool {
-	return a.Reason != "" || a.Period != "" || a.PeriodStart != nil || a.PeriodEnd != nil || a.ObservedBytes != nil || a.ThresholdBytes != nil || a.ObservedCost != nil || a.ThresholdCost != nil || a.Currency != "" || a.Milestone != nil || a.BaselineMeanBytes != nil || a.BaselineDays != nil || a.GrowthRatio != nil || a.Coverage != "" || a.Basis != "" || a.ConditionSince != nil
+	return a.Reason != "" || a.Period != "" || a.PeriodStart != nil || a.PeriodEnd != nil || a.ObservedBytes != nil || a.ThresholdBytes != nil || a.ObservedCost != nil || a.ThresholdCost != nil || a.Currency != "" || a.Milestone != nil || a.BaselineMeanBytes != nil || a.BaselineDays != nil || a.GrowthRatio != nil || a.Coverage != "" || a.Basis != "" || a.ConditionSince != nil || a.Diagnostic != nil
 }
 
 func (a *AlertContext) complete() bool {
@@ -113,7 +116,10 @@ func (a *AlertContext) complete() bool {
 // it can retain useful fields even when another original value was rejected.
 func (a *AlertContext) Validate(kind string) error {
 	bad := errors.New("invalid recorded alert context")
-	if a == nil || a.SchemaVersion != 1 || !alertKind(kind) || a.Metric != kind {
+	if a == nil || !alertKind(kind) || a.Metric != kind {
+		return bad
+	}
+	if a.SchemaVersion != 1 && a.SchemaVersion != 2 || (a.SchemaVersion == 1) != (a.Diagnostic == nil) || a.Diagnostic != nil && a.Diagnostic.Validate(kind) != nil {
 		return bad
 	}
 	if a.Reason != "" && !alertReason(a.Reason) || a.Period != "" && !alertPeriod(kind, a.Period) || !alertTime(a.PeriodStart) || !alertTime(a.PeriodEnd) || !alertTime(a.ConditionSince) {
@@ -159,7 +165,7 @@ func (a *AlertContext) Validate(kind string) error {
 	return nil
 }
 
-// ProjectAlertContext reads only the fixed evidence keys emitted by monitor v1.
+// ProjectAlertContext reads only fixed evidence keys saved with monitor events.
 // Non-monitor events have no alert context. Invalid/missing known fields are
 // omitted with an explicit availability qualification, never copied as text.
 func ProjectAlertContext(kind string, fields map[string]string) *AlertContext {
@@ -197,6 +203,12 @@ func ProjectAlertContext(kind string, fields map[string]string) *AlertContext {
 	}
 	if strings.HasPrefix(kind, "health_") {
 		a.ConditionSince = parseTime("condition_since_utc")
+		var diagnosticRejected bool
+		a.Diagnostic, diagnosticRejected = projectHealthDiagnostic(kind, fields)
+		if a.Diagnostic != nil {
+			a.SchemaVersion = 2
+		}
+		rejected = rejected || diagnosticRejected
 	} else {
 		a.Period = text("period", func(value string) bool { return alertPeriod(kind, value) })
 		a.PeriodStart, a.PeriodEnd = parseTime("period_start_utc"), parseTime("period_end_utc")

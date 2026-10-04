@@ -39,18 +39,56 @@ type journalRecord struct {
 	Unit             string `json:"_SYSTEMD_UNIT"`
 	UserUnit         string `json:"_SYSTEMD_USER_UNIT"`
 	Transport        string `json:"_TRANSPORT"`
+	unitMissing      bool
+}
+
+func (r *journalRecord) UnmarshalJSON(raw []byte) error {
+	// Preserve absence separately from explicit null/empty/malformed values.
+	// journald adds _SYSTEMD_UNIT only when cgroup lookup supplies a unit;
+	// it is not a mandatory sender-identity field. Decode this distinction
+	// for both the legacy and reliable collectors without trusting JSON flags.
+	type recordFields journalRecord
+	var value struct {
+		recordFields
+		Unit json.RawMessage `json:"_SYSTEMD_UNIT"`
+	}
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return err
+	}
+	*r = journalRecord(value.recordFields)
+	r.unitMissing = len(value.Unit) == 0
+	if !r.unitMissing {
+		return json.Unmarshal(value.Unit, &r.Unit)
+	}
+	return nil
 }
 
 func (r journalRecord) trustedSSHOrigin() bool {
+	return r.sshOriginFailure() == ""
+}
+
+func (r journalRecord) sshOriginFailure() string {
 	// SYSLOG_IDENTIFIER and _COMM are selection/display fields, not proof of
-	// origin. Require journald's sender credentials, executable path and a
-	// system service or logind session scope. A scope name alone proves no SSH
-	// identity. Reject inherited stdout credentials and user services.
-	if r.UID != "0" || r.UserUnit != "" || (r.Transport != "syslog" && r.Transport != "journal") {
-		return false
+	// origin. Require journald's root sender credentials, approved executable,
+	// and direct syslog/journal transport. Unit metadata is optional when
+	// journald could not resolve the sender's cgroup, but an explicitly supplied
+	// unit must still be an approved SSH service or logind session scope.
+	// A scope name alone proves no SSH identity. Reject inherited stdout
+	// credentials and user services even when _SYSTEMD_UNIT is absent.
+	if r.UID == "" || r.Executable == "" || r.Transport == "" {
+		return "missing_origin_metadata"
 	}
-	if !sshUnit(r.Unit) && !loginSessionScope(r.Unit) {
-		return false
+	if r.UID != "0" {
+		return "untrusted_uid"
+	}
+	if r.UserUnit != "" {
+		return "untrusted_unit"
+	}
+	if r.Transport != "syslog" && r.Transport != "journal" {
+		return "untrusted_transport"
+	}
+	if !sshUnit(r.Unit) && !loginSessionScope(r.Unit) && !(r.unitMissing && r.Unit == "") {
+		return "untrusted_unit"
 	}
 	// Debian 13 uses /usr/{sbin,lib/openssh}; Fedora 44 has merged sbin
 	// into bin and installs its split SSH executables in libexec/openssh.
@@ -58,9 +96,9 @@ func (r journalRecord) trustedSSHOrigin() bool {
 	case "/usr/sbin/sshd", "/usr/bin/sshd",
 		"/usr/lib/openssh/sshd-session", "/usr/lib/openssh/sshd-auth",
 		"/usr/libexec/openssh/sshd-session", "/usr/libexec/openssh/sshd-auth":
-		return true
+		return ""
 	}
-	return false
+	return "untrusted_executable"
 }
 
 func sshUnit(unit string) bool {

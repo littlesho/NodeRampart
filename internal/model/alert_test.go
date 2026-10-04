@@ -222,6 +222,10 @@ func FuzzProjectAlertContext(f *testing.F) {
 		data, _ := json.Marshal(alertFields(kind))
 		f.Add(kind, data)
 	}
+	for _, kind := range []string{"health_ssh_journal", "health_geoip_update"} {
+		data, _ := json.Marshal(diagnosticFields(kind))
+		f.Add(kind, data)
+	}
 	f.Add("health_storage", []byte(`{"reason":"<script>private</script>","condition_since_utc":"invalid"}`))
 	f.Fuzz(func(t *testing.T, kind string, data []byte) {
 		if len(data) > 64<<10 || len(kind) > 128 {

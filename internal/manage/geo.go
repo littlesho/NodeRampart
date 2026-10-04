@@ -33,6 +33,12 @@ type geoState struct {
 	Generation string    `json:"generation,omitempty"`
 }
 
+var (
+	errGeoRecoveryPending = errors.New("recover the pending configuration apply before replacing GeoIP data")
+	errGeoMetadataSave    = errors.New("GeoIP data verified, but update metadata could not be saved")
+	errGeoCleanup         = errors.New("GeoIP data verified; superseded managed database cleanup failed")
+)
+
 func (m *Manager) localPath(name string) string {
 	return filepath.Join(filepath.Dir(m.ConfigPath), name)
 }
@@ -151,7 +157,7 @@ func (m *Manager) updateGeoData(ctx context.Context, input map[string]string, re
 		state.Generation = dir
 	}
 	if err := m.writeJSON(m.localPath("geoip-state.json"), state, true); err != nil {
-		return result, errors.New("GeoIP data verified, but update metadata could not be saved")
+		return result, errGeoMetadataSave
 	}
 	*updateResult = state.Result
 	if !refresh {
@@ -162,7 +168,7 @@ func (m *Manager) updateGeoData(ctx context.Context, input map[string]string, re
 	if err := m.cleanGeo(snapshot.Config.Geo.CityMMDB, snapshot.Config.Geo.ASNMMDB); err != nil {
 		state.Result = "cleanup_failed"
 		*updateResult = "activation_failed"
-		return result, errors.New("GeoIP data verified; superseded managed database cleanup failed")
+		return result, errGeoCleanup
 	}
 	if unchanged {
 		return result, nil
@@ -355,7 +361,7 @@ func (m *Manager) geoFileDigest(ctx context.Context, dir, name string, active bo
 // manager. Any pending recovery journal pins old assets until recovery finishes.
 func (m *Manager) cleanGeo(city, asn string) error {
 	if _, err := readFile(m.journalPath(), 2*maxManagedJSON, true, -1); !errors.Is(err, os.ErrNotExist) {
-		return errors.New("recover the pending configuration apply before replacing GeoIP data")
+		return errGeoRecoveryPending
 	}
 	base := m.localPath("geoip")
 	directory, err := openDirectory(base, true)
@@ -458,29 +464,7 @@ func (m *Manager) scheduleGeoService(ctx context.Context, enabled bool) (string,
 	if err := writeFile(filepath.Join(m.tmpfilesDir, "noderampart-management.conf"), strings.NewReader("# NodeRampart management lock; preserve existing inode.\nf /run/noderampart-management.lock 0600 root root - -\n"), 4096, 0o644, os.Geteuid(), os.Getegid(), true); err != nil {
 		return "", err
 	}
-	service := fmt.Sprintf(`[Unit]
-Description=NodeRampart local GeoIP data update
-After=network-online.target systemd-tmpfiles-setup.service
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-ExecStart=%s assets update
-User=root
-Group=root
-UMask=0077
-NoNewPrivileges=yes
-CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER
-ProtectSystem=strict
-ReadWritePaths=/etc/noderampart /run/noderampart-management.lock
-ProtectHome=yes
-PrivateTmp=yes
-ProtectKernelTunables=yes
-ProtectKernelModules=yes
-ProtectControlGroups=yes
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-TimeoutStartSec=10min
-`, m.binary)
+	service := m.geoUpdateService()
 	timer := "[Unit]\nDescription=Daily NodeRampart GeoIP data refresh\n\n[Timer]\nOnCalendar=daily\nRandomizedDelaySec=1h\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n"
 	for name, content := range map[string]string{"noderampart-geoip-update.service": service, "noderampart-geoip-update.timer": timer} {
 		if err := writeFile(filepath.Join(m.unitDir, name), strings.NewReader(content), 8192, 0o644, os.Geteuid(), os.Getegid(), true); err != nil {
@@ -494,6 +478,40 @@ TimeoutStartSec=10min
 		return "", err
 	}
 	return "Daily GeoIP updates enabled. / 已启用每日更新。", nil
+}
+
+func (m *Manager) geoUpdateService() string {
+	// The MMDB child must clear supplementary groups and become nobody. The
+	// parent retains CAP_KILL to cancel its owned process group after that UID
+	// transition; otherwise a timeout cannot terminate the unprivileged child.
+	// systemd v257's seccomp setup drops CAP_SETUID unless it is ambient, even
+	// with User=root. NoNewPrivileges then prevents exec from restoring it from
+	// the bounding set. Keep only CAP_SETUID ambient; the child's setuid(nobody)
+	// clears its permitted, effective and ambient capabilities.
+	return fmt.Sprintf(`[Unit]
+Description=NodeRampart local GeoIP data update
+After=network-online.target systemd-tmpfiles-setup.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%s assets update
+User=root
+Group=root
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_KILL CAP_SETGID CAP_SETUID
+AmbientCapabilities=CAP_SETUID
+ProtectSystem=strict
+ReadWritePaths=/etc/noderampart /run/noderampart-management.lock
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+TimeoutStartSec=10min
+`, m.binary)
 }
 
 func (m *Manager) geoStatus(ctx context.Context) (string, error) {

@@ -31,7 +31,8 @@ func managementCommand(name string, arguments []string) error {
 	flags := quietFlags(name)
 	path := flags.String("config", defaultConfig, "installed configuration file")
 	var language string
-	if name != "assets" {
+	assetOperation := name == "assets" || name == "assets-reconcile-schedule"
+	if !assetOperation {
 		flags.StringVar(&language, "language", "", "en or zh (default: locale)")
 	}
 	if err := parseFlags(flags, arguments); err != nil {
@@ -49,14 +50,30 @@ func managementCommand(name string, arguments []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if name == "assets" {
-		result, err := manager.Action(ctx, "geo_refresh", nil)
+	if assetOperation {
+		result, err := runAssetManagement(ctx, manager, name)
 		if result != "" {
 			fmt.Fprintln(os.Stdout, result)
 		}
 		return err
 	}
 	return console.Run(ctx, manager, console.Options{Setup: name == "setup", Language: language})
+}
+
+type assetManagement interface {
+	Action(context.Context, string, map[string]string) (string, error)
+	ReconcileGeoSchedule(context.Context) (string, error)
+}
+
+func runAssetManagement(ctx context.Context, manager assetManagement, name string) (string, error) {
+	switch name {
+	case "assets":
+		return manager.Action(ctx, "geo_refresh", nil)
+	case "assets-reconcile-schedule":
+		return manager.ReconcileGeoSchedule(ctx)
+	default:
+		return "", errors.New("unsupported local asset operation")
+	}
 }
 
 func managementRequest(path string) manage.RequestFunc {

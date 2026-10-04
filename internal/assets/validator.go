@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -24,6 +23,8 @@ import (
 )
 
 const validatorTimeout = 45 * time.Second
+
+var errValidatorPrivilegeDrop = errors.New("GeoIP validator could not drop administrative privileges")
 
 type mmdbValidation struct {
 	BuildEpoch int64  `json:"build_epoch"`
@@ -51,11 +52,11 @@ func verifyMMDBFile(ctx context.Context, file *os.File, edition string) (mmdbVal
 	var result mmdbValidation
 	before, err := file.Stat()
 	if err != nil || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxDatabase {
-		return result, errors.New("GeoIP database source is invalid")
+		return result, geoFailure("validation", "validation_rejected", edition)
 	}
 	executable, err := os.Executable()
 	if err != nil {
-		return result, errors.New("GeoIP validator executable is unavailable")
+		return result, geoFailure("validation", "validator_setup_failed", edition)
 	}
 	work, cancel := context.WithTimeout(ctx, validatorTimeout)
 	defer cancel()
@@ -69,7 +70,7 @@ func verifyMMDBFile(ctx context.Context, file *os.File, edition string) (mmdbVal
 	cmd.Stdout, cmd.Stderr = &output, io.Discard
 	if err := cmd.Run(); err != nil {
 		if work.Err() != nil {
-			return result, fmt.Errorf("GeoIP validation cancelled or timed out: %w", work.Err())
+			return result, geoCancelled("validation", edition, work.Err())
 		}
 		// Only a complete, fixed child result may cross the diagnostic boundary.
 		// Stderr, arbitrary errors and unknown response fields remain private.
@@ -80,20 +81,22 @@ func verifyMMDBFile(ctx context.Context, file *os.File, edition string) (mmdbVal
 				return result, geoValidationFailure(ctx, edition, errMMDBResourceBudget)
 			case "validation_rejected":
 				return result, geoValidationFailure(ctx, edition, errMMDBBounds)
+			case "validator_privilege_drop_failed", "validator_setup_failed":
+				return result, geoFailure("validation", failure.Reason, edition)
 			}
 		}
-		return result, errors.New("GeoIP database validation failed or exceeded its resource limits")
+		return result, geoFailure("validation", "validator_failed", edition)
 	}
 	after, err := file.Stat()
 	if err != nil || !os.SameFile(before, after) || before.Size() != after.Size() || before.ModTime() != after.ModTime() || before.Mode() != after.Mode() {
-		return result, errors.New("GeoIP database changed during validation")
+		return result, geoFailure("validation", "source_changed", edition)
 	}
 	result, ok := decodeMMDBValidation(&output)
 	if !ok || result.Reason != "" || result.BuildEpoch <= 0 || len(result.Digest) != sha256.Size*2 {
-		return result, errors.New("GeoIP validator response is invalid")
+		return result, geoFailure("validation", "validator_response_invalid", edition)
 	}
 	if _, err := hex.DecodeString(result.Digest); err != nil {
-		return result, errors.New("GeoIP validator response is invalid")
+		return result, geoFailure("validation", "validator_response_invalid", edition)
 	}
 	return result, nil
 }
@@ -143,7 +146,12 @@ func ValidatorCommand(arguments []string, output io.Writer) error {
 		return errors.New("unsafe GeoIP validator input")
 	}
 	if err := constrainValidator(); err != nil {
-		return err
+		reason := "validator_setup_failed"
+		if errors.Is(err, errValidatorPrivilegeDrop) {
+			reason = "validator_privilege_drop_failed"
+		}
+		_ = json.NewEncoder(output).Encode(mmdbValidation{Reason: reason})
+		return errors.New("GeoIP validator sandbox setup failed")
 	}
 	data, err := unix.Mmap(3, 0, int(before.Size), unix.PROT_READ, unix.MAP_PRIVATE)
 	if err != nil {
@@ -198,8 +206,11 @@ func constrainValidator() error {
 		}
 		uid, uidErr := strconv.Atoi(account.Uid)
 		gid, gidErr := strconv.Atoi(account.Gid)
-		if uidErr != nil || gidErr != nil || uid <= 0 || gid <= 0 || syscall.Setgroups([]int{}) != nil || syscall.Setgid(gid) != nil || syscall.Setuid(uid) != nil {
-			return errors.New("GeoIP validator could not drop administrative privileges")
+		if uidErr != nil || gidErr != nil || uid <= 0 || gid <= 0 {
+			return errors.New("GeoIP validator unprivileged identity is invalid")
+		}
+		if syscall.Setgroups([]int{}) != nil || syscall.Setgid(gid) != nil || syscall.Setuid(uid) != nil {
+			return errValidatorPrivilegeDrop
 		}
 	}
 	return nil

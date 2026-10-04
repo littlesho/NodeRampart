@@ -30,32 +30,32 @@ const (
 
 func (c *Client) DownloadGeo(ctx context.Context, credentials Credentials) (*GeoBundle, error) {
 	if !validCredentials(credentials) {
-		return nil, errors.New("MaxMind account ID or license key format is invalid")
+		return nil, geoFailure("credentials", "invalid", "")
 	}
 	// Ignore TMPDIR for privileged staging: a caller-controlled non-sticky
 	// shared parent would allow another user to replace the newly created tree.
 	parent, err := os.Lstat("/tmp")
 	if err != nil || !parent.IsDir() || parent.Mode()&os.ModeSymlink != 0 {
-		return nil, errors.New("trusted temporary directory is unavailable")
+		return nil, geoFailure("staging", "temporary_directory_unavailable", "")
 	}
 	stat, ok := parent.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != 0 || parent.Mode().Perm()&0o022 != 0 && parent.Mode()&os.ModeSticky == 0 {
-		return nil, errors.New("temporary directory ownership or permissions are unsafe")
+		return nil, geoFailure("staging", "temporary_directory_unsafe", "")
 	}
 	directory, err := os.MkdirTemp("/tmp", "noderampart-geo-")
 	if err != nil {
-		return nil, errors.New("cannot create private GeoIP staging directory")
+		return nil, geoStagingFailure("", err)
 	}
 	root, err := os.OpenRoot(directory)
 	if err != nil {
 		_ = os.Remove(directory)
-		return nil, errors.New("cannot open GeoIP staging directory")
+		return nil, geoStagingFailure("", err)
 	}
 	identity, err := os.Lstat(directory)
 	if err != nil {
 		_ = root.Close()
 		_ = os.Remove(directory)
-		return nil, errors.New("cannot inspect GeoIP staging directory")
+		return nil, geoStagingFailure("", err)
 	}
 	bundle := &GeoBundle{Directory: directory, root: root, ownedDir: directory, identity: identity}
 	success := false
@@ -68,12 +68,23 @@ func (c *Client) DownloadGeo(ctx context.Context, credentials Credentials) (*Geo
 		endpoint := "https://" + geoHost + "/geoip/databases/" + edition + "/download?suffix=tar.gz"
 		stream, err := c.requestStream(ctx, endpoint, &credentials, maxCompressed)
 		if err != nil {
-			return nil, err
+			return nil, geoDownloadFailure(edition, err)
 		}
 		built, notices, digest, err := extractGeoStream(ctx, bundle.root, stream, edition)
 		_ = stream.Close()
 		if err != nil {
-			return nil, err
+			// A body read error can otherwise be flattened into an archive
+			// error by gzip/tar. The stream retains only its safe typed cause.
+			if body, ok := stream.(*assetStream); ok && body.failure != nil {
+				return nil, geoDownloadFailure(edition, body.failure)
+			}
+			if _, ok := GeoUpdateDiagnostic(err); ok {
+				return nil, err
+			}
+			if ctx.Err() != nil {
+				return nil, geoCancelled("download", edition, ctx.Err())
+			}
+			return nil, geoFailure("archive", "invalid", edition)
 		}
 		bundle.Notices = append(bundle.Notices, notices...)
 		if edition == "GeoLite2-City" {
@@ -215,30 +226,40 @@ func extractGeoStream(ctx context.Context, root *os.Root, compressed io.Reader, 
 		}
 		file, err := root.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if err != nil {
-			return time.Time{}, nil, "", errors.New("cannot stage GeoIP member")
+			return time.Time{}, nil, "", geoStagingFailure(edition, err)
 		}
-		var writeErr error
+		var contentErr, writeErr error
 		if base == edition+".mmdb" {
 			var written int64
-			written, writeErr = io.CopyBuffer(file, &geoContextReader{ctx: ctx, reader: io.LimitReader(archive, maximum+1)}, make([]byte, 32<<10))
-			if written != header.Size || limited.N <= 0 {
-				writeErr = errors.New("GeoIP member is truncated or exceeds limits")
+			staged := &geoStageWriter{writer: file}
+			written, contentErr = io.CopyBuffer(staged, &geoContextReader{ctx: ctx, reader: io.LimitReader(archive, maximum+1)}, make([]byte, 32<<10))
+			writeErr = staged.err
+			if writeErr != nil {
+				contentErr = nil
+			} else if written != header.Size || limited.N <= 0 {
+				contentErr = errors.Join(contentErr, errors.New("GeoIP member is truncated or exceeds limits"))
 			}
 		} else {
 			data, err := io.ReadAll(io.LimitReader(archive, maximum+1))
 			if err != nil || int64(len(data)) != header.Size || limited.N <= 0 || !utf8.Valid(data) || bytes.IndexByte(data, 0) >= 0 {
-				writeErr = errors.New("GeoIP notice is truncated or not valid text")
+				contentErr = errors.Join(err, errors.New("GeoIP notice is truncated or not valid text"))
 			} else {
 				_, writeErr = file.Write(data)
 				notices = append(notices, target)
 			}
 		}
-		if writeErr == nil {
+		if writeErr == nil && contentErr == nil {
 			writeErr = file.Sync()
 		}
 		closeErr := file.Close()
 		if writeErr != nil || closeErr != nil {
-			return time.Time{}, nil, "", errors.New("cannot persist staged GeoIP member")
+			return time.Time{}, nil, "", geoStagingFailure(edition, errors.Join(writeErr, closeErr))
+		}
+		if contentErr != nil {
+			if errors.Is(contentErr, context.Canceled) || errors.Is(contentErr, context.DeadlineExceeded) {
+				return time.Time{}, nil, "", geoCancelled("download", edition, contentErr)
+			}
+			return time.Time{}, nil, "", geoFailure("archive", "invalid", edition)
 		}
 	}
 	// Consume gzip trailers to check the CRC and detect extra expanded data;
@@ -269,6 +290,24 @@ func extractGeoStream(ctx context.Context, root *os.Root, compressed io.Reader, 
 		return time.Time{}, nil, "", err
 	}
 	return time.Unix(result.BuildEpoch, 0).UTC(), notices, result.Digest, nil
+}
+
+// Record only errors from the destination writer so a damaged archive or a
+// cancelled source read is not mislabeled as a local filesystem failure.
+type geoStageWriter struct {
+	writer io.Writer
+	err    error
+}
+
+func (w *geoStageWriter) Write(data []byte) (int, error) {
+	n, err := w.writer.Write(data)
+	if err == nil && n != len(data) {
+		err = io.ErrShortWrite
+	}
+	if err != nil {
+		w.err = err
+	}
+	return n, err
 }
 
 func safeArchiveName(name string) bool {
