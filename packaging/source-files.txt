@@ -157,6 +157,7 @@ internal/console/console.go
 internal/console/console_test.go
 internal/console/features_test.go
 internal/console/fields.go
+internal/console/geo_schedule_test.go
 internal/console/geo_validation_test.go
 internal/console/native.go
 internal/console/native_test.go

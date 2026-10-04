@@ -7,11 +7,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -152,6 +154,237 @@ func TestGeoTimerIsDataOnlyAndExplicit(t *testing.T) {
 	rule, err := readFile(filepath.Join(m.tmpfilesDir, "noderampart-management.conf"), 4096, false, -1)
 	if err != nil || !strings.Contains(string(rule), "f /run/noderampart-management.lock 0600 root root - -") || !strings.Contains(unit, "systemd-tmpfiles-setup.service") {
 		t.Fatal("updater lacks a safe boot-time lock creator")
+	}
+}
+
+type geoScheduleSystemdFixture struct {
+	loadState, unitFileState, activeState string
+	calls                                 []string
+}
+
+func geoScheduleManagerFixture(t *testing.T) (*Manager, *geoScheduleSystemdFixture) {
+	t.Helper()
+	m, _ := fixtureManager(t)
+	timer := &geoScheduleSystemdFixture{loadState: "not-found", activeState: "inactive"}
+	m.runner = func(ctx context.Context, program string, args ...string) (string, error) {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		if program != "/usr/bin/systemctl" {
+			t.Fatal("unexpected program in GeoIP schedule fixture")
+		}
+		call := strings.Join(args, " ")
+		timer.calls = append(timer.calls, call)
+		switch call {
+		case "show --property=LoadState,UnitFileState,ActiveState --all noderampart-geoip-update.timer":
+			deadline, ok := ctx.Deadline()
+			if !ok || time.Until(deadline) > 5*time.Second {
+				t.Fatal("schedule read has no short timeout")
+			}
+			// systemctl property ordering need not match the request ordering.
+			return "ActiveState=" + timer.activeState + "\nLoadState=" + timer.loadState + "\nUnitFileState=" + timer.unitFileState + "\n", nil
+		case "daemon-reload":
+			if _, err := os.Stat(filepath.Join(m.unitDir, "noderampart-geoip-update.timer")); err != nil {
+				t.Fatal("timer definition was not installed before reload")
+			}
+			timer.loadState = "loaded"
+		case "enable --now noderampart-geoip-update.timer":
+			timer.unitFileState, timer.activeState = "enabled", "active"
+		case "disable --now noderampart-geoip-update.timer":
+			timer.unitFileState, timer.activeState = "disabled", "inactive"
+		default:
+			t.Fatalf("unexpected GeoIP schedule command: %s", call)
+		}
+		return "", nil
+	}
+	return m, timer
+}
+
+func requireGeoScheduleState(t *testing.T, m *Manager, want bool) {
+	t.Helper()
+	result, err := m.Action(context.Background(), "geo_schedule_state", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var state map[string]bool
+	if json.Unmarshal([]byte(result), &state) != nil || !reflect.DeepEqual(state, map[string]bool{"enabled": want}) {
+		t.Fatalf("unexpected saved schedule selection: %s", result)
+	}
+}
+
+func TestGeoScheduleStateSurvivesReopenAndReflectsManualChanges(t *testing.T) {
+	m, timer := geoScheduleManagerFixture(t)
+	requireGeoScheduleState(t, copyManagerFixture(m), false)
+	if err := m.writeJSON(m.localPath("maxmind.credentials.json"), assets.Credentials{AccountID: "123", LicenseKey: "synthetic-only"}, true); err != nil {
+		t.Fatal(err)
+	}
+	for _, enabled := range []string{"yes", "no"} {
+		if _, err := m.Action(context.Background(), "geo_schedule", map[string]string{"enabled": enabled}); err != nil {
+			t.Fatal(err)
+		}
+		want := enabled == "yes"
+		m = copyManagerFixture(m)
+		requireGeoScheduleState(t, m, want)
+		before, err := os.ReadFile(m.localPath("geoip-health.json"))
+		if err != nil || m.previousGeoHealth().Scheduled != want {
+			t.Fatal("schedule action did not retain its outcome")
+		}
+		// A later manual change has no management metadata update. A newly
+		// opened form must follow systemd, not the last saved health outcome.
+		if want {
+			timer.unitFileState, timer.activeState = "disabled", "inactive"
+		} else {
+			timer.unitFileState, timer.activeState = "enabled-runtime", "active"
+		}
+		requireGeoScheduleState(t, copyManagerFixture(m), !want)
+		after, err := os.ReadFile(m.localPath("geoip-health.json"))
+		if err != nil || !bytes.Equal(before, after) {
+			t.Fatal("reading the current schedule changed historical health")
+		}
+	}
+}
+
+type geoScheduleFileSnapshot struct {
+	mode    os.FileMode
+	modTime time.Time
+	data    string
+}
+
+func snapshotGeoScheduleTree(t *testing.T, m *Manager) map[string]geoScheduleFileSnapshot {
+	t.Helper()
+	files := map[string]geoScheduleFileSnapshot{}
+	err := filepath.WalkDir(filepath.Dir(filepath.Dir(m.ConfigPath)), func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		state := geoScheduleFileSnapshot{mode: info.Mode(), modTime: info.ModTime()}
+		if info.Mode().IsRegular() {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			state.data = string(data)
+		}
+		files[path] = state
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
+}
+
+func TestGeoScheduleStateReadDoesNotWriteOrTakeManagementLock(t *testing.T) {
+	m, timer := geoScheduleManagerFixture(t)
+	// An absent timer is the normal fresh-install state. Inspecting it must
+	// not create units, metadata, directories or even a management lock file.
+	before := snapshotGeoScheduleTree(t, m)
+	requireGeoScheduleState(t, copyManagerFixture(m), false)
+	if !reflect.DeepEqual(before, snapshotGeoScheduleTree(t, m)) {
+		t.Fatal("fresh schedule read changed managed files")
+	}
+	if err := m.writeJSON(m.localPath("maxmind.credentials.json"), assets.Credentials{AccountID: "123", LicenseKey: "synthetic-only"}, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.Action(context.Background(), "geo_schedule", map[string]string{"enabled": "yes"}); err != nil {
+		t.Fatal(err)
+	}
+	release, err := m.lock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	before = snapshotGeoScheduleTree(t, m)
+	timer.calls = nil
+	requireGeoScheduleState(t, copyManagerFixture(m), true)
+	if !reflect.DeepEqual(before, snapshotGeoScheduleTree(t, m)) {
+		t.Fatal("enabled schedule read changed managed files")
+	}
+	if len(timer.calls) != 1 || !strings.HasPrefix(timer.calls[0], "show ") {
+		t.Fatalf("schedule read issued operations beyond a single query: %v", timer.calls)
+	}
+}
+
+func TestGeoScheduleStateReadsEnablementIndependentlyOfActivity(t *testing.T) {
+	for _, tc := range []struct {
+		name, load, unit, active string
+		want                     bool
+	}{
+		{"enabled_inactive", "loaded", "enabled", "inactive", true},
+		{"enabled_failed", "loaded", "enabled", "failed", true},
+		{"runtime_enabled", "loaded", "enabled-runtime", "active", true},
+		{"disabled_active", "loaded", "disabled", "active", false},
+		{"masked", "masked", "masked", "inactive", false},
+		{"runtime_masked", "masked", "masked-runtime", "inactive", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m, timer := geoScheduleManagerFixture(t)
+			timer.loadState, timer.unitFileState, timer.activeState = tc.load, tc.unit, tc.active
+			requireGeoScheduleState(t, m, tc.want)
+		})
+	}
+}
+
+func TestGeoScheduleStateRejectsUnreadableOrUnsupportedState(t *testing.T) {
+	valid := "LoadState=loaded\nUnitFileState=enabled\nActiveState=active\n"
+	for _, tc := range []struct {
+		name, output string
+		commandErr   error
+	}{
+		{"systemd_unavailable", "SYNTHETIC_PRIVATE_DETAIL", errors.New("SYNTHETIC_PRIVATE_DETAIL")},
+		{"failed_command_with_valid_output", valid, errors.New("SYNTHETIC_PRIVATE_DETAIL")},
+		{"empty", "", nil},
+		{"oversized", valid + strings.Repeat("SYNTHETIC_PRIVATE_DETAIL", 4096), nil},
+		{"missing_property", "LoadState=loaded\nUnitFileState=enabled\n", nil},
+		{"duplicate_property", valid + "UnitFileState=disabled\n", nil},
+		{"unexpected_property", valid + "SYNTHETIC_PRIVATE_DETAIL=value\n", nil},
+		{"unnamed_values", "loaded\nenabled\nactive\n", nil},
+		{"unknown_load", strings.ReplaceAll(valid, "LoadState=loaded", "LoadState=SYNTHETIC_PRIVATE_DETAIL"), nil},
+		{"bad_setting", strings.ReplaceAll(valid, "LoadState=loaded", "LoadState=bad-setting"), nil},
+		{"unknown_activity", strings.ReplaceAll(valid, "ActiveState=active", "ActiveState=SYNTHETIC_PRIVATE_DETAIL"), nil},
+		{"unknown_enablement", strings.ReplaceAll(valid, "UnitFileState=enabled", "UnitFileState=SYNTHETIC_PRIVATE_DETAIL"), nil},
+		{"empty_enablement", strings.ReplaceAll(valid, "UnitFileState=enabled", "UnitFileState="), nil},
+		{"static", strings.ReplaceAll(valid, "UnitFileState=enabled", "UnitFileState=static"), nil},
+		{"indirect", strings.ReplaceAll(valid, "UnitFileState=enabled", "UnitFileState=indirect"), nil},
+		{"generated", strings.ReplaceAll(valid, "UnitFileState=enabled", "UnitFileState=generated"), nil},
+		{"linked", strings.ReplaceAll(valid, "UnitFileState=enabled", "UnitFileState=linked"), nil},
+		{"not_found_active", "LoadState=not-found\nUnitFileState=\nActiveState=active\n", nil},
+		{"not_found_enabled", "LoadState=not-found\nUnitFileState=enabled\nActiveState=inactive\n", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m, _ := geoScheduleManagerFixture(t)
+			m.runner = func(context.Context, string, ...string) (string, error) { return tc.output, tc.commandErr }
+			before := snapshotGeoScheduleTree(t, m)
+			result, err := m.Action(context.Background(), "geo_schedule_state", nil)
+			if err == nil || result != "" || strings.Contains(err.Error(), "SYNTHETIC_PRIVATE_DETAIL") {
+				t.Fatalf("unsupported/unreadable state became a selection or exposed details: %q, %v", result, err)
+			}
+			if !reflect.DeepEqual(before, snapshotGeoScheduleTree(t, m)) {
+				t.Fatal("failed schedule read changed managed files")
+			}
+		})
+	}
+}
+
+func TestGeoScheduleStateHonorsCancellation(t *testing.T) {
+	m, timer := geoScheduleManagerFixture(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if result, err := m.Action(ctx, "geo_schedule_state", nil); result != "" || !errors.Is(err, context.Canceled) || len(timer.calls) != 0 {
+		t.Fatalf("pre-canceled read reached systemd or returned a selection: %q, %v", result, err)
+	}
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	m.runner = func(context.Context, string, ...string) (string, error) {
+		cancel()
+		return "LoadState=loaded\nUnitFileState=enabled\nActiveState=active\n", nil
+	}
+	if result, err := m.Action(ctx, "geo_schedule_state", nil); result != "" || !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled query accepted a late successful response: %q, %v", result, err)
 	}
 }
 

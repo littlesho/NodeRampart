@@ -111,6 +111,8 @@ func (m *Manager) Action(ctx context.Context, action string, input map[string]st
 			return "", errors.New("select whether daily GeoIP updates are enabled")
 		}
 		return m.scheduleGeo(ctx, input["enabled"] == "yes")
+	case "geo_schedule_state":
+		return m.geoScheduleState(ctx)
 	case "geo_status":
 		return m.geoStatus(ctx)
 	case "prices_regions":

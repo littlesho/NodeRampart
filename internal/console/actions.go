@@ -4,6 +4,8 @@ package console
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"strings"
 
 	"github.com/littlesho/NodeRampart/internal/assets"
@@ -203,6 +205,10 @@ func (u *ui) openAction(id string, back func()) {
 		u.priceProvider(back)
 		return
 	}
+	if id == "geo_schedule" || id == "geo_download" {
+		u.geoActionForm(a, back)
+		return
+	}
 	channel, _ := officialUIActionChannel(id)
 	if (id == "telegram_setup" || nativeSetupChannel(id) != "" || channel != "") && !u.loaded {
 		u.background(u.tr("Load notification settings", "加载通知设置"), func(ctx context.Context) func() {
@@ -219,6 +225,58 @@ func (u *ui) openAction(id string, back func()) {
 		return
 	}
 	u.actionForm(a, back)
+}
+
+func (u *ui) geoActionForm(a action, back func()) {
+	u.background(u.tr("Read daily GeoIP schedule", "读取 GeoIP 每日更新计划"), func(ctx context.Context) func() {
+		text, err := u.backend.Action(ctx, "geo_schedule_state", nil)
+		enabled, valid := decodeGeoScheduleState(text)
+		valid = valid && err == nil && ctx.Err() == nil
+		return func() {
+			if !valid {
+				u.output(u.tr("GeoIP schedule unavailable", "GeoIP 更新计划不可用"), u.tr("The current daily update schedule could not be read. Inspect Local GeoIP status and systemd before trying again. No settings were changed.", "无法读取当前每日更新计划。请检查本地 GeoIP 状态和 systemd 后重试；未修改任何设置。"), back)
+				return
+			}
+			// Each visit starts from a fresh read. Do not mutate the shared action
+			// definitions or carry one server/session's selection into another.
+			a.params = append([]parameter(nil), a.params...)
+			for i := range a.params {
+				if a.params[i].key == "enabled" || a.params[i].key == "auto_update" {
+					a.params[i].value = "no"
+					if enabled {
+						a.params[i].value = "yes"
+					}
+				}
+			}
+			u.actionForm(a, back)
+		}
+	}, back)
+}
+
+func decodeGeoScheduleState(text string) (bool, bool) {
+	if len(text) > 4096 {
+		return false, false
+	}
+	decoder := json.NewDecoder(strings.NewReader(text))
+	opening, err := decoder.Token()
+	if err != nil || opening != json.Delim('{') {
+		return false, false
+	}
+	key, err := decoder.Token()
+	if err != nil || key != "enabled" {
+		return false, false
+	}
+	value, err := decoder.Token()
+	enabled, ok := value.(bool)
+	if err != nil || !ok {
+		return false, false
+	}
+	closing, err := decoder.Token()
+	if err != nil || closing != json.Delim('}') {
+		return false, false
+	}
+	_, err = decoder.Token()
+	return enabled, err == io.EOF
 }
 
 func (u *ui) actionForm(a action, back func()) {
@@ -349,7 +407,13 @@ func (u *ui) actionForm(a action, back func()) {
 	if a.helpEN != "" {
 		form.AddButton(u.tr("Read full help", "查看完整说明"), func() {
 			clear()
-			u.output(u.tr(a.en, a.zh), u.tr(a.helpEN, a.helpZH), func() { u.actionForm(a, back) })
+			u.output(u.tr(a.en, a.zh), u.tr(a.helpEN, a.helpZH), func() {
+				if a.id == "geo_download" || a.id == "geo_schedule" {
+					u.geoActionForm(a, back)
+					return
+				}
+				u.actionForm(a, back)
+			})
 		})
 	}
 	help := tview.NewTextView().SetDynamicColors(false).SetText(u.tr(a.helpEN, a.helpZH))
