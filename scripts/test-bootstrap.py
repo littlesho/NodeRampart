@@ -21,7 +21,7 @@ import unittest
 
 REPO = Path(__file__).resolve().parent.parent
 MOCK = r'''
-import hashlib, json, os, pathlib, subprocess, sys
+import hashlib, json, os, pathlib, subprocess, sys, time, urllib.parse
 name = pathlib.Path(sys.argv[0]).name
 args = sys.argv[1:]
 lab = pathlib.Path(os.environ['BOOTSTRAP_LAB'])
@@ -40,6 +40,42 @@ elif name == 'curl':
     output = pathlib.Path(args[args.index('--output') + 1])
     headers = pathlib.Path(args[args.index('--dump-header') + 1])
     assert output.is_relative_to(root / 'tmp') and headers.is_relative_to(root / 'tmp')
+    if args[-1].startswith('https://api.github.com/'):
+        assert args[-1].startswith('https://api.github.com/repos/littlesho/NodeRampart/releases?per_page=100&page=')
+        assert '--location' not in args and '--netrc' not in args
+        assert '--retry' in args and args[args.index('--retry') + 1] == '0'
+        assert not any('Authorization' in a for a in args)
+        page = int(urllib.parse.parse_qs(urllib.parse.urlsplit(args[-1]).query)['page'][0])
+        pages = json.loads((lab / 'releases.json').read_text())
+        value = pages[page - 1] if page <= len(pages) else []
+        if scenario == 'api_page_limit':
+            value = [dict(pages[0][0], id=page)]
+        if scenario == 'api_transport': sys.exit(28)
+        if scenario == 'api_timeout': time.sleep(2)
+        if scenario in ('api_403', 'api_429', 'api_page2_403') and (scenario != 'api_page2_403' or page == 2):
+            output.write_text('{}')
+            headers.write_text('HTTP/1.1 403 Forbidden\r\n\r\n')
+            print('429' if scenario == 'api_429' else '403', end='')
+            sys.exit(0)
+        if scenario == 'api_redirect':
+            headers.write_text('HTTP/1.1 302 Found\r\nLocation: https://evil.invalid/\r\n\r\n')
+            output.write_bytes(b'')
+            print('302', end='')
+            sys.exit(0)
+        headers.write_text('HTTP/1.1 200 OK\r\n\r\n')
+        if scenario == 'api_json': output.write_text('{broken')
+        elif scenario == 'api_duplicate_member': output.write_text('[{"id":1,"id":2}]')
+        elif scenario == 'api_oversize':
+            try: output.write_text(' ' * 2097153)
+            except OSError: sys.exit(23)
+        else: output.write_text(json.dumps(value))
+        print('200', end='')
+        sys.exit(0)
+    if scenario == 'release_changes':
+        # A new higher publication after selection must not affect this install.
+        (lab / 'releases.json').write_text(json.dumps([[{
+            'id': 99, 'tag_name': 'v99.0.0', 'draft': False, 'prerelease': False,
+            'published_at': '2026-10-04T12:00:00Z'}]]))
     if scenario == 'transport': sys.exit(28)
     if scenario in ('redirect_bad', 'redirect_http', 'redirect_suffix'):
         destination = 'https://untrusted.example/asset' if scenario == 'redirect_bad' else 'http://github.com/asset'
@@ -68,23 +104,34 @@ elif name == 'curl':
         output.write_bytes(b'')
         print('302', end='')
         sys.exit(0)
-    if scenario == '404' or scenario == '404_package' and not args[-1].endswith('/SHA256SUMS'):
+    if (scenario == '404' or scenario == '404_package' and not args[-1].endswith('/SHA256SUMS')
+            or scenario == '404_native' and args[-1].endswith(('.deb', '.rpm'))):
         headers.write_text('HTTP/1.1 404 Not Found\r\n\r\n')
         output.write_bytes(b'not found')
         print('404', end='')
         sys.exit(0)
     headers.write_text('HTTP/1.1 200 OK\r\n\r\n')
     payload = b'synthetic package\n'
+    release_script = (lab / 'release-bootstrap.sh').read_bytes()
     if args[-1].endswith('/SHA256SUMS'):
         digest = hashlib.sha256(payload).hexdigest()
         if scenario == 'hash': digest = '0' * 64
-        asset = os.environ.get('MOCK_ASSET', 'noderampart_0.4.0-alpha.5_amd64.deb')
-        text = f'{digest}  {asset}\n'
+        asset = os.environ.get('MOCK_ASSET', 'noderampart_0.4.0-alpha.9_amd64.deb')
+        script_digest = hashlib.sha256(release_script).hexdigest()
+        if scenario == 'script_hash': script_digest = '0' * 64
+        text = f'{digest}  {asset}\n{script_digest}  bootstrap.sh\n'
+        if scenario == 'script_missing': text = f'{digest}  {asset}\n'
+        if scenario == 'script_duplicate': text += f'{script_digest}  bootstrap.sh\n'
         if scenario == 'duplicate': text *= 2
         if scenario == 'manifest': text += '../not-a-digest bad\n'
         if scenario == 'oversize': text = 'a' * 65537
-        if scenario == 'missing_asset': text = f'{digest}  another.deb\n'
+        if scenario == 'missing_asset': text = f'{digest}  another.deb\n{script_digest}  bootstrap.sh\n'
         output.write_text(text)
+    elif args[-1].endswith('/bootstrap.sh'):
+        if scenario == 'script_oversize':
+            try: output.write_bytes(b'#' * 1048577)
+            except OSError: sys.exit(23)
+        else: output.write_bytes(release_script)
     elif scenario == 'package_oversize':
         # Sparse synthetic data exercises the real child-only file-size limit
         # without allocating a 128 MiB fixture in memory or downloading bytes.
@@ -105,11 +152,11 @@ elif name == 'dpkg-query':
         else: print(os.environ.get('MOCK_DEB_STATUS', 'install ok installed'))
     else: sys.exit(1)
 elif name == 'dpkg-deb':
-    values = {'Package':os.environ.get('MOCK_DEB_NAME', 'noderampart'), 'Version':os.environ.get('MOCK_DEB_VERSION', '0.4.0~alpha.5'), 'Architecture':os.environ.get('MOCK_DEB_ARCH', os.environ.get('MOCK_USER_ARCH', 'amd64'))}
+    values = {'Package':os.environ.get('MOCK_DEB_NAME', 'noderampart'), 'Version':os.environ.get('MOCK_DEB_VERSION', '0.4.0~alpha.9'), 'Architecture':os.environ.get('MOCK_DEB_ARCH', os.environ.get('MOCK_USER_ARCH', 'amd64'))}
     print('malformed' if scenario == 'identity' else values[args[-1]])
 elif name == 'rpm':
     if '-qp' in args:
-        print('malformed' if scenario == 'identity' else os.environ.get('MOCK_RPM_IDENTITY', 'noderampart:0.4.0:0.alpha.6.fc44:x86_64'))
+        print('malformed' if scenario == 'identity' else os.environ.get('MOCK_RPM_IDENTITY', 'noderampart:0.4.0:0.alpha.10.fc44:x86_64'))
     elif not os.environ.get('MOCK_RPM_INSTALLED'):
         print('package noderampart is not installed')
         sys.exit(1)
@@ -167,6 +214,8 @@ class InstallerTests(unittest.TestCase):
         self.mocks = self.lab / 'mocks'
         self.mocks.mkdir()
         self.env = dict(os.environ, BOOTSTRAP_LAB=str(self.lab))
+        self.env.pop('NODERAMPART_BOOTSTRAP_DISPATCHED', None)
+        self.release_pages([self.published('v0.4.0-alpha.9')])
         for name in ('id', 'uname', 'curl', 'dpkg', 'dpkg-query', 'dpkg-deb', 'rpm', 'apt-get', 'dnf',
                      'systemctl', 'mountpoint', 'stat', 'rm', 'rmdir', 'userdel', 'groupdel', 'getent'):
             self.write(self.mocks / name, '#!' + sys.executable + '\n' + MOCK, 0o755)
@@ -178,6 +227,14 @@ class InstallerTests(unittest.TestCase):
         self.write(self.root / 'etc/noderampart/config.json', '{"fixture": true}\n')
         self.write(self.root / 'var/lib/noderampart/state', 'retained\n')
         self.write(self.root / 'proc/self/mountinfo', '1 0 0:1 / / rw - tmpfs tmpfs rw\n')
+
+    @staticmethod
+    def published(tag, **changes):
+        return dict({'id': 1, 'draft': False, 'prerelease': '-' in tag,
+                     'published_at': '2026-10-03T12:00:00Z', 'tag_name': tag}, **changes)
+
+    def release_pages(self, *pages):
+        self.write(self.lab / 'releases.json', json.dumps(pages))
 
     @staticmethod
     def write(path, body, mode=0o644):
@@ -194,17 +251,34 @@ class InstallerTests(unittest.TestCase):
             content = content.replace('/dev/tty', tty)
         else:
             content = content.replace('/dev/tty', str(self.root / 'no-tty/tty'))
+        if self.env.get('MOCK_SHORT_API_DEADLINE'):
+            content = content.replace('deadline = time.monotonic() + 120', 'deadline = time.monotonic() + 0.2')
         output = self.lab / script
         self.write(output, content, 0o755)
+        if script == 'bootstrap.sh':
+            # A synthetic published installer retains the old alpha.5 default.
+            # Dispatch must explicitly pin the selected release. Future fixtures
+            # model that release's own native mapping, never main's VERSION.
+            published_script = content.replace('  release=\n', '  release=v0.4.0-alpha.5\n', 1)
+            target = self.env.get('MOCK_RELEASE_MAPPING')
+            if target:
+                native = self.env['MOCK_RELEASE_NATIVE']
+                rpm_release = self.env['MOCK_RELEASE_RPM']
+                published_script = published_script.replace(
+                    'v0.4.0-alpha.9) deb_version=0.4.0~alpha.9; rpm_release=0.alpha.10;;',
+                    f'{target}) deb_version={native}; rpm_release={rpm_release};;')
+            # Keep safe production command boundaries while making dispatch
+            # observable to tests without creating a second test framework.
+            self.write(self.lab / 'release-bootstrap.sh', published_script, 0o755)
         return output
 
-    def run_script(self, script='bootstrap.sh', *args, tty=None, pipe=False):
+    def run_script(self, script='bootstrap.sh', *args, tty=None, pipe=False, cwd=None):
         staged = self.stage(script, tty)
         if pipe:
             return subprocess.run(['/bin/sh', '-s', '--', *args], input=staged.read_text(),
-                                  env=self.env, text=True, capture_output=True, timeout=15, check=False)
+                                  env=self.env, text=True, capture_output=True, timeout=15, check=False, cwd=cwd)
         return subprocess.run(['/bin/sh', str(staged), *args], env=self.env,
-                              text=True, capture_output=True, timeout=15, check=False)
+                              text=True, capture_output=True, timeout=15, check=False, cwd=cwd)
 
     def commands(self):
         path = self.lab / 'commands.jsonl'
@@ -363,10 +437,10 @@ class InstallerTests(unittest.TestCase):
     def test_alpha8_help_and_invalid_argument_boundaries(self):
         result = self.run_script('bootstrap.sh', '--help')
         self.assertEqual(result.returncode, 0, result.stderr)
-        for version in ('v0.4.0-alpha', 'v0.4.0-alpha.5', 'v0.4.0-alpha.6', 'v0.4.0-alpha.7', 'v0.4.0-alpha.8'):
-            self.assertIn(version, result.stdout)
+        self.assertIn('highest published product version', result.stdout)
+        self.assertIn('--version vX.Y.Z', result.stdout)
         self.assertEqual(self.commands(), [])
-        for args in (('--version',), ('--version', 'latest'), ('--version', '0.4.0-alpha.8'),
+        for args in (('--version',), ('--version', ''), ('--version', 'latest'), ('--version', '0.4.0-alpha.8'),
                      ('--version', 'v0.4.0-alpha.8', '--unknown'), ('--version', 'v0.4.0-alpha.8', 'extra')):
             with self.subTest(args=args):
                 result = self.run_script('bootstrap.sh', *args)
@@ -476,7 +550,7 @@ class InstallerTests(unittest.TestCase):
     def test_alpha9_identity_downgrade_and_help(self):
         result = self.run_script('bootstrap.sh', '--help')
         self.assertEqual(result.returncode, 0)
-        self.assertIn('v0.4.0-alpha.9', result.stdout)
+        self.assertIn('including prereleases', result.stdout)
         for scenario in ('identity', 'downgrade'):
             for distribution, version in (('debian', '13'), ('fedora', '44')):
                 with self.subTest(distribution=distribution, scenario=scenario):
@@ -498,18 +572,196 @@ class InstallerTests(unittest.TestCase):
         installs = [row for row in commands if row[:2] == ['apt-get', 'install']]
         self.assertEqual(len(installs), 1)
         self.assertIn('Dpkg::Options::=--force-confold', installs[0])
-        self.assertEqual([row[0] for row in commands].count('curl'), 2)
+        self.assertEqual([row[0] for row in commands].count('curl'), 6)
         self.assertFalse(list((self.root / 'tmp').iterdir()))
 
-    def test_default_release_stays_public_alpha5(self):
-        self.env.update(MOCK_ASSET='noderampart_0.4.0-alpha.5_amd64.deb',
-                        MOCK_DEB_VERSION='0.4.0~alpha.5')
+    def test_default_release_resolves_public_alpha9_and_pins_dispatch(self):
+        self.env['SCENARIO'] = 'release_changes'
+        self.release_pages([self.published('v0.4.0-alpha.7', id=7),
+                            self.published('v0.4.0-alpha.9', id=9),
+                            self.published('v0.4.0-alpha.8', id=8)])
         result = self.run_script('bootstrap.sh', '--no-setup')
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Selected published NodeRampart release: v0.4.0-alpha.9', result.stdout)
         downloads = [row[-1] for row in self.commands() if row[0] == 'curl']
+        base = 'https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.9/'
         self.assertEqual(downloads, [
-            'https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/SHA256SUMS',
-            'https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.5/noderampart_0.4.0-alpha.5_amd64.deb'])
+            'https://api.github.com/repos/littlesho/NodeRampart/releases?per_page=100&page=1',
+            'https://api.github.com/repos/littlesho/NodeRampart/releases?per_page=100&page=2',
+            base + 'SHA256SUMS', base + 'bootstrap.sh', base + 'SHA256SUMS',
+            base + 'noderampart_0.4.0-alpha.9_amd64.deb'])
+        self.assertEqual(json.loads((self.lab / 'releases.json').read_text())[0][0]['tag_name'], 'v99.0.0')
+        self.assertFalse(list((self.root / 'tmp').iterdir()))
+
+    def future_release(self, tag, native, rpm_release):
+        self.env.update(MOCK_RELEASE_MAPPING=tag, MOCK_RELEASE_NATIVE=native,
+                        MOCK_RELEASE_RPM=rpm_release, MOCK_DEB_VERSION=native,
+                        MOCK_ASSET='noderampart_' + tag[1:] + '_amd64.deb')
+
+    def assert_pinned_assets(self, tag):
+        assets = [row[-1] for row in self.commands() if row[0] == 'curl'
+                  and not row[-1].startswith('https://api.github.com/')]
+        self.assertTrue(assets)
+        self.assertTrue(all('/releases/download/' + tag + '/' in url for url in assets), assets)
+        self.assertEqual(sum(url.endswith('/bootstrap.sh') for url in assets), 1)
+
+    def test_numeric_prerelease_order_and_future_release_mapping(self):
+        self.future_release('v0.4.0-alpha.10', '0.4.0~alpha.10', '0.alpha.11')
+        # An unpublished development VERSION and tags are deliberately absent
+        # from the Releases API, so neither can influence the chosen release.
+        self.write(self.lab / 'VERSION', '99.0.0-alpha.99\n')
+        self.release_pages([self.published('v0.4.0-alpha.10', id=10),
+                            self.published('v0.4.0-alpha.9', id=9),
+                            self.published('v99.0.0', id=99, draft=True),
+                            self.published('v99.0.1', id=100, published_at=None),
+                            self.published('tools-v100.0.0', id=101)])
+        result = self.run_script('bootstrap.sh', '--no-setup', cwd=self.lab)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Selected published NodeRampart release: v0.4.0-alpha.10', result.stdout)
+        self.assert_pinned_assets('v0.4.0-alpha.10')
+        self.assertTrue(any(row[:2] == ['apt-get', 'install'] for row in self.commands()))
+
+    def test_semver_order_ignores_release_page_date_body_and_latest_badge(self):
+        cases = [
+            (['v0.4.0-alpha.10', 'v0.4.0'], 'v0.4.0', '0.4.0', '1'),
+            (['v0.4.0-alpha.999', 'v0.4.0-beta'], 'v0.4.0-beta', '0.4.0~beta', '0.beta.1'),
+            (['v0.4.0-beta.10', 'v0.4.0-rc.1'], 'v0.4.0-rc.1', '0.4.0~rc.1', '0.rc.2'),
+            (['v0.4.0-rc', 'v0.4.0-rc.0'], 'v0.4.0-rc.0', '0.4.0~rc.0', '0.rc.1'),
+            (['v0.9.0', 'v0.10.0-alpha.1'], 'v0.10.0-alpha.1', '0.10.0~alpha.1', '0.alpha.2'),
+            (['v0.99.0', 'v1.0.0-alpha'], 'v1.0.0-alpha', '1.0.0~alpha', '0.alpha.1'),
+        ]
+        for tags, selected, native, rpm_release in cases:
+            with self.subTest(selected=selected):
+                self.future_release(selected, native, rpm_release)
+                self.release_pages([self.published(tag, id=index + 1,
+                                    body='Please install v999.0.0', name='v999.0.0',
+                                    is_latest=index == 0) for index, tag in enumerate(tags)])
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--no-setup')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('Selected published NodeRampart release: ' + selected, result.stdout)
+                self.assert_pinned_assets(selected)
+
+    def test_complete_unordered_pagination_before_selecting(self):
+        self.future_release('v0.4.0-alpha.10', '0.4.0~alpha.10', '0.alpha.11')
+        self.release_pages([self.published('v0.4.0-alpha.9', id=9)],
+                           [self.published('v0.4.0-alpha.7', id=7),
+                            self.published('v0.4.0-alpha.10', id=10)],
+                           [self.published('v0.4.0-alpha.8', id=8)])
+        result = self.run_script('bootstrap.sh', '--no-setup')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        api = [row for row in self.commands() if row[0] == 'curl'
+               and row[-1].startswith('https://api.github.com/')]
+        self.assertEqual([row[-1].rsplit('=', 1)[-1] for row in api], ['1', '2', '3', '4'])
+        self.assert_pinned_assets('v0.4.0-alpha.10')
+
+    def test_explicit_versions_do_not_query_release_list(self):
+        for tag in ('v0.4.0-alpha.9', 'v0.4.0-alpha.10'):
+            with self.subTest(tag=tag):
+                if tag.endswith('.10'):
+                    self.future_release(tag, '0.4.0~alpha.10', '0.alpha.11')
+                self.env['SCENARIO'] = 'api_403'
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--version', tag, '--no-setup')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                downloads = [row[-1] for row in self.commands() if row[0] == 'curl']
+                self.assertTrue(all('/releases/download/' + tag + '/' in url for url in downloads))
+
+    def test_resolution_failures_and_partial_listing_never_fall_back(self):
+        for scenario in ('api_403', 'api_429', 'api_transport', 'api_json', 'api_duplicate_member',
+                         'api_redirect', 'api_oversize', 'api_page2_403', 'api_page_limit', 'api_timeout'):
+            with self.subTest(scenario=scenario):
+                self.env['SCENARIO'] = scenario
+                if scenario == 'api_timeout': self.env['MOCK_SHORT_API_DEADLINE'] = '1'
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--no-setup')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('no fallback', result.stderr)
+                self.assertNotIn('Selected published', result.stdout)
+                self.assert_no_install()
+                downloads = [row for row in self.commands() if row[0] == 'curl']
+                self.assertLessEqual(len(downloads), 20)
+                self.assertTrue(all(row[-1].startswith('https://api.github.com/') for row in downloads))
+                for row in downloads:
+                    self.assertEqual(row[row.index('--max-filesize') + 1], '2097152')
+                    self.assertLessEqual(float(row[row.index('--max-time') + 1]), 30)
+                    self.assertEqual(row[row.index('--retry') + 1], '0')
+                    self.assertNotIn('--location', row)
+                self.assertFalse(list((self.root / 'tmp').iterdir()))
+
+    def test_invalid_or_empty_release_metadata_never_installs(self):
+        candidates = [[], {}, [None], [dict(self.published('v0.4.0-alpha.9'), draft='false')],
+                      [dict(self.published('v0.4.0-alpha.9'), id=True)],
+                      [dict(self.published('v0.4.0-alpha.9'), published_at='2026-02-30T12:00:00Z')],
+                      [dict(self.published('v0.4.0-alpha.9'), published_at=1)],
+                      [dict(self.published('v0.4.0-alpha.9'), prerelease=None)],
+                      [self.published('v9.0.0', draft=True)],
+                      [self.published('v9.0.0', published_at=None)],
+                      [self.published('v01.4.0-alpha.9')], [self.published('v0.4.0-alpha.09')],
+                      [self.published('v0.4.0-alpha.9+build')], [self.published('v99.0.0-dev')],
+                      [self.published('v0.4.0-alpha.9', id=i + 1) for i in range(101)]]
+        for page in candidates:
+            with self.subTest(page=str(page)[:80]):
+                self.release_pages(page)
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--no-setup')
+                self.assertNotEqual(result.returncode, 0)
+                self.assert_no_install()
+                self.assertFalse(any('/releases/download/' in row[-1]
+                                     for row in self.commands() if row[0] == 'curl'))
+        self.release_pages([self.published('v0.4.0-alpha.9')], [self.published('v0.4.0-alpha.10')])
+        result = self.run_script('bootstrap.sh', '--no-setup')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('repeated release', result.stderr)
+        self.assert_no_install()
+
+    def test_missing_newest_package_does_not_install_older_release(self):
+        self.future_release('v0.4.0-alpha.10', '0.4.0~alpha.10', '0.alpha.11')
+        self.release_pages([self.published('v0.4.0-alpha.9', id=9),
+                            self.published('v0.4.0-alpha.10', id=10)])
+        self.env['SCENARIO'] = '404_native'
+        result = self.run_script('bootstrap.sh', '--no-setup')
+        self.assertNotEqual(result.returncode, 0)
+        self.assert_pinned_assets('v0.4.0-alpha.10')
+        self.assert_no_install()
+
+    def test_dispatch_checksum_native_identity_and_missing_package_fail_closed(self):
+        for scenario in ('script_hash', 'script_missing', 'script_duplicate', 'script_oversize',
+                         '404_native', 'missing_asset', 'hash', 'identity'):
+            with self.subTest(scenario=scenario):
+                self.env['SCENARIO'] = scenario
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--no-setup')
+                self.assertNotEqual(result.returncode, 0)
+                self.assert_no_install()
+                assets = [row[-1] for row in self.commands() if row[0] == 'curl'
+                          and '/releases/download/' in row[-1]]
+                self.assertTrue(assets)
+                self.assertTrue(all('/v0.4.0-alpha.9/' in url for url in assets))
+                self.assertFalse(list((self.root / 'tmp').iterdir()))
+
+    def test_future_release_without_its_mapping_cannot_dispatch_recursively(self):
+        self.release_pages([self.published('v0.4.0-alpha.10')])
+        result = self.run_script('bootstrap.sh', '--no-setup')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('recursive dispatch is refused', result.stderr)
+        self.assert_pinned_assets('v0.4.0-alpha.10')
+        self.assertEqual(sum(row[0] == 'curl' for row in self.commands()), 4)
+        self.assert_no_install()
+        self.assertFalse(list((self.root / 'tmp').iterdir()))
+
+    def test_default_dispatch_retains_native_downgrade_checks(self):
+        for distribution, version in (('debian', '13'), ('fedora', '44')):
+            with self.subTest(distribution=distribution):
+                self.alpha9_target(distribution, version)
+                self.env.update(SCENARIO='downgrade', MOCK_DEB_INSTALLED='1',
+                                MOCK_DEB_INSTALLED_VERSION='0.4.0~alpha.10',
+                                MOCK_RPM_INSTALLED='1', MOCK_RPM_VERSION='0.4.0-0.alpha.11.fc44')
+                result = self.run_script('bootstrap.sh', '--no-setup')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('downgrade', result.stderr)
+                self.assert_no_install()
+                self.assertEqual(sum(row[0] == 'curl' for row in self.commands()), 4)
 
     def test_explicit_alpha6_candidate_has_native_identity_and_downgrade_guard(self):
         self.env.update(MOCK_ASSET='noderampart_0.4.0-alpha.6_amd64.deb',
@@ -576,7 +828,7 @@ class InstallerTests(unittest.TestCase):
 
     def test_fedora_fresh_install_preserves_signature_policy(self):
         self.write(self.root / 'etc/os-release', 'ID=fedora\nVERSION_ID=44\n')
-        self.env['MOCK_ASSET'] = 'noderampart-0.4.0-0.alpha.6.fc44.x86_64.rpm'
+        self.env['MOCK_ASSET'] = 'noderampart-0.4.0-0.alpha.10.fc44.x86_64.rpm'
         result = self.run_script('bootstrap.sh', '--non-interactive')
         self.assertEqual(result.returncode, 0, result.stderr)
         install = [row for row in self.commands() if row[:2] == ['dnf', 'install']]
@@ -601,7 +853,7 @@ class InstallerTests(unittest.TestCase):
                     self.assert_no_install()
 
     def test_arm64_package_selection(self):
-        self.env.update(MOCK_MACHINE='aarch64', MOCK_USER_ARCH='arm64', MOCK_ASSET='noderampart_0.4.0-alpha.5_arm64.deb')
+        self.env.update(MOCK_MACHINE='aarch64', MOCK_USER_ARCH='arm64', MOCK_ASSET='noderampart_0.4.0-alpha.9_arm64.deb')
         result = self.run_script('bootstrap.sh', '--no-setup')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(any(row[0] == 'curl' and row[-1].endswith('_arm64.deb') for row in self.commands()))
@@ -659,7 +911,7 @@ class InstallerTests(unittest.TestCase):
                 self.assertTrue(all(row['LC_ALL'] == 'C' for row in machine))
 
     def test_unsupported_version_and_architecture(self):
-        result = self.run_script('bootstrap.sh', '--version', 'v9.0.0', '--no-setup')
+        result = self.run_script('bootstrap.sh', '--version', 'v9.0.0-dev', '--no-setup')
         self.assertNotEqual(result.returncode, 0)
         self.env['MOCK_MACHINE'] = 'mips'
         result = self.run_script('bootstrap.sh', '--no-setup')

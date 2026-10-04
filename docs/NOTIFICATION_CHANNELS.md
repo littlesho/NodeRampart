@@ -1,6 +1,15 @@
-# Native notification channels — alpha.8 prerelease
+# Native Webhook notification channels
 
-[简体中文](NOTIFICATION_CHANNELS.zh-CN.md). [Alpha.8 is published](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) as a non-latest alpha prerelease. Publication and package verification do not establish real platform acceptance: all six vendor API tests and human receipt confirmations remain **NOT RUN**. No vendor certification is claimed. See the [publication scope](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification), historical [feature acceptance](ALPHA8_ACCEPTANCE.md), [privacy](PRIVACY.md) and [user agreement](USER_AGREEMENT.md).
+<!-- current-release:start -->
+[简体中文](NOTIFICATION_CHANNELS.zh-CN.md). This guide targets the current published
+[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9).
+<!-- current-release:end -->
+
+These six native channels first shipped in alpha.8 and share the notification
+menu with the six other channels. Real vendor API tests and human receipt remain
+**NOT RUN**. See the [current publication scope](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification),
+historical [feature acceptance](ALPHA8_ACCEPTANCE.md), [privacy](PRIVACY.md) and
+[user agreement](USER_AGREEMENT.md).
 
 ## Common operation
 
@@ -108,12 +117,12 @@ Configuration changes use draft → validation → non-secret review → apply w
 
 Explicit **Discard isolated notification bodies** (or `notify discard-isolated --channel slack`) erases only that selected channel's isolated unsent bodies, retaining history and cooldown. New targets do not receive historic queued events; daily notification cutover is bound to activation. Existing report backfill remains local archive only and never sends messages. Excessive/unrepresentable server waits suspend until operator resume; they are never shortened. Quarantine is for permanent credential/permission/payload failures. Retry timeouts or remote success with failed local acknowledgment may produce duplicates; use the local message/event ID to correlate, not an exactly-once promise.
 
-The shared outbox retains 10,000 pending records/32 MiB and each of eight explicit channels has an admission share of 1,250 records/4 MiB across credential rotations. Existing oversized shares are preserved and can drain; new admission waits below the share. Counts/rejections/isolation/expiry are visible in status; new native events are not coalesced with Telegram HTML. Workers are fixed at one per configured channel, ≤20 rows per pass, no network within database transactions.
+The shared outbox retains 10,000 pending records/32 MiB and each of the eight original channels has an admission share of 1,250 records/4 MiB across credential rotations. Existing oversized shares are preserved and can drain; new admission waits below the share. Counts/rejections/isolation/expiry are visible in status; new native events are not coalesced with Telegram HTML. Workers are fixed at one per configured channel, ≤20 rows per pass, no network within database transactions.
 
-Schema 13 transactionally expands the per-channel event decision constraint and saves native daily activation boundaries; configuration/control API remain schema 1 and sensor protocol stays 5. Back up compatible database/config/credentials before upgrading. Old binaries reject schema 13. Rollback means restoring the matching alpha.7 database, configuration and credentials offline, never lowering an in-place schema. Uninstall preserves credentials; explicit purge is restricted to fixed product-owned paths and must not follow arbitrary references.
+The schema-13 migration introduced per-channel event decision constraints and native daily activation boundaries. The current release uses schema 14 with additional official-account state; configuration/control API remain schema 1 and sensor protocol stays 5. Back up compatible database/config/credentials before upgrading. Old binaries reject newer schemas. An intentional rollback to alpha.7 requires its matching database, configuration and credential backups restored offline; current-release rollback likewise requires the chosen older version's matching backups. Never lower an in-place schema. Uninstall preserves credentials; explicit purge is restricted to fixed product-owned paths and must not follow arbitrary references.
 
 Manual `*.credential.json` or files such as `secrets/slack-user.secret` are not product-created credentials; purge refuses them until you move them out. Atomically replace manual credentials and restart; managed hidden setup rotation is preferred. Attempt pacing, including failures, is three seconds for WeCom and one second for other native channels. Explicit operator resume can clear a cooldown; ordinary restart/re-enable cannot. Discord requests use API v10 and a NodeRampart-owned identified User-Agent.
 
 Back up configuration, database and credentials before native package purge. The managed removal command checks unknown credentials before removing the package. Direct `dpkg --purge` can remove package-owned conffiles before its post-removal guard rejects an unknown credential, so a failed purge does not promise an unchanged installation. The unknown credential itself is preserved.
 
-[Alpha.9 account-based QQ Bot / LINE Push / Twilio SMS / WhatsApp templates](OFFICIAL_NOTIFICATION_CHANNELS.md) are an Unreleased development candidate with separate consent, billing and intent semantics; these six webhook contracts remain unchanged.
+[Alpha.9 account-based QQ Bot / LINE Push / Twilio SMS / WhatsApp templates](OFFICIAL_NOTIFICATION_CHANNELS.md) are included in the current published release with separate consent, billing and intent semantics; these six webhook contracts remain unchanged.

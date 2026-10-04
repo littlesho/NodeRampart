@@ -10,11 +10,13 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 ## 版本状态与验收范围
 
-**[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) 已作为非 latest 的 alpha 预发布版本公开。** 四个官方账户渠道与已有八个渠道并行，均为可选。公开分发核验通过：22/22 项匿名下载、21 条 checksum；原 22 项 provenance 与 6 项包级 SPDX 验签结果在公开后按精确摘要一致性复用。最终 hosted 包 VM 运行、18 个 hosted 程序的二进制漏洞新扫描、平台实网／人工接收、实际收费、原生 ARM64 与生产仍为 **NOT RUN**。[公开记录](docs/RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)和[开发验收历史](docs/ALPHA9_ACCEPTANCE.md)区分这些范围；漏洞发现和扫描覆盖缺口继续披露。
+<!-- current-release:start -->
+**[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) 是当前最新公开产品版本**，包含预发布版。这个 alpha 没有 GitHub “Latest” 徽标；安装器不以该徽标判断最新版本。此版本包含统一通知菜单及全部十二个可选渠道。
+<!-- current-release:end -->
 
-**[v0.4.0-alpha.8](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8) 已作为非 latest 的 alpha 预发布版本公开。** 六个原生渠道包含在其安装包中。平台实网／人工接收、原生 ARM64 和生产仍为 **NOT RUN**；Fedora 44 公开 bootstrap 仍为 **BLOCKED_NETWORK**，历史 strict doctor unknown 继续保留在[公开分发与诊断记录](docs/RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。已知漏洞发现和扫描覆盖缺口见[当前限制](docs/ALPHA_LIMITATIONS.md)。
+同发行源码的本地候选已完成有限运行验收。最终公开构建有独立证据：22/22 项匿名下载、21 条 checksum，原 22 项 provenance 与 6 项包级 SPDX 验签按精确摘要一致性复用。发布时，最终 hosted 包 VM 运行与 18 个 hosted 程序的二进制新扫描为 **NOT RUN**；平台实网／人工接收、实际收费、原生 ARM64 与生产仍为 **NOT RUN**。详见[公开记录](docs/RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)、[开发验收历史](docs/ALPHA9_ACCEPTANCE.md)与[当前限制](docs/ALPHA_LIMITATIONS.md)。
 
-以下固定安装示例有意保留此前选定的 alpha.7 公开运行路径；省略 `--version` 仍选择 alpha.5。选择预发布版的用户可获取明确版本的 alpha.9 资产；静态公开分发通过不代表最终 hosted 字节已完成运行验收。[alpha.7](docs/RELEASE_VERIFICATION.md#alpha7-publication-and-distribution-verification)、[alpha.6](docs/RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification)和 [GeoIP 验收](docs/ALPHA_LIMITATIONS.md#geoip-alpha4-validation)保留原有范围，版本历史见 [CHANGELOG](CHANGELOG.md)。已发布包的程序与文档保持其冻结源码快照；更新 main 不会改变已安装的旧发行包。
+当前安装示例随最新公开版本更新。历史验收与已知风险在[发布验证](docs/RELEASE_VERIFICATION.md)和 [CHANGELOG](CHANGELOG.md)中保留原范围；已发布的程序、包内文档、tag 和资产保持冻结快照。
 
 ## 能帮你做什么？
 
@@ -31,30 +33,46 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 还可以合并重复告警、设置到期自动解除的静默、补齐缺失日报、备份数据库，以及通过离线脱敏元数据比较不同检测阈值。
 
-## 固定版本安装
+<a id="固定版本安装"></a>
 
-安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要运行 systemd，并在具有 root 或 sudo 权限的终端中操作。下载命令需要系统已有 curl 和有效的 HTTPS 证书；安装程序与 apt/dnf 会处理其余安装依赖，服务器无需安装 Go。ARM64 安装包已提供，但真实 ARM64 运行尚未验收。
+## 默认安装最新公开版本
 
-**这是旧版 alpha.7 的安装路径。** 下文统一菜单和全部 12 个渠道已包含在公开 alpha.9 中，此 alpha.7 命令不会安装这些新功能。由于最终 alpha.9 hosted 包 VM 运行仍为 NOT RUN，示例继续固定旧版本。先下载到独立目录，查看脚本后再决定是否执行：
+安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要 systemd，以及具有 root 或 sudo 权限的终端。维护入口需要 curl、有效 HTTPS 证书、Python 3 和 util-linux 中的 `prlimit`，以有界解析 JSON。这些是安装器依赖，daemon 不新增 Python 依赖；安装无需 Go、Node、Docker 或 GitHub CLI。ARM64 包已提供，原生 ARM64 运行尚未验收。
+
+本修订的维护入口在省略 `--version` 时，按版本优先级选择最高的公开产品版本，包含 alpha/beta/RC 预发布版。在 PR 分支查看本说明时，下面的 main 地址会在该修订合并后具有此行为。先下载到独立目录并查看脚本：
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.7/bootstrap.sh \
+  https://raw.githubusercontent.com/littlesho/NodeRampart/main/scripts/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
 # 查看并接受脚本行为后，再单独执行：
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.7 --no-setup
-sudo noderampart setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --no-setup
+sudo noderampart setup --language zh
 ~~~
 
-安装包与证明的人工核验步骤见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。HTTPS 下载、同一 Release 的 SHA256 和 GitHub attestation 是不同检查；bootstrap 会检查包校验和与包身份，**不会自动执行 attestation 验证**。
+安装器输出并固定本次选定的 Release，按同一 Release 的 SHA256SUMS 验证 bootstrap，再显式传入已选版本。安装包来自公开 Release，开发 `VERSION` 和 main 源码二进制不作为安装目标。最新目标缺少本平台包、API 限流、响应不完整或下载／校验失败时明确停止，不回退旧版。只有用户主动运行安装器时才选择版本，运行中的 daemon 不自动升级。
 
-安装器会识别系统和 CPU，下载对应 DEB/RPM，核对 SHA256、版本和架构，通过包管理器安装。`--no-setup` 将菜单留给随后单独运行的 setup。已有配置和服务启用/禁用状态会保留；下载源或制品尚未发布时会明确报错并停止。
+### 固定版本以便复现
 
-明确选择 alpha.7、下载后用 `--no-setup` 安装并单独运行 setup 的路径在 Debian 13、Fedora 44 的本次验收通过；受支持的 curl 管道交互安装路径未执行。省略 `--version` 仍选择 alpha.5。支持构建的平台不等于所有平台均已完成真实运行验收，具体边界见[当前限制](docs/ALPHA_LIMITATIONS.md)。
+<!-- current-release:start -->
+用 `--version v0.4.0-alpha.9` 精确固定当前公开版；显式版本不查询默认 Release 列表，也不静默换版。alpha.9 Release 中的 bootstrap 是冻结资产，保留其历史默认值，因此使用它时**必须显式传入版本**：
 
-上述安装命令使用 **--no-setup** 完成无人值守安装，之后再单独打开配置向导。安装器不会从脚本管道读取交互答案或凭据。Debian 首次装包会按系统服务策略启用服务并以安全默认配置开始观察；Fedora 遵循系统的服务 preset。
+~~~bash
+INSTALL_DIR=$(mktemp -d)
+curl --proto '=https' --tlsv1.2 -fsSL \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.9/bootstrap.sh \
+  -o "$INSTALL_DIR/bootstrap.sh"
+less "$INSTALL_DIR/bootstrap.sh"
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.9 --no-setup
+sudo noderampart setup --language zh
+~~~
+<!-- current-release:end -->
+
+包与证明的人工核验见[发布验证](docs/RELEASE_VERIFICATION.md#download-and-verify)。bootstrap 核对 SHA256、包版本与架构；**attestation 需另行验证**。原有源码安装冲突、不支持的平台及降级仍被拒绝；配置与服务启用／禁用状态会保留。
+
+**--no-setup** 用于无人值守安装，之后单独打开向导。省略该选项时，setup 从控制终端交互，答案和凭据不从脚本管道读取。Debian 首次装包按系统服务策略启用服务并以安全默认配置开始观察；Fedora 遵循系统 preset。
 
 ## 第一次怎么配置？
 
@@ -88,7 +106,7 @@ sudo noderampart tui --language zh
 | 功能配置 | 编辑全部可配置字段，包括高级选项；检查草稿后再确认保存。 |
 | 报告 | 生成当前报告、查看已保存日报、补齐缺失日期。 |
 | 事件与 Incident | 查看时间线和单次异常事件已保留的过程。 |
-| 通知渠道 | 进入当前 main 的全部 12 渠道，查看独立投递结果与消息、选择单个测试目标、管理到期静默。 |
+| 通知渠道 | 进入当前公开版的全部 12 渠道，查看独立投递结果与消息、选择单个测试目标、管理到期静默。 |
 | 本地 GeoIP 数据库 | 下载或更新数据库、检查库龄、设置每日自动更新。 |
 | 云公网出站费用估算 | 获取公开价格、比较已缓存的 AWS/OCI 估算、填写自定义价格。 |
 | 备份、回放与隐私 | 备份数据库、验证备份、离线比较检测规则。 |
@@ -96,14 +114,14 @@ sudo noderampart tui --language zh
 
 ## 通知渠道
 
-当前 main 共用一个入口：**setup → 通知渠道（可选）**，或 **tui → 通知渠道**。在同一页面选择已有渠道表单或配置编辑器；各渠道的凭据与投递规则保持独立。全部渠道均为可选，默认关闭。
+当前公开版共用一个入口：**setup → 通知渠道（可选）**，或 **tui → 通知渠道**。在同一页面选择已有渠道表单或配置编辑器；各渠道的凭据与投递规则保持独立。全部渠道均为可选，默认关闭。
 
 <a id="alpha8-预发布版本的原生通知"></a>
 
 | 渠道／标识 | 发送方式 | 配置入口与说明 | 版本范围 |
 | --- | --- | --- | --- |
-| Telegram／`telegram` | Bot API 向一个 Chat 发送文本 | Telegram 设置 · [操作说明](docs/V0.4_OPERATIONS.md#telegram) | 既有功能，固定 alpha.7 示例已包含 |
-| 通用 HTTPS Webhook／`webhook` | 固定接收方、JSON 与 Bearer 凭据 | 通知配置 · [操作说明](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook) | 既有功能，固定 alpha.7 示例已包含 |
+| Telegram／`telegram` | Bot API 向一个 Chat 发送文本 | Telegram 设置 · [操作说明](docs/V0.4_OPERATIONS.md#telegram) | 当前公开版已包含 |
+| 通用 HTTPS Webhook／`webhook` | 固定接收方、JSON 与 Bearer 凭据 | 通知配置 · [操作说明](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook) | 当前公开版已包含 |
 | 飞书／`feishu` | 自定义群机器人 Webhook，可选签名 | 飞书设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#feishu--飞书) | 已发布 alpha.8 及以后 |
 | 企业微信／`wecom` | 群机器人 Webhook | 企业微信设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#wecom--企业微信) | 已发布 alpha.8 及以后 |
 | Discord／`discord` | 频道 Incoming Webhook | Discord 设置 · [指南](docs/NOTIFICATION_CHANNELS.zh-CN.md#discord) | 已发布 alpha.8 及以后 |

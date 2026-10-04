@@ -1,6 +1,13 @@
-# 原生通知渠道 — alpha.8 预发布版本
+# 原生 Webhook 通知渠道
 
-[English](NOTIFICATION_CHANNELS.md)。[alpha.8 已公开](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.8)，定位为非 latest 的 alpha prerelease。公开与包验证不等于真实平台验收：六平台真实 API 及人工接收确认均仍为 **NOT RUN**，不声称厂商认证。参见[公开分发范围](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)、历史[功能验收矩阵](ALPHA8_ACCEPTANCE.md)、[隐私政策](PRIVACY.md)与[用户协议](USER_AGREEMENT.md)。
+<!-- current-release:start -->
+[English](NOTIFICATION_CHANNELS.md)。本指南面向当前公开版
+[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9)。
+<!-- current-release:end -->
+
+这六个原生渠道首次随 alpha.8 公开，现与另外六个渠道共用通知菜单。六平台真实 API
+与人工接收均为 **NOT RUN**。参见[当前公开分发范围](RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification)、
+历史[功能验收矩阵](ALPHA8_ACCEPTANCE.md)、[隐私政策](PRIVACY.md)与[用户协议](USER_AGREEMENT.md)。
 
 ## 通用配置、测试与安全
 
@@ -84,12 +91,12 @@ sudo noderampart notify list --limit 20
 
 明确选择**丢弃隔离正文**或 `sudo noderampart notify discard-isolated --channel slack` 只擦除该渠道隔离未发正文，不改其他目标、已发历史或冷却。新目标不接收历史事件/队列或启用前结束的日报；原有 report backfill 仍只生成本地归档，不发送消息。服务器等待超长/不可表示时暂停等待显式 resume，不提前重试。永久凭据/权限/payload 错误 quarantined；超时、断链或远端成功但本地写回失败仍可重复，用本地消息/事件 ID 关联，不能保证 exactly-once。
 
-全局 outbox 限 10000 条/32 MiB；8 个显式渠道各有 1250 条/4 MiB 准入份额，跨凭据轮换身份一起计。旧队列超份额仍保留并可发送，新增需降至份额。拒绝、隔离、过期可在状态观察；新原生事件不使用 Telegram HTML 合并。固定每渠道一个 worker、每次最多 20 行，外部网络不在数据库写事务中执行。
+全局 outbox 限 10000 条/32 MiB；原有 8 个渠道各有 1250 条/4 MiB 准入份额，跨凭据轮换身份一起计。旧队列超份额仍保留并可发送，新增需降至份额。拒绝、隔离、过期可在状态观察；新原生事件不使用 Telegram HTML 合并。固定每渠道一个 worker、每次最多 20 行，外部网络不在数据库写事务中执行。
 
-schema 13 事务化扩展事件渠道 CHECK 并保存原生日报启用边界；配置/控制 API 1、sensor 协议 5 不变。升级前保存匹配的旧数据库、配置及凭据备份。旧程序拒绝 schema 13；回退需要离线选择 alpha.7 对应备份，不提供原地降 schema。普通卸载保留凭据；明确 purge 仅处理固定产品拥有路径，不追随任意凭据引用删除用户文件。
+schema 13 迁移加入事件渠道 CHECK 和原生日报启用边界；当前公开版使用包含账户渠道状态的 schema 14，配置/控制 API 1、sensor 协议 5 不变。升级前保存匹配的旧数据库、配置及凭据备份。旧程序拒绝较新 schema；有意回退 alpha.7 时须离线恢复 alpha.7 匹配备份，回退其他版本同样需要其匹配备份，不提供原地降 schema。普通卸载保留凭据；明确 purge 仅处理固定产品拥有路径，不追随任意凭据引用删除用户文件。
 
 手工 `*.credential.json` 或 `secrets/slack-user.secret` 等不是产品创建的凭据；purge 会拒绝，须先移出产品目录。手工凭据修改应原子替换后重启；推荐使用隐藏设置中的管理轮换。尝试间隔（包括失败）为企业微信三秒、其他原生渠道一秒；显式操作员 resume 可清除冷却，普通重启/重新启用不会。
 
 原生包 purge 前应备份配置、数据库和凭据。管理卸载命令先检查未知凭据，再移除包；直接 `dpkg --purge` 可能在 postrm 拒绝未知凭据前已删除包拥有的 conffile，因此失败不保证安装完全未变。未知凭据本身仍保留。
 
-[alpha.9 的 QQ Bot／LINE Push／Twilio SMS／WhatsApp 模板账户渠道](OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md)为未发布开发候选，另有订阅、费用与发送意图规则；本文六个 Webhook 契约保持不变。
+[alpha.9 的 QQ Bot／LINE Push／Twilio SMS／WhatsApp 模板账户渠道](OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md)已包含在当前公开版，另有订阅、费用与发送意图规则；本文六个 Webhook 契约保持不变。

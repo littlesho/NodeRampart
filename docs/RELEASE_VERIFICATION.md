@@ -1,18 +1,23 @@
 # Verify a NodeRampart release
 
-This document records published [v0.4.0-alpha.9](#alpha9-publication-and-public-distribution-verification)
-and retains alpha.8 and all earlier release records. The published alpha.9 source
-is permanently `9cc75b6936d08099847655b5046c57a485c82ff7`; later main documentation
-commits are not its asset/attested source. Examples below still pin alpha.8;
-frozen bootstrap defaults to alpha.5. Alpha.8's lightweight tag resolves to
-`77ae069b8f00651106b9621a24047b0ad7b4e88d`; DEB is `0.4.0~alpha.8` and RPM is
-`0.4.0-0.alpha.9.fc43/fc44`. The source's original BUILD_DATE remains
-`2026-10-01T23:59:34+08:00`; publication time is separate. Historical releases
-require their own frozen source/tools and byte identities.
+<!-- current-release:start -->
+Current download and verification examples select published
+[v0.4.0-alpha.9](#alpha9-publication-and-public-distribution-verification).
+Its frozen source is `9cc75b6936d08099847655b5046c57a485c82ff7`, Debian native
+version is `0.4.0~alpha.9`, and RPM is `0.4.0-0.alpha.10.fc43/fc44`.
+Later main installer/documentation commits do not become the source of these
+published assets or attestations.
+<!-- current-release:end -->
 
-本指南新增已公开的非 latest alpha.9 prerelease 记录，保留 alpha.8 及所有历史
-记录。以下操作示例继续指定 alpha.8，bootstrap 默认仍为 alpha.5。当前 main 文档
-提交不改变任何既有发行源或包字节；候选 CI 包和旧版本证明不能替代冻结发行字节。
+Use the [maintained entry](../README.md#install-the-newest-published-release)
+for default-latest installation. A Release's frozen bootstrap retains its
+original default: always pass an explicit version when using the pinned
+Release-asset example. The current documentation record is [LATEST_RELEASE](../LATEST_RELEASE),
+separate from development `VERSION` and never an online fallback.
+
+中文：当前下载与验签示例随最新公开版本更新；默认安装使用 main 维护入口。
+固定 Release 的 bootstrap 必须显式传版本。下方各版本发布记录保留当时的测试、
+默认值和推荐情况，历史记录不作为当前安装政策；以本节和 README 为准。
 
 The release workflow creates a draft for a maintainer to inspect; local workflow
 edits and tests neither publish a release nor prove that hosted checks ran.
@@ -23,7 +28,9 @@ before merging main, prevent force-push/deletion of release tags, and review
 the complete draft asset set before publication. Local scripts do not configure
 GitHub branch/tag rules or approve a release.
 
-## Published alpha.5 baseline
+<a id="published-alpha5-baseline"></a>
+
+## Historical published alpha.5 baseline
 
 [v0.4.0-alpha.5](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.5)
 was published as an alpha prerelease at `2026-09-29T14:50:47Z` (Release ID
@@ -52,14 +59,15 @@ The runtime matrix is Debian `amd64`/`arm64` and Fedora 43/44
 asset and has no runtime SBOM. `bootstrap.sh`, `release.json` and `SHA256SUMS`
 complete the download set.
 
-For alpha.8, public DEB names are
-`noderampart_0.4.0-alpha.8_ARCH.deb`, with native Debian version
-`0.4.0~alpha.8`. RPM names contain `0.4.0-0.alpha.9.fc43` or
-`0.4.0-0.alpha.9.fc44`; the source RPM uses Fedora 44. SBOM/buildinfo names,
-checksums and attestations bind the final public filename and actual bytes.
-The [alpha.8 distribution record](#alpha8-publication-and-distribution-verification)
-identifies the actual hosted run, source and measured native acceptance; the
-format description alone is not runtime proof.
+<!-- current-release:start -->
+For the current published release, public DEB names are
+`noderampart_0.4.0-alpha.9_ARCH.deb`, with native version `0.4.0~alpha.9`.
+RPM names contain `0.4.0-0.alpha.10.fc43` or `0.4.0-0.alpha.10.fc44`;
+the source RPM uses Fedora 44. SBOM/buildinfo names append `.spdx.json` and
+`.buildinfo.json` to the exact public package filename. Checksums and
+attestations bind those filenames and bytes. The [publication record](#alpha9-publication-and-public-distribution-verification)
+identifies the hosted source, run and evidence scope.
+<!-- current-release:end -->
 
 The SBOM covers only the three packaged Go programs. It does **not** inventory
 runtime system dependencies, inspect your installed host, provide a complete
@@ -101,25 +109,26 @@ with artifact attestation support. Select the full commit SHA from the release
 source you have reviewed; do not treat a value downloaded beside the package as
 independent evidence of the expected source.
 
-The example selects published `v0.4.0-alpha.8`, whose reviewed source is
-`77ae069b8f00651106b9621a24047b0ad7b4e88d`. Confirm that identity against the
+<!-- current-release:start -->
+The example selects published `v0.4.0-alpha.9`, whose reviewed source is
+`9cc75b6936d08099847655b5046c57a485c82ff7`. Confirm that identity against the
 public source before using it as an expected value. Missing statements cannot
 pass verification; do not substitute another release's attestations.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.8 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.9 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.8_amd64.deb
-EXPECTED_COMMIT='77ae069b8f00651106b9621a24047b0ad7b4e88d'
+PACKAGE=noderampart_0.4.0-alpha.9_amd64.deb
+EXPECTED_COMMIT='9cc75b6936d08099847655b5046c57a485c82ff7'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.8 \
+  --source-ref refs/tags/v0.4.0-alpha.9 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
@@ -129,7 +138,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.8 \
+  --source-ref refs/tags/v0.4.0-alpha.9 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document/v2.3 \
@@ -139,12 +148,14 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.8 \
+  --source-ref refs/tags/v0.4.0-alpha.9 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
   --deny-self-hosted-runners
 ```
+
+<!-- current-release:end -->
 
 The CLI may use your existing GitHub login; its download command alone does not
 prove anonymous access. The publication record below identifies the separate
@@ -162,7 +173,7 @@ it does not perform these GitHub attestation checks automatically.
 ## Maintainer draft verification
 
 The following procedure applies before publication of a future candidate;
-alpha.8 is already published. Select that candidate’s independently reviewed
+the current release is already published. Select that candidate’s independently reviewed
 version and source identity. A local candidate can be built without a tag using
 `EXPECTED_COMMIT=<full-main-SHA> ./scripts/release-metadata.sh` and passing its
 `commit` and source-commit `build_date` to `build-release.sh`. Do not substitute
@@ -174,16 +185,19 @@ that can read the draft. Record its numeric Release ID, tag, full source commit,
 workflow run ID and attempt before verification. The tag must resolve to the
 reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 
-For frozen alpha.7, the exact asset set is 22 files:
+<!-- current-release:start -->
+For the current published release, the exact asset set is 22 files:
 
-- `noderampart_0.4.0-alpha.7_amd64.deb` and `noderampart_0.4.0-alpha.7_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.8.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.8.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.8.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.8.fc44.aarch64.rpm`.
+- `noderampart_0.4.0-alpha.9_amd64.deb` and `noderampart_0.4.0-alpha.9_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.10.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.10.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.10.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.10.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.8.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.10.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
+
+<!-- current-release:end -->
 
 Check names and identities, not only the count. GitHub's generated source ZIP/TAR
 links are not runtime assets. SHA256SUMS lists the other 21 files, not itself.
@@ -202,6 +216,90 @@ results for new tag acceptance. Public download 404s while the draft is private
 must be recorded as unavailable, not checksum or provenance passes. Publish the
 same verified draft only after a separate decision to make its assets public.
 
+## Current release and installer policy
+
+The maintained `main` bootstrap resolves the highest product version among this
+repository's published Releases when `--version` is omitted. Include alpha,
+beta and RC prereleases; require `draft=false` and a valid `published_at`.
+Compare semantic version precedence, including numeric prerelease components
+and stable-over-prerelease ordering. Drafts, unaccompanied tags and development
+`VERSION` are excluded. GitHub's [latest endpoint excludes prereleases](https://docs.github.com/en/rest/releases/releases#get-the-latest-release);
+neither that endpoint, the “Latest” badge, list order nor release-body text is
+the selection authority. Resolve all bounded pages or fail.
+
+Each invocation prints and pins one Release/tag, verifies its bootstrap against
+that same Release's checksum file, and dispatches it once with explicit
+`--version`. All scripts, checksums and packages belong to that fixed release.
+A new publication during installation cannot change the target. Missing packages,
+API errors/limits, malformed or incomplete responses and failed identity/checksum
+checks are errors; do not fall back to a local record or older release. Explicit
+`--version` pins exactly that release without the default list query, preserving
+platform, source-install, credential, service-policy and anti-downgrade checks.
+Only an active installer invocation selects updates; the daemon never auto-upgrades.
+
+Current user guides, feature summaries, install/download/upgrade/verification
+examples and package/SBOM names follow the newest published release.
+`LATEST_RELEASE` is the single offline documentation pin; development `VERSION`
+may differ. Mark current identity examples with `current-release:start/end`
+comments and run `python3 scripts/check-current-release.py`. The check is part
+of shared validation and ordinary CI, using local evidence and fixtures without
+network access. Preserve historical changelogs, release/tag snapshots, asset
+hashes, attestations, incident evidence, explicitly labeled rollback targets and
+old upgrade sources. Tool/dependency versions remain independent.
+
+Keep NOT RUN and known risks accurately scoped. They do not authorize retaining
+an older default or recommendation; withdrawal or rollback needs an explicit
+maintainer decision. Published asset bytes, checksum manifests, attestations and
+tag targets remain immutable. Deliver default changes through maintained main
+and future releases, never by replacing a published bootstrap.
+
+### Publication completion
+
+A release task is complete after this sequence:
+
+1. Publish the already reviewed Release, then read back its real public state,
+   tag/source and asset identities. Resolve the complete product Release list,
+   including prereleases; do not infer the newest release from `VERSION`.
+2. Update `LATEST_RELEASE`, current documentation, examples and feature summaries
+   to that real release. Keep native DEB/RPM naming and expected source digests
+   consistent with the recorded publication identity. Check current Wiki/pinned
+   guide/Release-body installation recommendations if those surfaces exist.
+3. Capture the complete fixed-repository Release list in private evidence, then
+   run the public-state checker only after a successful bounded fetch:
+
+   ```sh
+   SYNC_EVIDENCE_DIR=$(mktemp -d)
+   timeout 120s gh api --paginate 'repos/littlesho/NodeRampart/releases?per_page=100' \
+     > "$SYNC_EVIDENCE_DIR/releases.json" &&
+     python3 scripts/check-current-release.py \
+       --published-releases-json "$SYNC_EVIDENCE_DIR/releases.json"
+   ```
+
+   The checker accepts one Release array, concatenated page arrays or slurped
+   page arrays, bounded to 20 MiB, 20 pages and 2,000 entries. Preserve both fetch
+   and checker results. A failed/incomplete traversal cannot satisfy this check;
+   `&&` prevents checking partial output after a timeout or API failure. Keep the
+   ordinary offline checker and affected tests; normal CI requires no network.
+4. Run required checks and independent review for the exact final PR head,
+   normally merge the documentation/installer update through the existing PR
+   flow, then read back main's exact merge commit and checks.
+5. Read back the maintained raw-main installer entry and record actual results
+   before marking the release task complete. PR success alone is not main success.
+
+Publication, synchronization, review, normal merge and main verification are one
+authorized release task. They do not require repeated authorization for the same
+scope or a new bot/platform. Real failures, unexpected source changes and active
+handoff/monitoring boundaries still stop the affected work. Preserve run IDs and
+read back pending operations instead of replaying them. Any future event hook
+must cover [release.published](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#release),
+including prereleases published from drafts, and retain ordinary PR CI and merge
+controls.
+
+中文：发布完成包括核对真实公开版、同步当前文档／示例、必要检查与独立审查、正常
+PR 合并 main，并读回 main 检查与维护入口。这是一项已授权发布任务的连续步骤。
+保留历史及 NOT RUN，明确旧升级来源／回退目标；不得据此静默保留旧推荐，也不得
+覆写已发布资产或移动 tag。实际失败、非预期源码变化和有效交接／监看边界仍须停止。
+
 ## Build-time generation
 
 The release workflow scans final DEB/RPM artifacts on a dedicated Linux amd64
@@ -211,7 +309,7 @@ architecture metadata before running Syft. No target program is executed.
 The collector requires all six package/SBOM/inspection triples and compares
 package and program digests before it creates `dist/release`.
 
-For a reviewed local alpha.7 candidate package, with Go 1.26.8 and the appropriate read-only
+For a reviewed local development package, with Go 1.26.8 and the appropriate read-only
 `dpkg-deb` or `rpm`/`rpm2cpio` inspection tools available:
 
 ```sh
@@ -222,7 +320,8 @@ BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 export COMMIT BUILD_DATE
 make build
 ./scripts/build-deb.sh
-python3 scripts/release_sbom.py dist/noderampart_0.4.0~alpha.7_amd64.deb \
+LOCAL_DEB_VERSION=$(tr -d '\n' < VERSION | sed 's/-/~/')
+python3 scripts/release_sbom.py "dist/noderampart_${LOCAL_DEB_VERSION}_amd64.deb" \
   --syft "$TOOLS_DIR/syft/syft" --output dist/sbom
 ```
 
@@ -1120,6 +1219,10 @@ alpha.9 未发布源码增加只读、无外部解释器依赖的 Lua `%pretrans
 
 
 ## Alpha.9 publication and public distribution verification
+
+> Publication-time record: the tests, defaults and README choice below describe
+> that completed publication. Current installation policy and examples are in
+> [Download and verify](#download-and-verify) and the [current policy](#current-release-and-installer-policy).
 
 [v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) was published as a **non-latest alpha prerelease**.
 This is the fixed hosted publication, not a rebuilt local candidate or a later

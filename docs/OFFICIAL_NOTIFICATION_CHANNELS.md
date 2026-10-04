@@ -1,8 +1,12 @@
-# Official account notification channels — alpha.9
+# Official account notification channels
 
 [简体中文](OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md) · [First six native channels](NOTIFICATION_CHANNELS.md) · [Privacy](PRIVACY.md) · [User agreement](USER_AGREEMENT.md)
 
-Alpha.9 is a **[published non-latest alpha prerelease](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9)**. It includes `qqbot`, `line`,
+<!-- current-release:start -->
+This guide targets the newest published release, **[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9)**, an alpha prerelease.
+<!-- current-release:end -->
+
+It includes `qqbot`, `line`,
 `twilio_sms` and `whatsapp_cloud`, one target each, alongside the existing eight
 channels. Heartbeat is separate. All four default disabled. Contract tests use
 synthetic accounts and transports; real APIs, recipient confirmation, billing,

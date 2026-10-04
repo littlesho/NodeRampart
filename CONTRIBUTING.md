@@ -10,3 +10,10 @@ NodeRampart accepts focused issues and pull requests while the API is still unst
 6. Sign commits with `git commit -s` to certify the Developer Certificate of Origin.
 
 Never use public infrastructure or third-party IP addresses for attack simulation. Privileged integration tests must run in an isolated, authorized lab.
+
+Current installation examples must track [LATEST_RELEASE](LATEST_RELEASE), not
+development `VERSION`. Run `python3 scripts/check-current-release.py` for current
+documentation changes; keep historical/rollback examples explicitly scoped. Follow
+the [release completion policy](docs/RELEASE_VERIFICATION.md#current-release-and-installer-policy):
+publication includes current-documentation synchronization, required checks,
+independent review, a normal PR merge and main readback in the same release task.

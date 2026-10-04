@@ -88,7 +88,9 @@ only the namespaces and child processes created by that invocation. This adds
 no production capabilities and does not establish privileged lifecycle, packet
 rate, or complete VM-matrix acceptance.
 
-## alpha.8 native notifications (development candidate)
+<a id="alpha8-native-notifications-development-candidate"></a>
+
+## Native notifications introduced in alpha.8
 
 Complete vendor webhook URLs are credentials. Protected reference-only files
 use descriptor-based, no-link reads, bounded strict JSON, trusted ownership and
