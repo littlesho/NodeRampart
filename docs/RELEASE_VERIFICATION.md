@@ -93,6 +93,11 @@ packaging/bootstrap/SBOM regressions and pinned `govulncheck@v1.7.0`.
 Secret scanning and seven bounded fuzz targets run separately in the shared
 `.github/workflows/safety.yml` workflow. Both CI and release invoke it for their
 own exact `github.sha`; package jobs and draft creation wait for these results.
+Only the fuzz jobs pin Go 1.27.1 to fix the deadline cancellation race in
+[golang/go#75804](https://github.com/golang/go/issues/75804). Ordinary/race tests,
+coverage, Ubuntu builds and release validation retain Go 1.26.8; Fedora package
+builds retain their native toolchain. The fuzz pin applies to PR/main CI and
+future release safety checks; it does not change published release assets.
 The release validation job verifies the version tag and records full commit and
 commit timestamp once. Packages, SBOM declarations and collection consume that
 same metadata. A local `validate.sh` PASS does not mean the hosted secret/fuzz
