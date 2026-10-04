@@ -20,7 +20,7 @@ NodeRampart 在操作者自己的 Linux 主机运行，观察报文头/流量汇
 
 用户可在已审阅本地管理流程控制开关、语言、隐私，检查队列、擦除选定隔离未发正文，并在厂商撤销目标。[存储政策](STORAGE-BUDGET.md)和[通知说明](NOTIFICATION_CHANNELS.zh-CN.md)说明默认保留期/限额。普通卸载保留数据，只有明确支持的 purge 删除固定产品数据；备份/远端副本另行处理。隐私修改不能撤回已发送数据。分享伪名化证据前应自查；GitHub 问题公开，机密漏洞依 SECURITY.md 报告，禁止附真实秘密/报告。组织、数据主体和收件权限由操作者取得；源码不提供这些授权、不代接受条款。商业分发/托管方应制定自己的准确政策并取得必要许可。
 
-## Alpha.9 development addition / 开发候选增补
+## Published official account channels / 已发布账户渠道
 
 The additional official QQ/LINE/Twilio/Meta channels keep application/account IDs,
 sender/recipient identifiers (including phone numbers), tokens and secrets in

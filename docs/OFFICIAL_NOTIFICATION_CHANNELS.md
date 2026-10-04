@@ -3,7 +3,7 @@
 [简体中文](OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md) · [First six native channels](NOTIFICATION_CHANNELS.md) · [Privacy](PRIVACY.md) · [User agreement](USER_AGREEMENT.md)
 
 <!-- current-release:start -->
-This guide targets the newest published release, **[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9)**, an alpha prerelease.
+This guide targets the newest published release, **[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10)**, an alpha prerelease.
 <!-- current-release:end -->
 
 It includes `qqbot`, `line`,

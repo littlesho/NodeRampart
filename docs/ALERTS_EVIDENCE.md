@@ -1,15 +1,17 @@
 # Budget alerts, health alerts and local evidence / 告警与离线证据
 
-Budget/health alerts and local evidence are included in published alpha.9.
-The SSH/GeoIP diagnostic additions below belong to the `0.4.0-alpha.10`
-development candidate. Current public installation selects alpha.9.
+<!-- current-release:start -->
+Budget/health alerts, local evidence and the SSH/GeoIP diagnostic additions below
+are included in published [v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10).
+Current public installation selects this release; see its [publication scope](RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification).
+<!-- current-release:end -->
 Both new alert groups are **off by default**. Open `sudo noderampart tui
 --language zh` for Chinese or `sudo noderampart tui --language en` for English.
 All settings below are available under **Configuration / 功能配置**. Validate,
 review and save the draft to apply it.
 
-预算、健康告警与离线证据已包含在公开 alpha.9 中。下文新增 SSH/GeoIP 诊断属于
-`0.4.0-alpha.10` 开发候选；当前公开安装仍选择 alpha.9。
+预算、健康告警、离线证据与下文 SSH/GeoIP 诊断已包含在公开 alpha.10 中；
+当前公开安装选择该版本，CLI 与 daemon 应配套升级。
 
 这四项功能分别解决“费用是否快超预算”“采集是否还正常”“怎么分享排障材料”
 和“历史数据为什么不见了”。预算与健康告警需要主动开启；证据导出、裁剪台账

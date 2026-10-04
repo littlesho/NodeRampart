@@ -11,10 +11,10 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 ## Version status and validation scope
 
 <!-- current-release:start -->
-**[v0.4.0-alpha.9](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.9) is the newest published product release**, including prereleases. GitHub's “Latest” badge is unset for this alpha; it does not determine the installer's choice. The release includes the shared notification menu and all twelve optional channels.
+**[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10) is the newest published product release**, including prereleases. GitHub's “Latest” badge is unset for this alpha; it does not determine the installer's choice. The release restores trusted SSH journal collection and GeoIP updater diagnostics, alongside the shared notification menu and all twelve optional channels.
 <!-- current-release:end -->
 
-Local candidates from the release source passed bounded runtime acceptance. The final hosted build has separate evidence: 22/22 anonymous asset downloads, 21 checksum entries, and reused 22 provenance / six package-subject SPDX verifications by exact digest identity. At publication, final hosted-package VM runtime and scans of the 18 hosted programs were **NOT RUN**. Real platform APIs / human receipt, actual fees, native ARM64 and production remain **NOT RUN**. See the [publication record](docs/RELEASE_VERIFICATION.md#alpha9-publication-and-public-distribution-verification), [development acceptance history](docs/ALPHA9_ACCEPTANCE.md) and [current limitations](docs/ALPHA_LIMITATIONS.md).
+The final hosted Debian13 amd64 and Fedora44 x86_64 packages passed bounded upgrade, service, SSH and GeoIP smoke checks. Their source passed complete validation and independent review; all 22 draft provenance and six package-subject SPDX verifications passed. Fresh anonymous downloads of all 22 assets and 21 checksum entries passed; the original 28 proof results were reused by exact subject digest, without new cryptographic commands. The other hosted package runtime cases, scans of the 18 hosted programs, real platform APIs / human receipt, actual fees, native ARM64 and production remain **NOT RUN**. See the [publication record](docs/RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification), [earlier development acceptance history](docs/ALPHA9_ACCEPTANCE.md) and [current limitations](docs/ALPHA_LIMITATIONS.md).
 
 Current installation examples follow the newest published release. Earlier acceptance results and known risks keep their original scope in [release verification](docs/RELEASE_VERIFICATION.md) and [CHANGELOG](CHANGELOG.md). Published package programs, documentation, tags and assets remain their frozen snapshots.
 
@@ -39,7 +39,7 @@ You can also merge repeated alerts, set silences that expire automatically, fill
 
 The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. The maintained entry needs curl, working HTTPS certificates, Python 3 and `prlimit` (util-linux) for bounded JSON parsing. These are installer dependencies; the daemon gains no Python dependency. Go, Node, Docker and GitHub CLI are unnecessary for installation. ARM64 packages are available; native ARM64 runtime remains unvalidated.
 
-This revision's maintained entry resolves the highest published product version, including alpha/beta/RC prereleases, when `--version` is omitted. On a PR branch, the main URL below gains this behavior when the change is merged. Download into a separate directory and inspect the script:
+The maintained entry resolves the highest published product version, including alpha/beta/RC prereleases, when `--version` is omitted. Download into a separate directory and inspect the script:
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
@@ -57,15 +57,15 @@ The installer prints and fixes one selected Release for the whole invocation, ve
 ### Pin a reproducible release
 
 <!-- current-release:start -->
-Use `--version v0.4.0-alpha.9` to pin the current published release exactly. A pin does not query the default Release list or silently substitute another version. The frozen alpha.9 Release bootstrap retains its historical default, so **always pass the version explicitly** when using that asset:
+Use `--version v0.4.0-alpha.10` to pin the current published release exactly. A pin does not query the default Release list or silently substitute another version. The alpha.10 bootstrap is a frozen source snapshot whose default can follow later published versions. **Pass the version explicitly** to keep this asset installation pinned to alpha.10:
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.9/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.10/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.9 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.10 --no-setup
 sudo noderampart setup
 ~~~
 <!-- current-release:end -->

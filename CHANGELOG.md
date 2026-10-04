@@ -2,7 +2,7 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-## 0.4.0-alpha.10 - Development candidate
+## 0.4.0-alpha.10 - 2026-10-04 (UTC)
 
 - Restore trusted OpenSSH journal records with genuinely absent unit metadata;
   retain root/executable/transport checks and durable-ACK recovery semantics.
@@ -15,8 +15,18 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
   preserving custom units, masks, drop-ins, timer state and failure history.
 - Include all 21 new Go files in the explicit RPM source manifest and retain
   its completeness regression and main's installer/documentation checks.
-- Prepare DEB `0.4.0~alpha.10` and RPM `0.4.0-0.alpha.11.fc43/fc44` identities.
-  The newest published release remains alpha.9 until this candidate is public.
+- Publish [v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10)
+  at `2026-10-04T11:54:33Z`, Release ID `402977099`, as an alpha prerelease.
+  The permanent source is `79ae500106e5d89b0b65b04bfa48e010dcdb39ac`;
+  [release run 37195901702 / attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/37195901702/attempts/1)
+  passed 17/17 jobs. DEB is `0.4.0~alpha.10`, RPM `0.4.0-0.alpha.11.fc43/fc44`.
+- The exact 22 hosted assets, six SPDX/buildinfo pairs, 21 checksum entries and
+  28 actual draft attestation verifications passed. Two final hosted package
+  smokes passed on Debian13/Fedora44. Fresh anonymous downloads of all 22 assets
+  and 21 checksum entries passed; the 28 proof results were reused by exact digest;
+  other hosted runtime cases, native ARM64, real notifications, licensed external
+  GeoIP pipeline, production and existing vulnerability/scan limits remain disclosed.
+  See the [publication record](docs/RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification).
 
 ## 0.4.0-alpha.9 - 2026-10-04 (UTC)
 
