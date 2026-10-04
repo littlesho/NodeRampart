@@ -160,11 +160,17 @@ accepted. Local checks do not execute hosted workflows or publish drafts.
 
 CI also builds Fedora 43/44 RPM/SRPMs for both architectures and runs seven separate bounded fuzz
 jobs for SSH text, journal JSON/checkpoints, sensor IPC frames, configuration,
-and Ethernet decoding. Each job mutates inputs for 30 seconds with two workers
-and a two-minute command timeout. Run one locally with:
+Ethernet decoding, route attributes and replay metadata. Only these fuzz jobs
+pin Go 1.27.1, which fixes the parent/child deadline cancellation race in
+[golang/go#75804](https://github.com/golang/go/issues/75804). The shared workflow
+applies this pin to PR/main CI and future release safety checks. Ordinary tests,
+race, coverage, Ubuntu builds and release validation retain Go 1.26.8; Fedora
+packages retain their native build toolchain. Each fuzz job mutates inputs for
+30 seconds with two workers, a two-minute command timeout and a ten-minute job
+budget. Run one locally with an isolated Go 1.27.1 binary on `PATH`:
 
 ```bash
-GOMAXPROCS=2 go test ./internal/collector -run='^$' \
+GOTOOLCHAIN=local GOMAXPROCS=2 GOMEMLIMIT=768MiB go test ./internal/collector -run='^$' \
   -fuzz='^FuzzParseSSH$' -fuzztime=30s -parallel=2 -timeout=2m
 ```
 
