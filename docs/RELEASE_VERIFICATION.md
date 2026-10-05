@@ -219,7 +219,39 @@ validation scope are reviewed. Record actual test results and unrun lifecycle
 or architecture cases in its notes; do not substitute historical private lab
 results for new tag acceptance. Public download 404s while the draft is private
 must be recorded as unavailable, not checksum or provenance passes. Publish the
-same verified draft only after a separate decision to make its assets public.
+same verified draft only when the explicitly authorized release task's required
+gates and artifact/runtime acceptance have passed.
+
+### Alpha.11 candidate preparation (unpublished)
+
+Development `VERSION` and the release tooling now target `0.4.0-alpha.11`.
+This candidate is not a publication record: `LATEST_RELEASE` and the current
+examples above continue to describe the actually published alpha.10.
+
+The candidate DEB native version is `0.4.0~alpha.11`; its two public filenames
+use `noderampart_0.4.0-alpha.11_{amd64,arm64}.deb`. RPM Version is `0.4.0`,
+Release is `0.alpha.12.fc43/fc44`, and the source RPM is
+`noderampart-0.4.0-0.alpha.12.fc44.src.rpm`. The same 22-file structure applies:
+six runtime packages, their twelve SPDX/buildinfo sidecars, one source RPM,
+`bootstrap.sh`, `release.json` and `SHA256SUMS`. The checksum file covers the
+other 21 assets.
+
+Freeze the successful tag-triggered workflow's actual Draft bytes before the
+required Debian 12/13 and Fedora 43/44 x86_64 acceptance. Record the source C,
+numeric Release ID and asset IDs/digests as one immutable set A. Installation,
+alpha.10 upgrade, reinstall, GeoIP real-form YES/NO and new-process readback,
+SQLite/journal, reboot persistence and removal/purge results must bind to C/A.
+The real GeoIP YES save needs safely stored legitimate MaxMind credentials and
+license confirmation; a fixture or external timer enable cannot replace it.
+Missing required acceptance blocks publication. Preserve historical failures,
+skips and unobserved event order; do not retry failed gates until green.
+
+Alpha.11 retains **Alpha** product maturity. When all its authorized gates pass,
+publish the same verified Draft ID with `draft=false`, `prerelease=false` and
+`make_latest="true"`, then perform the public/Latest readbacks below. This
+distribution metadata does not certify beta/stable readiness, native ARM64,
+72-hour soak or production deployment. None of those unrun cases becomes PASS
+through four x86_64 VM results.
 
 ## Current release and installer policy
 
@@ -258,26 +290,49 @@ maintainer decision. Published asset bytes, checksum manifests, attestations and
 tag targets remain immutable. Deliver default changes through maintained main
 and future releases, never by replacing a published bootstrap.
 
+An explicitly authorized release task selects its newly published, accepted
+release from reviewed main as **GitHub Latest**. A merge alone authorizes no tag
+or Release. Keep the workflow's strict `draft=true`, `prerelease=true` staging;
+only final publication of the verified same numeric ID uses `draft=false`,
+`prerelease=false`, `make_latest="true"`. GitHub [does not permit drafts or
+prereleases to be Latest](https://docs.github.com/en/rest/releases/releases#update-a-release).
+If a future user chooses `prerelease=true`, explain that it cannot also satisfy
+Latest before publishing. Retain the alpha/beta/RC tag and its maturity notice;
+platform flags do not waive product maturity gates.
+
+Confirm Latest from actual GET responses and page/download redirects, not from
+the PATCH input. Its numeric ID, tag, public state and publication time must
+agree with the complete published listing and the highest product version.
+Also check the peeled source tag, all 22 public bytes and the 21 checksum entries.
+The installer continues to use semantic product ordering over the complete
+published list, including prereleases; GitHub Latest remains a separate
+distribution setting.
+
 ### Publication completion
 
 A release task is complete after this sequence:
 
-1. Publish the already reviewed Release, then read back its real public state,
+1. Publish the already reviewed and accepted same Release ID as authorized
+   Latest, retaining an explicit Alpha notice for an alpha tag. Then read back its real public state,
    tag/source and asset identities. Resolve the complete product Release list,
    including prereleases; do not infer the newest release from `VERSION`.
 2. Update `LATEST_RELEASE`, current documentation, examples and feature summaries
    to that real release. Keep native DEB/RPM naming and expected source digests
    consistent with the recorded publication identity. Check current Wiki/pinned
    guide/Release-body installation recommendations if those surfaces exist.
-3. Capture the complete fixed-repository Release list in private evidence, then
+3. Capture the complete fixed-repository Release list and actual Latest response
+   in private evidence, then
    run the public-state checker only after a successful bounded fetch:
 
    ```sh
    SYNC_EVIDENCE_DIR=$(mktemp -d)
    timeout 120s gh api --paginate 'repos/littlesho/NodeRampart/releases?per_page=100' \
      > "$SYNC_EVIDENCE_DIR/releases.json" &&
+   timeout 45s gh api 'repos/littlesho/NodeRampart/releases/latest' \
+     > "$SYNC_EVIDENCE_DIR/latest.json" &&
      python3 scripts/check-current-release.py \
-       --published-releases-json "$SYNC_EVIDENCE_DIR/releases.json"
+       --published-releases-json "$SYNC_EVIDENCE_DIR/releases.json" \
+       --published-latest-json "$SYNC_EVIDENCE_DIR/latest.json"
    ```
 
    The checker accepts one Release array, concatenated page arrays or slurped
@@ -285,6 +340,14 @@ A release task is complete after this sequence:
    and checker results. A failed/incomplete traversal cannot satisfy this check;
    `&&` prevents checking partial output after a timeout or API failure. Keep the
    ordinary offline checker and affected tests; normal CI requires no network.
+   The optional Latest file is bounded to 1 MiB and requires the complete list.
+   It must contain one object with a positive integer ID, strict false draft and
+   prerelease flags and a valid publication time, uniquely matching the current
+   documentation pin and list-selected version. Duplicate or contradictory
+   identities/JSON fields, an old Latest and missing paired input fail. An alpha
+   tag with `prerelease=false` is valid; it remains Alpha. Run this joint check
+   after updating the documentation workspace following real publication;
+   ordinary offline checks do not require an unpublished candidate to be Latest.
 4. Run required checks and independent review for the exact final PR head,
    normally merge the documentation/installer update through the existing PR
    flow, then read back main's exact merge commit and checks.

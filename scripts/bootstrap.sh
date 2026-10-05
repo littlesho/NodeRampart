@@ -41,6 +41,7 @@ bootstrap_main() {
     v0.4.0-alpha.8) deb_version=0.4.0~alpha.8; rpm_release=0.alpha.9;;
     v0.4.0-alpha.9) deb_version=0.4.0~alpha.9; rpm_release=0.alpha.10;;
     v0.4.0-alpha.10) deb_version=0.4.0~alpha.10; rpm_release=0.alpha.11;;
+    v0.4.0-alpha.11) deb_version=0.4.0~alpha.11; rpm_release=0.alpha.12;;
     # Future releases own their package mapping; do not guess native versions.
     *) dispatch=true;;
   esac

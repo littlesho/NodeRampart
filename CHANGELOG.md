@@ -2,6 +2,24 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
+## 0.4.0-alpha.11 - Unreleased
+
+- Read the actual GeoIP timer enable state on every daily-update and setup
+  download form opening; report read errors instead of displaying a false NO.
+  Keep credentials empty and terms unaccepted in the download form.
+- Upgrade SQLite to 1.60.1, libc to 1.77.1, memory to 1.12.1, x/sys to 0.48.0,
+  x/text to 0.42.0 and tcell to 2.13.10. Synchronize the Go 1.26 source-build
+  requirement, third-party notices and SQLite license removal lists.
+- Synchronize journal diagnosis tests with durable acknowledgement, preserving
+  quiet/duplicate/trusted recovery assertions and production ACK conditions.
+  Observe final terminal cells for Chinese input and navigation regressions.
+- Pin download-artifact v8.0.1 and verify both release download paths without
+  publishing. Prepare alpha.11 DEB/RPM/SBOM identities and an optional offline
+  joint published-list/Latest completion check; retain draft-first staging.
+- Retain Alpha maturity when an explicitly authorized, fully accepted release
+  is published as GitHub Latest. Native acceptance and publication are pending;
+  this entry does not claim beta/stable or production readiness.
+
 ## 0.4.0-alpha.10 - 2026-10-04 (UTC)
 
 - Restore trusted OpenSSH journal records with genuinely absent unit metadata;

@@ -525,6 +525,114 @@ class InstallerTests(unittest.TestCase):
         self.env['MOCK_RPM_IDENTITY'] = self.env['MOCK_RPM_IDENTITY'].replace('0.alpha.9.fc', '0.alpha.10.fc')
         return self.env['MOCK_ASSET']
 
+    def alpha11_target(self, distribution='debian', version='13', machine='x86_64'):
+        self.alpha9_target(distribution, version, machine)
+        self.env['MOCK_ASSET'] = self.env['MOCK_ASSET'].replace('0.4.0-alpha.9', '0.4.0-alpha.11').replace('0.alpha.10.fc', '0.alpha.12.fc')
+        self.env['MOCK_DEB_VERSION'] = '0.4.0~alpha.11'
+        self.env['MOCK_RPM_IDENTITY'] = self.env['MOCK_RPM_IDENTITY'].replace('0.alpha.10.fc', '0.alpha.12.fc')
+        return self.env['MOCK_ASSET']
+
+    def test_alpha11_explicit_native_mapping_matrix(self):
+        for distribution, version in (('debian', '12'), ('debian', '13'), ('fedora', '43'), ('fedora', '44')):
+            for machine in ('x86_64', 'aarch64'):
+                with self.subTest(distribution=distribution, version=version, machine=machine):
+                    asset = self.alpha11_target(distribution, version, machine)
+                    self.env['SCENARIO'] = 'api_403'
+                    (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                    result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.11', '--no-setup')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    base = 'https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.11/'
+                    downloads = [row[-1] for row in self.commands() if row[0] == 'curl']
+                    self.assertEqual(downloads, [base + 'SHA256SUMS', base + asset])
+                    expected = 'apt-get' if distribution == 'debian' else 'dnf'
+                    installs = [row for row in self.commands() if row[:2] == [expected, 'install']]
+                    self.assertEqual(len(installs), 1)
+                    self.assertTrue(installs[0][-1].endswith('/' + asset))
+                    if distribution == 'debian':
+                        self.assertIn('Dpkg::Options::=--force-confold', installs[0])
+                    else:
+                        self.assertFalse(any('gpg' in arg for arg in installs[0]))
+                    self.assertFalse(any(row[0] in ('systemctl', 'noderampart') for row in self.commands()))
+                    self.assertEqual((self.root / 'etc/noderampart/config.json').read_text(), '{"fixture": true}\n')
+                    self.assertEqual((self.root / 'var/lib/noderampart/state').read_text(), 'retained\n')
+                    self.assertFalse(list((self.root / 'tmp').iterdir()))
+
+    def test_alpha11_default_selects_published_semver_and_pins_native_assets(self):
+        self.write(self.lab / 'VERSION', '99.0.0-alpha.99\n')
+        for distribution, version in (('debian', '12'), ('debian', '13'), ('fedora', '43'), ('fedora', '44')):
+            with self.subTest(distribution=distribution, version=version):
+                asset = self.alpha11_target(distribution, version)
+                self.release_pages([self.published('v0.4.0-alpha.10', id=10, is_latest=True),
+                                    self.published('v0.4.0-alpha.11', id=11, is_latest=False),
+                                    self.published('v0.4.0-alpha.12', id=12, draft=True),
+                                    self.published('v0.4.0-alpha.13', id=13, published_at=None),
+                                    self.published('tools-v99.0.0', id=99)])
+                self.env['SCENARIO'] = 'release_changes'
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--no-setup', cwd=self.lab)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('Selected published NodeRampart release: v0.4.0-alpha.11', result.stdout)
+                self.assert_pinned_assets('v0.4.0-alpha.11')
+                base = 'https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.11/'
+                self.assertEqual([row[-1] for row in self.commands() if row[0] == 'curl'], [
+                    'https://api.github.com/repos/littlesho/NodeRampart/releases?per_page=100&page=1',
+                    'https://api.github.com/repos/littlesho/NodeRampart/releases?per_page=100&page=2',
+                    base + 'SHA256SUMS', base + 'bootstrap.sh', base + 'SHA256SUMS', base + asset])
+                self.assertFalse(any(row[0] in ('systemctl', 'noderampart') for row in self.commands()))
+                self.assertFalse(list((self.root / 'tmp').iterdir()))
+
+    def test_alpha11_identity_and_native_downgrade_refuse_before_install(self):
+        for distribution, version in (('debian', '12'), ('debian', '13'), ('fedora', '43'), ('fedora', '44')):
+            for scenario in ('identity', 'downgrade'):
+                with self.subTest(distribution=distribution, version=version, scenario=scenario):
+                    self.alpha11_target(distribution, version)
+                    self.env['SCENARIO'] = scenario
+                    if scenario == 'downgrade':
+                        self.env.update(MOCK_DEB_INSTALLED='1', MOCK_DEB_INSTALLED_VERSION='0.4.0~alpha.12',
+                                        MOCK_RPM_INSTALLED='1', MOCK_RPM_VERSION='0.4.0-0.alpha.13.fc' + version)
+                    (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                    result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.11', '--no-setup')
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(scenario, result.stderr)
+                    self.assert_no_install()
+                    if scenario == 'downgrade':
+                        self.assertFalse(any(row[0] == 'curl' for row in self.commands()))
+                    self.assertFalse(list((self.root / 'tmp').iterdir()))
+
+    def test_alpha11_upgrades_and_reinstalls_use_exact_native_versions(self):
+        for current in ('0.4.0~alpha.10', '0.4.0~alpha.11'):
+            with self.subTest(kind='deb', current=current):
+                self.alpha11_target()
+                self.env.update(MOCK_DEB_INSTALLED='1', MOCK_DEB_INSTALLED_VERSION=current)
+                result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.11', '--no-setup')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn(['dpkg', '--compare-versions', current, 'le', '0.4.0~alpha.11'], self.commands())
+                self.assertTrue(any(row[:2] == ['apt-get', 'install'] for row in self.commands()))
+        for version in ('43', '44'):
+            for release in ('0.alpha.11', '0.alpha.12'):
+                with self.subTest(kind='rpm', version=version, release=release):
+                    self.alpha11_target('fedora', version)
+                    self.env.update(MOCK_RPM_INSTALLED='1', MOCK_RPM_VERSION='0.4.0-' + release + '.fc' + version)
+                    result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.11', '--no-setup')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertTrue(any(row[:2] == ['dnf', 'install'] for row in self.commands()))
+
+    def test_alpha12_future_installer_owns_its_mapping_and_keeps_the_pin(self):
+        for explicit in (False, True):
+            with self.subTest(explicit=explicit):
+                self.future_release('v0.4.0-alpha.12', '0.4.0~alpha.12', '0.alpha.13')
+                self.release_pages([self.published('v0.4.0-alpha.11', id=11),
+                                    self.published('v0.4.0-alpha.12', id=12)])
+                self.env['SCENARIO'] = 'api_403' if explicit else ''
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                args = ('--version', 'v0.4.0-alpha.12', '--no-setup') if explicit else ('--no-setup',)
+                result = self.run_script('bootstrap.sh', *args)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_pinned_assets('v0.4.0-alpha.12')
+                self.assertEqual(sum(row[0] == 'curl' for row in self.commands()), 4 if explicit else 6)
+                self.assertTrue(any(row[:2] == ['apt-get', 'install'] for row in self.commands()))
+                self.assertFalse(list((self.root / 'tmp').iterdir()))
+
     def test_alpha9_candidate_explicit_matrix_and_fail_closed(self):
         for distribution, version in (('debian', '12'), ('debian', '13'), ('fedora', '43'), ('fedora', '44')):
             for machine in ('x86_64', 'aarch64'):
@@ -656,10 +764,12 @@ class InstallerTests(unittest.TestCase):
         self.assert_pinned_assets('v0.4.0-alpha.10')
 
     def test_explicit_versions_do_not_query_release_list(self):
-        for tag in ('v0.4.0-alpha.9', 'v0.4.0-alpha.10'):
+        for tag in ('v0.4.0-alpha.9', 'v0.4.0-alpha.10', 'v0.4.0-alpha.11'):
             with self.subTest(tag=tag):
                 if tag.endswith('.10'):
                     self.future_release(tag, '0.4.0~alpha.10', '0.alpha.11')
+                elif tag.endswith('.11'):
+                    self.alpha11_target()
                 self.env['SCENARIO'] = 'api_403'
                 (self.lab / 'commands.jsonl').unlink(missing_ok=True)
                 result = self.run_script('bootstrap.sh', '--version', tag, '--no-setup')
@@ -741,11 +851,13 @@ class InstallerTests(unittest.TestCase):
                 self.assertFalse(list((self.root / 'tmp').iterdir()))
 
     def test_future_release_without_its_mapping_cannot_dispatch_recursively(self):
-        self.release_pages([self.published('v0.4.0-alpha.11')])
+        # alpha.11 now has an explicit mapping; the next unknown release must
+        # still fail if its published installer cannot handle that pinned tag.
+        self.release_pages([self.published('v0.4.0-alpha.12')])
         result = self.run_script('bootstrap.sh', '--no-setup')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('recursive dispatch is refused', result.stderr)
-        self.assert_pinned_assets('v0.4.0-alpha.11')
+        self.assert_pinned_assets('v0.4.0-alpha.12')
         self.assertEqual(sum(row[0] == 'curl' for row in self.commands()), 4)
         self.assert_no_install()
         self.assertFalse(list((self.root / 'tmp').iterdir()))
@@ -1211,13 +1323,13 @@ class ReleaseAssetTests(unittest.TestCase):
         (self.project / 'scripts').mkdir()
         for name in ('build-release.sh', 'bootstrap.sh', 'release_sbom.py'):
             shutil.copyfile(REPO / 'scripts' / name, self.project / 'scripts' / name)
-        (self.project / 'VERSION').write_text('0.4.0-alpha.10\n')
+        (self.project / 'VERSION').write_text('0.4.0-alpha.11\n')
         self.input = self.project / 'input'
         self.input.mkdir()
-        names = [f'noderampart_0.4.0-alpha.10_{arch}.deb' for arch in ('amd64', 'arm64')]
-        names += [f'noderampart-0.4.0-0.alpha.11.fc{fedora}.{arch}.rpm'
+        names = [f'noderampart_0.4.0-alpha.11_{arch}.deb' for arch in ('amd64', 'arm64')]
+        names += [f'noderampart-0.4.0-0.alpha.12.fc{fedora}.{arch}.rpm'
                   for fedora in (43, 44) for arch in ('x86_64', 'aarch64')]
-        names += ['noderampart-0.4.0-0.alpha.11.fc44.src.rpm']
+        names += ['noderampart-0.4.0-0.alpha.12.fc44.src.rpm']
         for name in names:
             (self.input / name).write_text('synthetic package\n')
         # This is a synthetic clean revision, not a Git mutation or an assertion
@@ -1251,10 +1363,10 @@ elif args[:1] not in (['diff'], ['ls-files']):
                          'build_settings': {'GOARCH': arch, 'GOOS': 'linux'}} for path in paths]
             (self.input / (name + '.buildinfo.json')).write_text(json.dumps({'format': 1, 'package': name,
                 'sha256': sha, 'architecture': arch, 'scope': scope, 'binaries': binaries,
-                'declared_build': {'version': '0.4.0-alpha.10', 'commit': self.env['COMMIT'], 'build_date': self.env['BUILD_DATE']}}))
+                'declared_build': {'version': '0.4.0-alpha.11', 'commit': self.env['COMMIT'], 'build_date': self.env['BUILD_DATE']}}))
             (self.input / (name + '.spdx.json')).write_text(json.dumps({'spdxVersion': 'SPDX-2.3',
                 'dataLicense': 'CC0-1.0', 'comment': f'{scope} Package: {name}; SHA256: {sha}.',
-                'packages': [{'name': name, 'versionInfo': '0.4.0~alpha.10' if name.endswith('.deb') else name.removeprefix('noderampart-').rsplit('.', 2)[0]}],
+                'packages': [{'name': name, 'versionInfo': '0.4.0~alpha.11' if name.endswith('.deb') else name.removeprefix('noderampart-').rsplit('.', 2)[0]}],
                 'files': [{'fileName': path, 'checksums': [{'algorithm': 'SHA256', 'checksumValue': 'a' * 64}]} for path in paths]}))
 
     def run_collect(self):
@@ -1271,7 +1383,7 @@ elif args[:1] not in (['diff'], ['ls-files']):
             digest, name = line.split()
             self.assertEqual(digest, hashlib.sha256((release / name).read_bytes()).hexdigest())
         metadata = json.loads((release / 'release.json').read_text())
-        self.assertEqual(metadata['version'], '0.4.0-alpha.10')
+        self.assertEqual(metadata['version'], '0.4.0-alpha.11')
         self.assertEqual(metadata['commit'], self.commit)
         self.assertEqual(metadata['build_date'], self.env['BUILD_DATE'])
         self.assertEqual(metadata['package_count'], 6)
