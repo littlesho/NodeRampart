@@ -50,7 +50,7 @@
   allowlisted SSH/GeoIP diagnostics; updater privilege-drop/readiness and guarded
   unit migration fixes. Config/API/sensor/DB remain 1/1/5/14; upgrade CLI/daemon
   together. Identity-aware sensor receipt diagnosis and early RPM installation
-  conflict checks remain included; see the [publication scope](RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification).
+  conflict checks remain included; see the [promotion scope](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion).
 - Current install and verification examples track this published release; the
   maintained bootstrap resolves future published versions when actively invoked.
 <!-- current-release:end -->

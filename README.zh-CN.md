@@ -11,10 +11,12 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 ## 版本状态与验收范围
 
 <!-- current-release:start -->
-**[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) 是最高已公开产品版本（Pre-release），尚不是 GitHub Latest。** 产品继续为 Alpha。本版修复 GeoIP timer 状态回填，升级依赖／构建要求，并完善 journal 测试同步及终端观察。
+**[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) 是最高已公开产品版本，现为普通 GitHub Release 和 [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest)。** 产品成熟度仍为 **Alpha**；这些分发设置不是 stable 或生产就绪认证。本版修复 GeoIP timer 状态回填，升级依赖／构建要求，并完善 journal 测试同步及终端观察。
 <!-- current-release:end -->
 
-冻结 hosted 资产已在 Debian12/13、Fedora43/44 四台 x86_64 实验机通过限定首装、基础 SQLite、中英文 TUI/setup NO 回填、帮助和取消；适用的升级／重装、正常服务生命周期、DEB/RPM 保留数据卸载及家族 purge 通过。Debian12 正常可信 durable ACK 通过，完整故障恢复未测。22 项匿名下载及 21 条 checksum 与已认证的 22 个 provenance／6 个 SPDX 绑定一致。**Fedora43/44 原生 durable ACK、真实 MaxMind 下载／GeoIP YES 持久回填、原生 ARM64、长期 soak 和真实 VPS 部署仍为 NOT RUN。** 维护者仅为本次 Pre-release 接受 Fedora ACK 缺口；私有 MAC 标签解析失败既不能证明产品有缺陷，也不能证明 Fedora ACK 正常。详见[公开记录](docs/RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification)及[当前限制](docs/ALPHA_LIMITATIONS.md)。
+冻结 hosted 资产已在 Debian12/13、Fedora43/44 四台 x86_64 实验机通过限定首装、基础 SQLite、中英文 TUI/setup NO 回填、帮助和取消；适用的升级／重装、正常服务生命周期、DEB/RPM 保留数据卸载及家族 purge 通过。Debian12 正常可信 durable ACK 通过，完整故障恢复未测。22 项匿名下载及 21 条 checksum 与已认证的 22 个 provenance／6 个 SPDX 绑定一致。
+
+**USER-REPORTED VPS ACCEPTANCE PASS**：维护者本人报告匿名下载／升级成功、原 Bug 复测确认修复、合法凭据及本人许可确认后的真实 City／ASN 下载，以及 GeoIP **YES 保存 → 完全退出 → 新进程仍 YES → 实际 systemd timer 为 enabled**。这是用户报告，不冒充独立自动日志。**Fedora43/44 原生 durable ACK、完整 journal 故障恢复、原生 ARM64、长期 soak 仍为 NOT RUN**，本次 Alpha 晋级明确接受这些缺口。Fedora 场景因私有 MAC 标签解析失败未启动，既不能证明产品有缺陷，也不能证明该场景正常。详见[晋级记录](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion)及[当前限制](docs/ALPHA_LIMITATIONS.md)。
 
 当前安装示例随最新公开版本更新。历史验收与已知风险在[发布验证](docs/RELEASE_VERIFICATION.md)和 [CHANGELOG](CHANGELOG.md)中保留原范围；已发布的程序、包内文档、tag 和资产保持冻结快照。
 
@@ -94,11 +96,11 @@ sudo noderampart setup --language zh
 
 <a id="vps-pre-release-acceptance"></a>
 
-## 正式 Release／Latest 前的本人 VPS 验收
+## 本人 VPS 验收与本地 GeoIP 核对
 
-先查看预发布限制并自行备份，再在自己的 VPS 安装。预期程序版本为 `0.4.0-alpha.11`，永久发行源为 `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`；之后的 main 文档提交不代表包已重建。
+维护者本人 VPS 安装、真实 City／ASN 下载和 YES 持久回填已按上述范围记为 **USER-REPORTED PASS**。在其它服务器安装前，查看 Alpha 限制并自行备份。预期程序版本为 `0.4.0-alpha.11`，永久发行源为 `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`；之后的 main 文档提交不代表包已重建。以下清单保留供本地核对：
 
-1. 用 `sudo noderampart version` 核对版本／源码，查看正常服务与采集状态。发行证据中的真实 VPS 安装仍为 **NOT RUN**。
+1. 用 `sudo noderampart version` 核对版本／源码，查看正常服务与采集状态。
 2. 若选择 GeoIP，在本地 setup 输入本人合法 MaxMind 凭据，并亲自确认许可条款；不要把凭据发到聊天、录屏或报告。完成真实 City／ASN 下载并查看产品更新结果。实验室 NO 回填不能证明真实下载或 YES 保存。
 3. 从 `tui` 或 `setup` 打开独立“每日更新”表单，保存 **YES**，彻底退出，再启动新进程重进表单，确认仍为 YES，并与以下只读 systemd 状态一致：
 
@@ -108,9 +110,9 @@ sudo noderampart setup --language zh
    sudo systemctl list-timers --all noderampart-geoip-update.timer
    ~~~
 
-4. 再保存 **NO**、退出、重进确认 NO。反馈实际入口／语言、程序版本和 timer 字段，不含凭据。enabled 但 inactive／failed 仍表示 YES；下载成功与 updater 健康须分别判断。读取异常不能当作 NO。启用 timer 可能触发 Persistent 补跑更新。
+4. 可再保存 **NO**、退出、重进确认 NO；这条反向闭环不在本次 VPS 报告范围内。记录实际入口／语言、程序版本和 timer 字段，不含凭据。enabled 但 inactive／failed 仍表示 YES；下载成功与 updater 健康须分别判断。读取异常不能当作 NO。启用 timer 可能触发 Persistent 补跑更新。
 
-验收反馈后才讨论正式 Release／Latest。即使 VPS 的 GeoIP 验收通过，Fedora durable ACK 和完整故障恢复缺口仍须单独披露并重新确认；正式发布和 Latest 需要再次明确授权。
+维护者在报告 VPS 验收并接受剩余 Alpha 缺口后，已明确授权同一 Release 晋级及 Latest。Fedora durable ACK 和完整故障恢复仍未验证，不能由 GeoIP 结果替代。Codex 未部署到 VPS 或重复本人测试。
 
 ## 平时怎么使用？
 

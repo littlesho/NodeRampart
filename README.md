@@ -11,10 +11,12 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 ## Version status and validation scope
 
 <!-- current-release:start -->
-**[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) is the highest published product version, a Pre-release. It is not GitHub Latest.** Product maturity remains Alpha. This version fixes GeoIP timer-state readback, updates dependencies/build requirements and improves journal-test synchronization and terminal observation.
+**[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) is the highest published product version, an ordinary GitHub Release and [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest).** Product maturity remains **Alpha**; these distribution settings do not certify stable or production readiness. This version fixes GeoIP timer-state readback, updates dependencies/build requirements and improves journal-test synchronization and terminal observation.
 <!-- current-release:end -->
 
-The frozen hosted assets passed scoped first-install, basic SQLite, English/Chinese TUI/setup NO readback, help and cancel checks on Debian 12/13 and Fedora 43/44 x86_64. Applicable upgrade/reinstall, normal service lifecycle, DEB/RPM keep-data removal and family purge checks passed. Debian12 normal trusted durable ACK passed; full fault recovery did not. All 22 anonymous downloads and 21 checksum entries match the authenticated 22 provenance and six SPDX bindings. **Fedora43/44 native durable ACK, real MaxMind download/GeoIP YES persistence, native ARM64, long soak and real VPS deployment remain NOT RUN.** The maintainer accepted the Fedora ACK gap for this Pre-release only; the private MAC-label failure does not prove either a product defect or Fedora ACK success. See the [publication record](docs/RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification) and [current limitations](docs/ALPHA_LIMITATIONS.md).
+The frozen hosted assets passed scoped first-install, basic SQLite, English/Chinese TUI/setup NO readback, help and cancel checks on Debian 12/13 and Fedora 43/44 x86_64. Applicable upgrade/reinstall, normal service lifecycle, DEB/RPM keep-data removal and family purge checks passed. Debian12 normal trusted durable ACK passed; full fault recovery did not. All 22 anonymous downloads and 21 checksum entries match the authenticated 22 provenance and six SPDX bindings.
+
+**USER-REPORTED VPS ACCEPTANCE PASS:** the maintainer reports successful anonymous download/upgrade, verification of the original bug fix, legitimate licensed City/ASN downloads, and GeoIP **YES save → full exit → new-process YES → actual systemd timer enabled**. This is a user report, without independent automated VPS logs. **Fedora43/44 native durable ACK, complete journal fault recovery, native ARM64 and long soak remain NOT RUN**, explicitly accepted for this Alpha promotion. A private MAC-label failure prevented the Fedora ACK scenario from starting; it proves neither a product defect nor success. See the [promotion record](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion) and [current limitations](docs/ALPHA_LIMITATIONS.md).
 
 Current installation examples follow the newest published release. Earlier acceptance results and known risks keep their original scope in [release verification](docs/RELEASE_VERIFICATION.md) and [CHANGELOG](CHANGELOG.md). Published package programs, documentation, tags and assets remain their frozen snapshots.
 
@@ -94,11 +96,11 @@ The report timezone selector works offline. Notification language is separate fr
 
 <a id="vps-pre-release-acceptance"></a>
 
-## Your VPS acceptance before formal Release / Latest
+## VPS acceptance and local GeoIP verification
 
-Install only after reviewing the Pre-release limits and making your own backup. Expected program version is `0.4.0-alpha.11`, with permanent release source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`; later main documentation is not a new package build.
+The maintainer's VPS installation, real City/ASN download and YES persistence are recorded above as **USER-REPORTED PASS**. Review the Alpha limits and make your own backup before installing on another server. Expected program version is `0.4.0-alpha.11`, with permanent release source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`; later main documentation is not a new package build. This checklist remains available for local verification:
 
-1. Check `sudo noderampart version`, normal service status and collection on your own VPS. Actual VPS installation is **NOT RUN** in the release evidence.
+1. Check `sudo noderampart version`, normal service status and collection on your own VPS.
 2. If you choose GeoIP, enter your legitimate MaxMind credentials locally through setup and personally confirm its license terms. Keep credentials out of chat, recordings and reports. Complete the real City/ASN download and inspect the product's update result; the lab's NO checks do not prove download or YES-save success.
 3. Open the independent daily-update form from `tui` or `setup`, save **YES**, fully exit, start a new process and reopen the form. It must show YES and agree with this read-only systemd query:
 
@@ -108,9 +110,9 @@ Install only after reviewing the Pre-release limits and making your own backup. 
    sudo systemctl list-timers --all noderampart-geoip-update.timer
    ~~~
 
-4. Save **NO**, exit and reopen to check NO. Report the actual entry/language, version and timer fields without credentials. Enabled-but-inactive/failed still means YES; updater health/download success is a separate result. A read error must not be treated as NO. Enabling the timer can run a persistent/catch-up update.
+4. Optionally save **NO**, exit and reopen to check NO; this reverse loop was not part of the reported VPS acceptance. Record the actual entry/language, version and timer fields without credentials. Enabled-but-inactive/failed still means YES; updater health/download success is a separate result. A read error must not be treated as NO. Enabling the timer can run a persistent/catch-up update.
 
-Send the acceptance outcome before any formal Release/Latest decision. Fedora durable ACK and complete fault recovery remain separate coverage gaps even if your GeoIP test passes. Formal Release and GitHub Latest require fresh explicit authorization; this Pre-release does not grant it.
+The maintainer explicitly authorized same-ID Release/Latest promotion after reporting VPS acceptance and accepting the remaining Alpha gaps. Fedora durable ACK and complete fault recovery remain unverified; GeoIP acceptance does not establish either result. Codex did not deploy to the VPS or repeat the user's tests.
 
 ## Everyday use
 

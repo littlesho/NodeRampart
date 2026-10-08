@@ -3,20 +3,22 @@
 <!-- current-release:start -->
 The newest published product release is
 [v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11),
-an alpha prerelease without GitHub's “Latest” badge.
+an ordinary GitHub Release selected as [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest). Product maturity remains Alpha.
 <!-- current-release:end -->
 
-## Alpha.11 scoped Pre-release acceptance
+## Alpha.11 acceptance and ordinary Release promotion
 
-The [alpha.11 publication record](RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification) binds the same 22 hosted assets to source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`. Four x86_64 VMs (Debian12/13, Fedora43/44) passed first-install, basic SQLite and English/Chinese NO-readback/help/cancel checks. Applicable upgrades, reinstalls, normal service cycles, RPM soft stop/start, DEB/RPM keep-data paths and family purge passed. Debian12 normal pending=0 trusted durable ACK passed; ordinary ACK does not establish fault recovery. All 22 assets passed anonymous byte/SHA checks and 21 checksum entries, reusing the same 22 provenance and six SPDX bindings.
+The [alpha.11 promotion record](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion) binds the same 22 hosted assets to source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`. Four x86_64 VMs (Debian12/13, Fedora43/44) passed first-install, basic SQLite and English/Chinese NO-readback/help/cancel checks. Applicable upgrades, reinstalls, normal service cycles, RPM soft stop/start, DEB/RPM keep-data paths and family purge passed. Debian12 normal pending=0 trusted durable ACK passed; ordinary ACK does not establish fault recovery. All 22 assets passed new anonymous byte/SHA checks and 21 checksum entries after promotion, reusing the same 22 provenance and six SPDX bindings.
 
-**Fedora43/44 native durable ACK remains NOT RUN:** a private MAC-label parser failure prevented the scene from starting. No product defect is confirmed in that scene, and there is no evidence of success. The maintainer's **SCOPED_PRE_RELEASE_WAIVER** accepts this coverage gap only for alpha.11 Pre-release; the original PRE-RELEASE-GATE BLOCKED and all failures remain unchanged.
+**Fedora43/44 native durable ACK remains NOT RUN:** a private MAC-label parser failure prevented the scene from starting. No product defect is confirmed in that scene, and there is no evidence of success. The original **SCOPED_PRE_RELEASE_WAIVER** and PRE-RELEASE-GATE BLOCKED retain their historical scope. The maintainer separately and explicitly accepted this gap for the current Alpha Release/Latest promotion; no failure is changed to PASS.
 
-Complete journal fault/quiet/trusted-once recovery, real MaxMind download and YES-save/new-process/systemd closure, native ARM64, long soak, real VPS deployment and actual third-party notification delivery remain **NOT RUN**. The lab cannot reach MaxMind; no credentials/license-sensitive input was supplied. VPS installation, license confirmation and real GeoIP acceptance are user work after publication. A full new binary vulnerability scan of the 18 hosted programs was not performed; provenance and reachable-source checks are distinct evidence.
+**USER-REPORTED VPS ACCEPTANCE PASS:** anonymous published-package download/upgrade, original bug retest, real City/ASN downloads with the maintainer's legitimate credentials and personal license confirmation, and YES save → full exit → new-process YES → actual systemd timer enabled. This is a user report, without independent automated VPS logs or credentials. The lab's real MaxMind/YES cases remain historical **NOT RUN / BLOCKED_BY_LAB_CONNECTIVITY**; Codex did not deploy to the VPS or repeat the tests.
 
-This is **Alpha / Pre-release**, not stable or production-ready, and not GitHub Latest. Formal Release/Latest requires user VPS feedback and new explicit approval, including reconsidering Fedora ACK. No old tag, asset, failure or historical cause is rewritten by publication.
+Complete journal fault/quiet/trusted-once recovery, native ARM64, long soak and actual third-party notification delivery remain **NOT RUN**, alongside Fedora ACK. A full independent binary vulnerability scan of the 18 hosted programs was not performed; provenance and reachable-source checks are distinct evidence. The VPS report does not prove Fedora ACK or fault recovery.
 
-中文：四台 x86_64 的限定首装、SQLite、NO 回填／帮助／取消及适用生命周期已通过；Debian12 普通 ACK 不等于故障恢复。Fedora43/44 原生 ACK 因私有工具失败未执行，本次例外只允许 Alpha 预发布；旧 BLOCKED／FAILURE 保留。真实 MaxMind／YES 闭环、原生 ARM64、长期 soak、VPS 和真实通知仍未测，正式 Release／Latest 等待本人 VPS 反馈及新授权。
+This is an ordinary GitHub Release / Latest with **Alpha** product maturity. `prerelease=false` is distribution metadata, not stable or production-readiness certification. Source C, tag and all assets remain frozen; old failures and historical unknown causes stay unchanged.
+
+中文：四台 x86_64 的限定首装、SQLite、NO 回填／帮助／取消及适用生命周期已通过；Debian12 普通 ACK 不等于故障恢复。本人 VPS 匿名升级、Bug 修复复测、合法许可下真实 City／ASN 下载与 YES 保存闭环仅记为 **USER-REPORTED PASS**，不冒充独立日志。Fedora43/44 原生 ACK、完整故障恢复、ARM64 和长期 soak 仍为 **NOT RUN**，本次普通 Release／Latest 晋级已明确接受这些 Alpha 风险；旧 BLOCKED／FAILURE 与实验室不可达记录保留。Latest 不改变 Alpha 成熟度，也不证明 stable 或生产就绪。
 
 ## Historical alpha.10 acceptance
 

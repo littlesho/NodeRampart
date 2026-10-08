@@ -2,7 +2,7 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-## 0.4.0-alpha.11 - 2026-10-08 (UTC; Pre-release)
+## 0.4.0-alpha.11 - 2026-10-08 (UTC; Alpha)
 
 - Read the actual GeoIP timer enable state on every daily-update and setup
   download form opening; report read errors instead of displaying a false NO.
@@ -16,13 +16,20 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 - Pin download-artifact v8.0.1 and verify both release download paths without
   publishing. Prepare alpha.11 DEB/RPM/SBOM identities and an optional offline
   joint published-list/Latest completion check; retain draft-first staging.
-- Retain Alpha maturity for this scoped Pre-release. Formal Release/Latest
-  promotion is deferred until user VPS feedback and fresh explicit approval;
-  this entry does not claim beta/stable or production readiness.
+- Retain Alpha maturity across GitHub distribution channels; this entry does
+  not claim beta/stable or production readiness.
+
+### Initial Pre-release publication
 
 - Publish the same verified [alpha.11 Pre-release](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11), Release 403384051, from permanent source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`. Its 22 anonymous assets and 21 checksums match the frozen Draft and authenticated 22+6 proof bindings; no tag or asset is replaced.
 - Explicit scoped waiver accepts missing Fedora43/44 native durable ACK for this Pre-release only. Old PRE-RELEASE-GATE BLOCKED stays unchanged; Debian12 ordinary durable ACK is not fault recovery. Real MaxMind/GeoIP YES, ARM64, long soak and VPS remain NOT RUN. Product remains Alpha, `prerelease=true`, and not GitHub Latest; formal promotion waits for user VPS feedback and new authorization.
 - Synchronize current public docs/install examples to alpha.11, keeping historical versions, failures and upgrade sources. See the [publication scope](docs/RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification).
+
+### Same-ID ordinary Release / Latest promotion
+
+- At `2026-10-08T04:55:00Z`, promote the same Release 403384051 to `draft=false`, `prerelease=false` and GitHub Latest under new explicit maintainer authorization. Source C, annotated tag and all 22 assets remain unchanged. New anonymous downloads and 21 checksum entries match A; authenticated 22 provenance and six SPDX bindings are reused by digest.
+- Record **USER-REPORTED VPS ACCEPTANCE PASS** for anonymous download/upgrade, original bug retest, legitimate licensed City/ASN download and YES save → full exit → new-process YES → actual systemd timer enabled. No independent VPS logs or credentials are fabricated; Codex did not deploy or repeat the tests.
+- Explicitly accept Fedora native durable ACK, full journal fault recovery, native ARM64 and long soak **NOT RUN** for this Alpha promotion. Debian12 ordinary ACK and VPS GeoIP results do not replace those gaps. Historical BLOCKED/FAILURE remain unchanged. See the [promotion record](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion).
 
 ## 0.4.0-alpha.10 - 2026-10-04 (UTC)
 

@@ -2,7 +2,8 @@
 
 <!-- current-release:start -->
 Current download and verification examples select published
-[v0.4.0-alpha.11](#alpha11-pre-release-publication-and-distribution-verification).
+[v0.4.0-alpha.11](#alpha11-ordinary-release-and-latest-promotion), now an ordinary
+GitHub Release and GitHub Latest with Alpha product maturity.
 Its frozen source is `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`, Debian native
 version is `0.4.0~alpha.11`, and RPM is `0.4.0-0.alpha.12.fc43/fc44`.
 Later main installer/documentation commits do not become the source of these
@@ -228,7 +229,7 @@ The original preparation targeted `0.4.0-alpha.11` while the current public pin 
 
 The DEB native version is `0.4.0~alpha.11`; public filenames are `noderampart_0.4.0-alpha.11_{amd64,arm64}.deb`. RPM Version is `0.4.0`, Release `0.alpha.12.fc43/fc44`; the source RPM is `noderampart-0.4.0-0.alpha.12.fc44.src.rpm`. Freeze successful hosted Draft bytes before native acceptance and bind every result to source C and asset set A. No fixture or manual timer enable replaces legitimate credentialed YES-save acceptance.
 
-On 2026-10-08 the maintainer explicitly accepted a **SCOPED_PRE_RELEASE_WAIVER** for missing Fedora native durable ACK and moved real MaxMind/GeoIP YES to their own VPS after Pre-release. Publish only the same verified numeric ID with `draft=false`, `prerelease=true`, `make_latest="false"`. Original PRE-RELEASE-GATE BLOCKED and failures remain retained; those unexecuted scenarios are not PASS. The planned ordinary Release/Latest promotion is deferred until user VPS feedback and new explicit authority. Four x86_64 VMs do not certify native ARM64, long soak, stable readiness or production.
+On 2026-10-08 the maintainer explicitly accepted a **SCOPED_PRE_RELEASE_WAIVER** for missing Fedora native durable ACK and moved real MaxMind/GeoIP YES to their own VPS after Pre-release. That initial authorization published only the same verified numeric ID with `draft=false`, `prerelease=true`, `make_latest="false"`. Original PRE-RELEASE-GATE BLOCKED and failures remain retained; those unexecuted scenarios are not PASS. At that stage ordinary Release/Latest was deferred; the [later promotion](#alpha11-ordinary-release-and-latest-promotion) records user VPS feedback and new explicit authority. Four x86_64 VMs do not certify native ARM64, long soak, stable readiness or production.
 
 ## Current release and installer policy
 
@@ -274,8 +275,9 @@ only final publication of the verified same numeric ID uses `draft=false`,
 `prerelease=false`, `make_latest="true"`. GitHub [does not permit drafts or
 prereleases to be Latest](https://docs.github.com/en/rest/releases/releases#update-a-release).
 If the maintainer chooses `prerelease=true`, publish with `make_latest="false"`
-and explain that it cannot also satisfy Latest. Alpha.11 currently uses this
-Pre-release channel; formal Release/Latest is not yet authorized. Retain the alpha/beta/RC tag and its maturity notice;
+and explain that it cannot also satisfy Latest. Alpha.11 was initially published
+in that Pre-release channel; it has since been promoted under new explicit
+authority to ordinary Release/Latest. Retain the alpha/beta/RC tag and its maturity notice;
 platform flags do not waive product maturity gates.
 
 Confirm Latest from actual GET responses and page/download redirects, not from
@@ -299,22 +301,24 @@ A release task is complete after this sequence:
    to that real release. Keep native DEB/RPM naming and expected source digests
    consistent with the recorded publication identity. Check current Wiki/pinned
    guide/Release-body installation recommendations if those surfaces exist.
-3. For this Pre-release, capture the complete fixed-repository published list,
-   then run the list-only check after a successful bounded fetch:
+3. For the current ordinary Release/Latest, capture the complete fixed-repository
+   published list and the actual Latest object, then run the joint check:
 
    ```sh
    SYNC_EVIDENCE_DIR=$(mktemp -d)
    timeout 120s gh api --paginate 'repos/littlesho/NodeRampart/releases?per_page=100' \
      > "$SYNC_EVIDENCE_DIR/releases.json" &&
-     python3 scripts/check-current-release.py \
-       --published-releases-json "$SYNC_EVIDENCE_DIR/releases.json"
+   timeout 30s gh api 'repos/littlesho/NodeRampart/releases/latest' \
+     > "$SYNC_EVIDENCE_DIR/latest.json" &&
+   python3 scripts/check-current-release.py \
+       --published-releases-json "$SYNC_EVIDENCE_DIR/releases.json" \
+       --published-latest-json "$SYNC_EVIDENCE_DIR/latest.json"
    ```
 
-   Separately read GitHub Latest to verify alpha.11 was not selected; an actual
-   404 is an unset Latest, not a Latest PASS. Do not supply
-   `--published-latest-json` for this Pre-release. For a later explicitly
-   authorized ordinary Release/Latest promotion only, capture the real Latest
-   object and pass that optional parameter with the complete list.
+   For a future explicitly authorized Pre-release-only publication, use the
+   list-only check and separately confirm that it was not selected as Latest.
+   A real Latest 404 means unset, not Latest PASS. Do not fabricate a Latest
+   object or use a request's `make_latest` parameter as readback evidence.
 
    The checker accepts one Release array, concatenated page arrays or slurped
    page arrays, bounded to 20 MiB, 20 pages and 2,000 entries. Preserve both fetch
@@ -1605,9 +1609,9 @@ BUILD_DATE 保留原 Git 字符串。真实草稿 22 项身份、六组配对、
 
 <a id="alpha11-pre-release-publication-and-distribution-verification"></a>
 
-## Alpha.11 Pre-release publication and distribution verification
+## Historical alpha.11 initial Pre-release publication and distribution verification
 
-Published [v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) is the highest public product version, **Alpha / Pre-release**, not GitHub Latest. The maintainer approved **SCOPED_PRE_RELEASE_WAIVER** for missing Fedora native durable ACK. The original PRE-RELEASE-GATE BLOCKED and historical failures remain unchanged.
+At initial publication, [v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) was the highest public product version, **Alpha / Pre-release**, not GitHub Latest. The maintainer approved **SCOPED_PRE_RELEASE_WAIVER** for missing Fedora native durable ACK. This section preserves that stage; the [later ordinary Release/Latest promotion](#alpha11-ordinary-release-and-latest-promotion) is recorded separately. The original PRE-RELEASE-GATE BLOCKED and historical failures remain unchanged.
 
 | Field | Value |
 | --- | --- |
@@ -1670,3 +1674,89 @@ Public bootstrap `--help` and pinned `--version v0.4.0-alpha.11 --help` entry ch
 | 611571385 | `release.json` | 298 | `3fd843a2a19b6180559e35cabb24c7a6d23d1ccda4f295d9feecf4e710bfb90b` |
 
 中文：alpha.11 已以同一个403384051公开为 Pre-release，未设Latest；C/tag/A永久不变。22项匿名字节及21条校验通过，复用同字节22+6证明。四机限定运行证据与家族卸载／purge通过，但Fedora原生ACK、完整故障恢复、真实MaxMind／YES闭环、ARM64、长期soak、VPS与真实通知仍未测；旧BLOCKED／FAILURE不改为通过。本人VPS验收后，正式Release／Latest须再次授权。
+
+<a id="alpha11-ordinary-release-and-latest-promotion"></a>
+
+## Alpha.11 ordinary Release and Latest promotion
+
+On 2026-10-08 the maintainer reported real VPS acceptance and explicitly
+authorized promotion of the same published Release **403384051**. Before the
+single PATCH, authenticated reads matched C/tree, annotated tag, documentation
+main D and every frozen asset ID/name/size/digest. The complete previous Release
+body was retained and a bilingual promotion/acceptance record appended.
+
+| Field | Value |
+| --- | --- |
+| Tag | `v0.4.0-alpha.11` (unchanged, annotated) |
+| Tag object | `3c1a175000cd59668e2db0e98b1ab10f957f2616` |
+| Source commit | `2c9d4416adef3cb64e0523a1b9ac1e691b121c16` |
+| Source tree | `8cb7a70af1b4bbae2db27c0f755c0e3df55d670b` |
+| Documentation main before promotion | `408a72fe4b8734b821fb99fcdf2cf83762e88367` |
+| Release ID | `403384051` (unchanged) |
+| Initial publication UTC | `2026-10-08T03:08:01Z` (unchanged `published_at`) |
+| Promotion update UTC | `2026-10-08T04:55:00Z` (`updated_at` from actual response) |
+| Public state | `draft=false`, `prerelease=false`; promotion requested `make_latest="true"` |
+| Actual GitHub Latest GET | ID `403384051`, tag `v0.4.0-alpha.11` |
+| Project / DEB / RPM | `0.4.0-alpha.11` / `0.4.0~alpha.11` / `0.4.0-0.alpha.12.fc43/fc44` |
+| Frozen asset-set identity A | `456da439d5a45ae78bf610c9b029866b923d2d5c6fb8c689eea63f1f7589eb68` |
+| SHA256SUMS SHA256 | `79734fb957a1767aba4af783db17a17184e43c95b7c03db77fed5c10d3314ed2` |
+
+### VPS acceptance and retained Alpha gaps
+
+**USER-REPORTED VPS ACCEPTANCE PASS:** the maintainer reports anonymous GitHub
+download/upgrade of the published alpha.11 package, successful retest of the
+original bug, real City/ASN downloads using their own legitimate MaxMind
+credentials and personal license confirmation, and **YES save → full exit →
+new-process YES → actual systemd timer enabled**. These are user-reported results,
+not independent automated VPS logs. No credentials are recorded; Codex did not
+deploy to the VPS or repeat the tests. The report does not claim the optional
+VPS NO reverse loop or every UI entry/language combination.
+
+The maintainer explicitly accepts **Fedora43/44 native durable ACK, complete
+journal fault recovery, native ARM64 and long soak NOT RUN** for this Alpha
+promotion. Private MAC-label parsing FAILURE prevented the Fedora scenario from
+starting; neither product failure nor success is established. Debian12 ordinary
+durable ACK is not fault recovery, and VPS GeoIP results do not replace Fedora
+evidence. Real third-party notification delivery and full independent binary
+scans of the 18 hosted programs also remain unverified.
+
+The product remains **Alpha**. Ordinary GitHub Release/Latest and
+`prerelease=false` are distribution settings, not stable maturity or production
+readiness. Earlier lab MaxMind/YES **NOT RUN / BLOCKED_BY_LAB_CONNECTIVITY** and
+the original PRE-RELEASE-GATE BLOCKED, FAILURE, PENDING, SKIP and unknown causes
+retain their historical meaning. No lab tests or private harness work were
+resumed for this promotion.
+
+### Public readback and unchanged bytes
+
+Independent authenticated and anonymous Release/Latest GETs returned the same
+ID/tag and strict false draft/prerelease flags. The complete anonymous published
+list contained 10 objects on one complete page and selected alpha.11 as the
+highest product version. The Latest page redirected to the fixed alpha.11 tag;
+the Latest bootstrap download matched A. Tag peeling remained C.
+
+All **22 assets** were downloaded anonymously again after promotion: **108,090,970
+bytes**, exact IDs/names/sizes/SHA256 against the unchanged inventory above, and
+all **21** non-self checksum entries passed `sha256sum --check --strict`. The
+matching **22 provenance + 6 SPDX bindings** were reused under the unchanged
+repository/workflow/tag/source/invocation and deny-self-hosted identity described
+in the initial record. No new signature verification, build, upload, asset
+replacement or tag movement occurred.
+
+Maintained raw-main bootstrap matched C/A exactly. Its unchanged production
+`bootstrap_latest_release()` function was invoked read-only against the real
+anonymous API and returned `v0.4.0-alpha.11`, using its original bounded full-list
+resolution. Explicit `--version v0.4.0-alpha.11` parameter/native mapping and
+no-default-list-query evidence are reused from the matching C tests; no whole
+installer or new VPS deployment was executed here. The current documentation
+check uses the real complete published-list capture together with the actual
+Latest GET through `--published-latest-json`; ordinary offline checks remain
+unchanged. Documentation commits do not replace permanent release source C.
+
+中文：同一个 Release 403384051 已按新的明确授权晋级为普通 Release／GitHub
+Latest，产品仍是 Alpha。本人 VPS 匿名升级、Bug 复测、合法许可下真实 City／ASN
+下载及 YES 保存—退出—新进程回填—timer enabled 仅记为 **USER-REPORTED PASS**。
+Fedora 原生 ACK、完整故障恢复、原生 ARM64、长期 soak 仍 **NOT RUN**，本次已明确
+接受风险；旧失败和初次 Pre-release 记录保留。22 项重新匿名下载及 21 条 checksum
+通过，复用同身份 22+6 证明，C/tag/A 不变；真实 Latest／完整列表联合校验不以请求
+参数代替读回，也不意味着 stable 或全部环境验收完成。
