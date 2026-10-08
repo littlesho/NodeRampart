@@ -24,10 +24,11 @@ NodeRampart's original source code is licensed under MIT. Compiled binaries also
 This inventory lists the modules linked into the command binaries, including the local terminal interface. Test-only and build-tool dependencies are not part of the distributed binaries. Regenerate and review the inventory whenever `go.mod` changes. The original license and applicable patent-grant files for the added terminal modules are bundled unchanged.
 
 SQLite 3.53.4 is public domain; its upstream dedication is bundled unchanged as
-`third_party/licenses/modernc.org_sqlite_LICENSE-SQLITE`. The unchanged
+`third_party/licenses/modernc.org_sqlite_LICENSE-SQLITE`. The
 `modernc.org/sqlite v1.60.1` upstream inventory is bundled as
 `third_party/licenses/modernc.org_sqlite_LICENSE-3RD-PARTY.md`, including the
-inherited notices for libc components such as musl. That upstream inventory
+inherited notices for libc components such as musl. Its driver-license link is
+adjusted to the bundled filename; all legal text is retained. That upstream inventory
 also describes optional packages, tests and build tools; it does not imply
 those components are linked into NodeRampart. NodeRampart does not import
 `modernc.org/sqlite/vec`, `modernc.org/sqlite/vfs` or `modernc.org/sqlite/pcache`.

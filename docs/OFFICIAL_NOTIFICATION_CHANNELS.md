@@ -3,16 +3,20 @@
 [简体中文](OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md) · [First six native channels](NOTIFICATION_CHANNELS.md) · [Privacy](PRIVACY.md) · [User agreement](USER_AGREEMENT.md)
 
 <!-- current-release:start -->
-This guide targets the newest published release, **[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11)**, an alpha prerelease.
+This guide targets the newest published release, **[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11)**,
+an ordinary GitHub Release selected as [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest).
+Product maturity remains **Alpha**; see the [promotion and validation scope](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion).
 <!-- current-release:end -->
 
 It includes `qqbot`, `line`,
 `twilio_sms` and `whatsapp_cloud`, one target each, alongside the existing eight
-channels. Heartbeat is separate. All four default disabled. Contract tests use
-synthetic accounts and transports; real APIs, recipient confirmation, billing,
-native ARM64 and production operation are **NOT RUN**. Platform acceptance does
-not prove delivery or reading. This feature does not register accounts, accept
-terms, buy numbers, submit templates or obtain recipient consent for you.
+channels. Heartbeat is separate. All four default disabled. Operators provide
+their own authorized accounts, accepted terms, numbers, approved templates and
+recipient consent as required by the selected channel.
+
+Contract tests use synthetic accounts and transports. Real APIs, recipient
+confirmation, billing, native ARM64 and production operation are **NOT RUN**.
+Platform acceptance does not prove delivery or reading.
 
 ## Configure and preview
 

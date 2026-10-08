@@ -44,6 +44,9 @@
 <!-- current-release:start -->
 ## `v0.4.0-alpha.11` — current published alpha
 
+- GeoIP setup and daily-update forms read the actual timer enablement on each
+  opening. Terminal regression tests and journal-test synchronization are updated,
+  alongside the pinned Go dependency graph; see the [changelog](../CHANGELOG.md).
 - Twelve optional notification channels through the shared terminal menu,
   including four official-account channels with persistent consent/cost controls.
 - Trusted SSH records with absent unit metadata, durable-ACK recovery and

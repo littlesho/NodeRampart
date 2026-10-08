@@ -5,9 +5,11 @@
 [v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11)。
 <!-- current-release:end -->
 
-这六个原生渠道首次随 alpha.8 公开，现与另外六个渠道共用通知菜单。六平台真实 API
-与人工接收均为 **NOT RUN**。参见[当前公开分发范围](RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification)、
+这六个原生渠道首次随 alpha.8 公开，现与另外六个渠道共用通知菜单。
+参见[当前 Release／Latest 验收范围](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion)、
 历史[功能验收矩阵](ALPHA8_ACCEPTANCE.md)、[隐私政策](PRIVACY.md)与[用户协议](USER_AGREEMENT.md)。
+
+六平台真实 API 与人工接收均为 **NOT RUN**，产品成熟度仍为 Alpha。
 
 ## 通用配置、测试与安全
 

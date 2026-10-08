@@ -1,8 +1,10 @@
 # alpha.6 acceptance / 验收
 
 The original preparation snapshot below is retained with its date and pending
-claims. Current publication results are appended in
+claims. Alpha.6 publication results are appended in
 [Publication and distribution (2026-10-01)](#publication-and-distribution-2026-10-01).
+For the current version, use the [installation guide](../README.md) and
+[current release record](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion).
 
 ## Preparation snapshot (2026-09-30)
 

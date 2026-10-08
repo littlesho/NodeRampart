@@ -6,10 +6,12 @@
 <!-- current-release:end -->
 
 These six native channels first shipped in alpha.8 and share the notification
-menu with the six other channels. Real vendor API tests and human receipt remain
-**NOT RUN**. See the [current publication scope](RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification),
+menu with the six other channels. See the [current Release/Latest validation scope](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion),
 historical [feature acceptance](ALPHA8_ACCEPTANCE.md), [privacy](PRIVACY.md) and
 [user agreement](USER_AGREEMENT.md).
+
+Real vendor API tests and human receipt remain **NOT RUN**. Product maturity
+remains Alpha.
 
 ## Common operation
 

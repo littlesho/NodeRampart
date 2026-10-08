@@ -1,5 +1,9 @@
 # 拟用 Release Notes — NodeRampart v0.4.0-alpha.8
 
+这是 2026-10-01 的发布前拟用文本。alpha.8 已于 2026-10-02 公开，详见
+[发布记录](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification)。
+下文保留早期阶段的默认值与 NOT RUN 结果。现在安装请使用[当前指南](../README.zh-CN.md)。
+
 **尚未公开的拟用文本。** 此文件不是 GitHub draft/Release、发布日期、资产声明或
 公开授权。正式 tag/source、hosted 构建和 attestation 身份只能在后续独立授权阶段取得。
 

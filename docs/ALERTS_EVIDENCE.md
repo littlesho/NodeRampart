@@ -3,15 +3,16 @@
 <!-- current-release:start -->
 Budget/health alerts, local evidence and the SSH/GeoIP diagnostic additions below
 are included in published [v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11).
-Current public installation selects this release; see its [publication scope](RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification).
+Current public installation selects this Alpha release, an ordinary GitHub
+Release and Latest; see its [promotion and validation scope](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion).
+
+预算、健康告警、离线证据与下文 SSH/GeoIP 诊断已包含在公开 alpha.11 中。
+该版本已设为普通 GitHub Release／Latest，产品成熟度仍为 Alpha；CLI 与 daemon 应配套升级。
 <!-- current-release:end -->
 Both new alert groups are **off by default**. Open `sudo noderampart tui
 --language zh` for Chinese or `sudo noderampart tui --language en` for English.
 All settings below are available under **Configuration / 功能配置**. Validate,
 review and save the draft to apply it.
-
-预算、健康告警、离线证据与下文 SSH/GeoIP 诊断已包含在公开 alpha.10 中；
-当前公开安装选择该版本，CLI 与 daemon 应配套升级。
 
 这四项功能分别解决“费用是否快超预算”“采集是否还正常”“怎么分享排障材料”
 和“历史数据为什么不见了”。预算与健康告警需要主动开启；证据导出、裁剪台账
@@ -235,15 +236,17 @@ are not reported as successful known evaluations.
 在告警状态页可区分“尚未检查”“正在检查”“检查超时”和“结果待保存”，避免把检查
 没有完成误认为系统健康。这些时间和状态不能证明 Telegram 已送达。
 
-Each alert creates a local timeline event. If Telegram is enabled, the existing
-minimum severity, merging, expiring silences and durable retry queue apply.
+Each alert creates a local timeline event. Enabled notification channels apply
+their severity eligibility, expiring silences and persistent queue rules;
+Telegram and the generic Webhook also support update merging.
 Monthly traffic/cost kinds are `budget_month_bytes` / `budget_month_cost`;
 daily kinds are `budget_day_bytes` / `budget_day_growth`. Health kinds are
 `health_sensor`, `health_interface_counter`, `health_ssh_journal`,
 `health_storage`, `health_geoip_update`. These kinds or a selected incident can
 be silenced through the existing notification menu. Silencing does not remove
-the event record. Delivery remains at least once and may be duplicated around
-a remote send whose result was not acknowledged.
+the event record. Telegram/Webhook retries may duplicate a remote send whose
+result was not acknowledged. Official account channels use their separate
+[intent and unknown-delivery rules](OFFICIAL_NOTIFICATION_CHANNELS.md#durable-states-recovery-and-outbound-boundary).
 
 ## Local evidence / 离线证据包
 
@@ -378,7 +381,8 @@ exists, without proving continuous coverage.
 
 ## Upgrade / 升级
 
-Back up and verify the database before upgrading. The alpha.9 to alpha.10 upgrade
+Back up and verify the database before upgrading. Upgrading from alpha.9 or
+alpha.10 to alpha.11
 keeps SQLite schema **14**, config/control API **1**, and sensor protocol **5**.
 Upgrades from older supported schemas use the existing transactional migrations.
 Older binaries refuse newer database schemas and may reject new configuration

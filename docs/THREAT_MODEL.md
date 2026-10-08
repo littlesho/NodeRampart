@@ -22,6 +22,12 @@ An attacker who already has root is outside the confidentiality boundary. NodeRa
 
 ## Major threats and controls
 
+The table records the original v0.2 controls and residual risks. Current
+[IPC commit acknowledgments](ARCHITECTURE.md#collection-and-reconciliation),
+[notification boundaries](#native-notifications-introduced-in-alpha8) and
+[release verification](RELEASE_VERIFICATION.md#download-and-verify) describe
+the later implementations and their evidence.
+
 | Threat | Control in `v0.2.0-alpha` | Residual risk |
 | --- | --- | --- |
 | Packet parser memory corruption | Go bounds checks, explicit header/length checks, no C parser | Logical parser bugs and CPU load remain possible |

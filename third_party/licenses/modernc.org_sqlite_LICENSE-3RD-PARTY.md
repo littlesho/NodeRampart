@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-`modernc.org/sqlite` is BSD-3-Clause; that license is in [LICENSE](LICENSE) and it is
+`modernc.org/sqlite` is BSD-3-Clause; that license is in [LICENSE](modernc.org_sqlite_LICENSE) and it is
 not repeated here. This file accounts for everything else -- every other body of code,
 of any origin, that reaches you through this repository.
 

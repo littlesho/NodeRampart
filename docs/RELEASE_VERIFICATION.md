@@ -20,6 +20,12 @@ separate from development `VERSION` and never an online fallback.
 固定 Release 的 bootstrap 必须显式传版本。下方各版本发布记录保留当时的测试、
 默认值和推荐情况，历史记录不作为当前安装政策；以本节和 README 为准。
 
+Quick navigation / 快速导航：
+[download and verify / 下载与验证](#download-and-verify) ·
+[current alpha.11 Release / Latest / 当前发行状态](#alpha11-ordinary-release-and-latest-promotion) ·
+[initial alpha.11 Pre-release / 初次预发布历史](#alpha11-pre-release-publication-and-distribution-verification) ·
+[all published versions / 历史发行版](https://github.com/littlesho/NodeRampart/releases).
+
 The release workflow creates a draft for a maintainer to inspect; local workflow
 edits and tests neither publish a release nor prove that hosted checks ran.
 
@@ -66,7 +72,7 @@ For the current published release, public DEB names are
 RPM names contain `0.4.0-0.alpha.12.fc43` or `0.4.0-0.alpha.12.fc44`;
 the source RPM uses Fedora 44. SBOM/buildinfo names append `.spdx.json` and
 `.buildinfo.json` to the exact public package filename. Checksums and
-attestations bind those filenames and bytes. The [publication record](#alpha11-pre-release-publication-and-distribution-verification)
+attestations bind those filenames and bytes. The [current Release / Latest record](#alpha11-ordinary-release-and-latest-promotion)
 identifies the hosted source, run and evidence scope.
 <!-- current-release:end -->
 
@@ -223,9 +229,11 @@ must be recorded as unavailable, not checksum or provenance passes. Publish the
 same verified draft only when the explicitly authorized release task's required
 gates and artifact/runtime acceptance have passed.
 
-### Alpha.11 preparation and scoped publication decision
+<a id="alpha11-preparation-and-scoped-publication-decision"></a>
 
-The original preparation targeted `0.4.0-alpha.11` while the current public pin still described alpha.10. The actual [publication record](#alpha11-pre-release-publication-and-distribution-verification) below supersedes that unpublished state; it does not rewrite the original preparation/FAILURE evidence.
+### Historical alpha.11 preparation and scoped publication decision
+
+The original preparation targeted `0.4.0-alpha.11` while the public pin still described alpha.10. The dated [initial publication](#alpha11-pre-release-publication-and-distribution-verification) and [Release / Latest promotion](#alpha11-ordinary-release-and-latest-promotion) records below document the later stages. The original preparation and FAILURE evidence retain their historical scope.
 
 The DEB native version is `0.4.0~alpha.11`; public filenames are `noderampart_0.4.0-alpha.11_{amd64,arm64}.deb`. RPM Version is `0.4.0`, Release `0.alpha.12.fc43/fc44`; the source RPM is `noderampart-0.4.0-0.alpha.12.fc44.src.rpm`. Freeze successful hosted Draft bytes before native acceptance and bind every result to source C and asset set A. No fixture or manual timer enable replaces legitimate credentialed YES-save acceptance.
 
@@ -439,10 +447,27 @@ interfaces used here.
 
 ## Candidate metadata and package revision
 
+This section records the alpha.2 packaging repair and the two preceding unpublished candidates. Current package names and source identity are listed [above](#what-a-release-contains).
+
 The `v0.4.0-alpha.2` prerelease replaces two unpublished candidates. The immutable
 `v0.4.0-alpha` build failed; the `v0.4.0-alpha.1` draft has a filename/checksum
 mismatch because the upload changed tilde-containing names. Neither is a
 published installation release. Do not repair alpha.1 by renaming downloads.
+
+**Archive update, 2026-10-08:** the abandoned alpha.1 Draft, Release ID
+`392171667`, was deleted after its metadata, original body and all 22 assets were
+fully archived privately. All 21 checksum entries matched the archived bytes
+through a recorded filename mapping; the six original DEB/sidecar filename
+differences remain preserved as failure evidence. The deletion readback returned
+404. Tag `v0.4.0-alpha.1` remains at
+`43081eaf0d34acb451b76714e2a0b74a7c5d4d61`; all public alpha.2–alpha.10 Releases
+remain available with their historical assets and proofs.
+
+中文（2026-10-08）：废弃 alpha.1 Draft（ID `392171667`）的元数据、原正文及
+22 项资产已完整私有归档，随后定点删除并读回 404。21 条 checksum 按记录的
+文件名映射核对字节一致，六项 DEB／附属文件的原始名称差异仍作为失败证据保留。
+alpha.1 tag 及上述 commit 保留；已公开的 alpha.2–alpha.10 发行版、历史资产和证明保留。
+
 For that historical alpha.2 release, the project version is `0.4.0-alpha.2`, Debian version `0.4.0~alpha.2`, and
 RPM Version/Release `0.4.0` / `0.alpha.3%{?dist}`. Program version strings keep
 `0.4.0-alpha.2`. The validation job checks checkout HEAD against the expected
@@ -772,6 +797,10 @@ NOT RUN。后续真实提交水位推进不改变原 strict 快照。默认仍 a
 发行历史、资产及 C 包内文档字节不变；本次纯文档更新不重新发行安装包。
 
 ## Alpha8 publication and distribution verification
+
+This is the 2026-10-02 publication and follow-up record. Its README selections,
+installer defaults and validation limits describe that period. See the
+[current release](#alpha11-ordinary-release-and-latest-promotion) for today's status.
 
 ### Fixed public identity
 
@@ -1638,7 +1667,7 @@ Debian12 normal trusted OpenSSH durable ACK passed for ordinary pending0 events 
 
 Real MaxMind download and YES-save → exit → new-process YES → actual systemd timer-state closure remain NOT RUN / BLOCKED_BY_LAB_CONNECTIVITY. No MaxMind credentials/license-sensitive input was supplied to lab VMs. Native ARM64, long soak, real VPS and actual third-party notification delivery remain NOT RUN. All four VMs ended STOPPED; original failed environments/evidence were retained, not restored away. Old journal event ordering, old Fedora44 initial status errno and Windows Invalid argument interoperability causes are not backfilled from later successes.
 
-The waiver accepts missing Fedora evidence only for this Alpha Pre-release. User VPS installation, personal license confirmation, real download and timer persistence are subsequent user acceptance. Formal Release or GitHub Latest needs that feedback and new explicit permission, with Fedora ACK coverage reconsidered. See the [English](../README.md#vps-pre-release-acceptance) and [Chinese](../README.zh-CN.md#vps-pre-release-acceptance) handoff; no Codex VPS deployment was performed.
+The waiver accepted missing Fedora evidence only for this initial Alpha Pre-release. User VPS installation, personal license confirmation, real download and timer persistence were planned as subsequent user acceptance. Formal Release or GitHub Latest then required that feedback and new explicit permission, with Fedora ACK coverage reconsidered. The [promotion record](#alpha11-ordinary-release-and-latest-promotion) documents the later user report and decision; no Codex VPS deployment was performed.
 
 ### Public bytes and authenticated proof reuse
 
@@ -1646,7 +1675,7 @@ The same numeric Draft was published with one PATCH; tag/source/name/target and 
 
 The archived 22 provenance subject bindings and 6 runtime SPDX bindings were reused by identical digest, bound to `littlesho/NodeRampart`, `.github/workflows/release.yml`, `refs/tags/v0.4.0-alpha.11`, source/signer digest C, invocation `https://github.com/littlesho/NodeRampart/actions/runs/37265168287/attempts/1`, and deny-self-hosted. There are 22 assets and 28 proof bindings, verified by 7 commands; no new signature commands or asset replacement occurred. Provenance and reachable-source security gates do not imply a full independent binary scan of 18 hosted programs.
 
-Public bootstrap `--help` and pinned `--version v0.4.0-alpha.11 --help` entry checks passed without installing on the host. Public package installation/default-resolution execution on a VPS remains user work; network fetch/byte identity and the complete-list check are distinct from installed runtime evidence. Current documentation uses only `--published-releases-json`; optional formal-Latest validation was NOT RUN.
+Public bootstrap `--help` and pinned `--version v0.4.0-alpha.11 --help` entry checks passed without installing on the host. At this initial stage, public package installation/default-resolution execution on a VPS remained user work; network fetch/byte identity and the complete-list check were separate from installed runtime evidence. Documentation validation used only `--published-releases-json`; formal-Latest validation was NOT RUN at that stage.
 
 | Asset ID | Name | Bytes | SHA256 |
 | --- | --- | ---: | --- |

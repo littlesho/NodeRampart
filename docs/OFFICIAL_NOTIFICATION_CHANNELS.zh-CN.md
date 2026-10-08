@@ -3,14 +3,18 @@
 [English](OFFICIAL_NOTIFICATION_CHANNELS.md) · [第一批六个渠道](NOTIFICATION_CHANNELS.zh-CN.md) · [隐私政策](PRIVACY.md) · [用户协议](USER_AGREEMENT.md)
 
 <!-- current-release:start -->
-本指南面向最新公开版 **[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11)**（alpha 预发布版）。
+本指南面向最新公开版 **[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11)**，
+已设为普通 GitHub Release／[Latest](https://github.com/littlesho/NodeRampart/releases/latest)。
+产品成熟度仍为 **Alpha**；参见[晋级与验收范围](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion)。
 <!-- current-release:end -->
 
 本版包含 `qqbot`、`line`、`twilio_sms`、
 `whatsapp_cloud`，每个渠道一个独立目标，与旧八渠道并行；heartbeat 不计入分发。
-四项默认关闭。自动化只使用合成账户和受控 transport；四平台实网、人工接收、
-实际收费、原生 ARM64 和生产运行均为 **NOT RUN**。接口受理不代表送达或已读。
-本程序不代注册、接受协议、购买号码、提交模板或取得收件人同意。
+四项默认关闭。操作者需按所选渠道要求，自行准备获授权的账户、已接受的协议、号码、批准模板及
+收件人同意。
+
+自动化使用合成账户和受控 transport。四平台实网、人工接收、实际收费、原生
+ARM64 和生产运行均为 **NOT RUN**。接口受理不代表送达或已读。
 
 ## 设置、预览与测试
 
