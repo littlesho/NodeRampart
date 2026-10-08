@@ -11,10 +11,10 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 ## 版本状态与验收范围
 
 <!-- current-release:start -->
-**[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10) 是当前最新公开产品版本**，包含预发布版。这个 alpha 没有 GitHub “Latest” 徽标；安装器不以该徽标判断最新版本。此版本修复可信 SSH journal 采集和 GeoIP 更新诊断，并包含统一通知菜单及全部十二个可选渠道。
+**[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) 是最高已公开产品版本（Pre-release），尚不是 GitHub Latest。** 产品继续为 Alpha。本版修复 GeoIP timer 状态回填，升级依赖／构建要求，并完善 journal 测试同步及终端观察。
 <!-- current-release:end -->
 
-最终 hosted Debian13 amd64 与 Fedora44 x86_64 包已通过有限升级、服务、SSH 和 GeoIP smoke；同源完整验证与独立审查通过，22 项草稿 provenance 与 6 项包级 SPDX 验签通过。公开后 22 项匿名下载及 21 条 checksum 通过；按完全相同的 subject digest 复用原 28 项验签，未重复执行密码学验证。其余 hosted 包运行场景、18 个 hosted 程序的二进制新扫描、平台实网／人工接收、实际收费、原生 ARM64 与生产仍为 **NOT RUN**。详见[公开记录](docs/RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification)、[早期开发验收历史](docs/ALPHA9_ACCEPTANCE.md)与[当前限制](docs/ALPHA_LIMITATIONS.md)。
+冻结 hosted 资产已在 Debian12/13、Fedora43/44 四台 x86_64 实验机通过限定首装、基础 SQLite、中英文 TUI/setup NO 回填、帮助和取消；适用的升级／重装、正常服务生命周期、DEB/RPM 保留数据卸载及家族 purge 通过。Debian12 正常可信 durable ACK 通过，完整故障恢复未测。22 项匿名下载及 21 条 checksum 与已认证的 22 个 provenance／6 个 SPDX 绑定一致。**Fedora43/44 原生 durable ACK、真实 MaxMind 下载／GeoIP YES 持久回填、原生 ARM64、长期 soak 和真实 VPS 部署仍为 NOT RUN。** 维护者仅为本次 Pre-release 接受 Fedora ACK 缺口；私有 MAC 标签解析失败既不能证明产品有缺陷，也不能证明 Fedora ACK 正常。详见[公开记录](docs/RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification)及[当前限制](docs/ALPHA_LIMITATIONS.md)。
 
 当前安装示例随最新公开版本更新。历史验收与已知风险在[发布验证](docs/RELEASE_VERIFICATION.md)和 [CHANGELOG](CHANGELOG.md)中保留原范围；已发布的程序、包内文档、tag 和资产保持冻结快照。
 
@@ -57,15 +57,15 @@ sudo noderampart setup --language zh
 ### 固定版本以便复现
 
 <!-- current-release:start -->
-用 `--version v0.4.0-alpha.10` 精确固定当前公开版；显式版本不查询默认 Release 列表，也不静默换版。alpha.10 Release 的 bootstrap 是冻结源码快照，省略版本仍可跟随以后公开的新版本。使用该资产复现 alpha.10 安装时，**必须显式传入版本**：
+用 `--version v0.4.0-alpha.11` 精确固定当前公开版；显式版本不查询默认 Release 列表，也不静默换版。alpha.11 Release 的 bootstrap 是冻结源码快照，省略版本仍可跟随以后公开的新版本。使用该资产复现 alpha.11 安装时，**必须显式传入版本**：
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.10/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.11/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.10 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.11 --no-setup
 sudo noderampart setup --language zh
 ~~~
 <!-- current-release:end -->
@@ -91,6 +91,26 @@ sudo noderampart setup --language zh
 菜单用方向键和 Enter 操作，表单用 Tab/Shift+Tab 切换字段，Escape 返回。也可在菜单中随时切换中文和 English。
 
 报告时区选择离线工作；通知语言与界面语言独立，修改设置不会翻译旧队列正文。参见[时区与 Telegram 语言](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language)和下方各渠道说明。从 setup 进入后，“返回”／Escape 回到首次设置；从 `tui` 进入后回到主菜单。
+
+<a id="vps-pre-release-acceptance"></a>
+
+## 正式 Release／Latest 前的本人 VPS 验收
+
+先查看预发布限制并自行备份，再在自己的 VPS 安装。预期程序版本为 `0.4.0-alpha.11`，永久发行源为 `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`；之后的 main 文档提交不代表包已重建。
+
+1. 用 `sudo noderampart version` 核对版本／源码，查看正常服务与采集状态。发行证据中的真实 VPS 安装仍为 **NOT RUN**。
+2. 若选择 GeoIP，在本地 setup 输入本人合法 MaxMind 凭据，并亲自确认许可条款；不要把凭据发到聊天、录屏或报告。完成真实 City／ASN 下载并查看产品更新结果。实验室 NO 回填不能证明真实下载或 YES 保存。
+3. 从 `tui` 或 `setup` 打开独立“每日更新”表单，保存 **YES**，彻底退出，再启动新进程重进表单，确认仍为 YES，并与以下只读 systemd 状态一致：
+
+   ~~~bash
+   sudo systemctl show noderampart-geoip-update.timer \
+     --property=LoadState,UnitFileState,ActiveState,SubState,NextElapseUSecRealtime
+   sudo systemctl list-timers --all noderampart-geoip-update.timer
+   ~~~
+
+4. 再保存 **NO**、退出、重进确认 NO。反馈实际入口／语言、程序版本和 timer 字段，不含凭据。enabled 但 inactive／failed 仍表示 YES；下载成功与 updater 健康须分别判断。读取异常不能当作 NO。启用 timer 可能触发 Persistent 补跑更新。
+
+验收反馈后才讨论正式 Release／Latest。即使 VPS 的 GeoIP 验收通过，Fedora durable ACK 和完整故障恢复缺口仍须单独披露并重新确认；正式发布和 Latest 需要再次明确授权。
 
 ## 平时怎么使用？
 

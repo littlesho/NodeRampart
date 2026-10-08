@@ -11,10 +11,10 @@ It observes and reports. It does not block IP addresses, change your firewall, i
 ## Version status and validation scope
 
 <!-- current-release:start -->
-**[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10) is the newest published product release**, including prereleases. GitHub's “Latest” badge is unset for this alpha; it does not determine the installer's choice. The release restores trusted SSH journal collection and GeoIP updater diagnostics, alongside the shared notification menu and all twelve optional channels.
+**[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) is the highest published product version, a Pre-release. It is not GitHub Latest.** Product maturity remains Alpha. This version fixes GeoIP timer-state readback, updates dependencies/build requirements and improves journal-test synchronization and terminal observation.
 <!-- current-release:end -->
 
-The final hosted Debian13 amd64 and Fedora44 x86_64 packages passed bounded upgrade, service, SSH and GeoIP smoke checks. Their source passed complete validation and independent review; all 22 draft provenance and six package-subject SPDX verifications passed. Fresh anonymous downloads of all 22 assets and 21 checksum entries passed; the original 28 proof results were reused by exact subject digest, without new cryptographic commands. The other hosted package runtime cases, scans of the 18 hosted programs, real platform APIs / human receipt, actual fees, native ARM64 and production remain **NOT RUN**. See the [publication record](docs/RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification), [earlier development acceptance history](docs/ALPHA9_ACCEPTANCE.md) and [current limitations](docs/ALPHA_LIMITATIONS.md).
+The frozen hosted assets passed scoped first-install, basic SQLite, English/Chinese TUI/setup NO readback, help and cancel checks on Debian 12/13 and Fedora 43/44 x86_64. Applicable upgrade/reinstall, normal service lifecycle, DEB/RPM keep-data removal and family purge checks passed. Debian12 normal trusted durable ACK passed; full fault recovery did not. All 22 anonymous downloads and 21 checksum entries match the authenticated 22 provenance and six SPDX bindings. **Fedora43/44 native durable ACK, real MaxMind download/GeoIP YES persistence, native ARM64, long soak and real VPS deployment remain NOT RUN.** The maintainer accepted the Fedora ACK gap for this Pre-release only; the private MAC-label failure does not prove either a product defect or Fedora ACK success. See the [publication record](docs/RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification) and [current limitations](docs/ALPHA_LIMITATIONS.md).
 
 Current installation examples follow the newest published release. Earlier acceptance results and known risks keep their original scope in [release verification](docs/RELEASE_VERIFICATION.md) and [CHANGELOG](CHANGELOG.md). Published package programs, documentation, tags and assets remain their frozen snapshots.
 
@@ -57,15 +57,15 @@ The installer prints and fixes one selected Release for the whole invocation, ve
 ### Pin a reproducible release
 
 <!-- current-release:start -->
-Use `--version v0.4.0-alpha.10` to pin the current published release exactly. A pin does not query the default Release list or silently substitute another version. The alpha.10 bootstrap is a frozen source snapshot whose default can follow later published versions. **Pass the version explicitly** to keep this asset installation pinned to alpha.10:
+Use `--version v0.4.0-alpha.11` to pin the current published release exactly. A pin does not query the default Release list or silently substitute another version. The alpha.11 bootstrap is a frozen source snapshot whose default can follow later published versions. **Pass the version explicitly** to keep this asset installation pinned to alpha.11:
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.10/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.11/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.10 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.11 --no-setup
 sudo noderampart setup
 ~~~
 <!-- current-release:end -->
@@ -91,6 +91,26 @@ sudo noderampart setup
 Use arrow keys and Enter for menus, Tab/Shift+Tab for form fields, and Escape to go back. English and Chinese are available from the language menu or the --language en / --language zh option.
 
 The report timezone selector works offline. Notification language is separate from UI language; changing either does not translate old queued messages. See [timezone and Telegram language](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language) and the channel-specific guides below. From this setup page, **Back** / Escape returns to setup; from `tui`, it returns to the main menu.
+
+<a id="vps-pre-release-acceptance"></a>
+
+## Your VPS acceptance before formal Release / Latest
+
+Install only after reviewing the Pre-release limits and making your own backup. Expected program version is `0.4.0-alpha.11`, with permanent release source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`; later main documentation is not a new package build.
+
+1. Check `sudo noderampart version`, normal service status and collection on your own VPS. Actual VPS installation is **NOT RUN** in the release evidence.
+2. If you choose GeoIP, enter your legitimate MaxMind credentials locally through setup and personally confirm its license terms. Keep credentials out of chat, recordings and reports. Complete the real City/ASN download and inspect the product's update result; the lab's NO checks do not prove download or YES-save success.
+3. Open the independent daily-update form from `tui` or `setup`, save **YES**, fully exit, start a new process and reopen the form. It must show YES and agree with this read-only systemd query:
+
+   ~~~bash
+   sudo systemctl show noderampart-geoip-update.timer \
+     --property=LoadState,UnitFileState,ActiveState,SubState,NextElapseUSecRealtime
+   sudo systemctl list-timers --all noderampart-geoip-update.timer
+   ~~~
+
+4. Save **NO**, exit and reopen to check NO. Report the actual entry/language, version and timer fields without credentials. Enabled-but-inactive/failed still means YES; updater health/download success is a separate result. A read error must not be treated as NO. Enabling the timer can run a persistent/catch-up update.
+
+Send the acceptance outcome before any formal Release/Latest decision. Fedora durable ACK and complete fault recovery remain separate coverage gaps even if your GeoIP test passes. Formal Release and GitHub Latest require fresh explicit authorization; this Pre-release does not grant it.
 
 ## Everyday use
 

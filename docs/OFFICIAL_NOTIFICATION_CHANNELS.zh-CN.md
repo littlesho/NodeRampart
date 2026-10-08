@@ -3,7 +3,7 @@
 [English](OFFICIAL_NOTIFICATION_CHANNELS.md) · [第一批六个渠道](NOTIFICATION_CHANNELS.zh-CN.md) · [隐私政策](PRIVACY.md) · [用户协议](USER_AGREEMENT.md)
 
 <!-- current-release:start -->
-本指南面向最新公开版 **[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10)**（alpha 预发布版）。
+本指南面向最新公开版 **[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11)**（alpha 预发布版）。
 <!-- current-release:end -->
 
 本版包含 `qqbot`、`line`、`twilio_sms`、
