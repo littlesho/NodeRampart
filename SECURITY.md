@@ -3,7 +3,7 @@
 ## Supported versions
 
 <!-- current-release:start -->
-`v0.4.0-alpha.10` is the newest published release, an alpha prerelease. Security
+`v0.4.0-alpha.11` is the newest published release, an alpha prerelease. Security
 fixes are applied to the latest alpha branch only until a stable support policy
 is published.
 <!-- current-release:end -->

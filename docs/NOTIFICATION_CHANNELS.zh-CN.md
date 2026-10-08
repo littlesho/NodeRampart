@@ -2,7 +2,7 @@
 
 <!-- current-release:start -->
 [English](NOTIFICATION_CHANNELS.md)。本指南面向当前公开版
-[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10)。
+[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11)。
 <!-- current-release:end -->
 
 这六个原生渠道首次随 alpha.8 公开，现与另外六个渠道共用通知菜单。六平台真实 API

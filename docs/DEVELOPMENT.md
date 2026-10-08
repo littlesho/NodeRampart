@@ -119,16 +119,20 @@ numbering is independent of the project prerelease index. Use each build script'
 reported output path; ordinary validation/package builds create no tag or Release.
 
 <!-- current-release:start -->
-The current published release is `v0.4.0-alpha.10`, with public DEB filename
-`noderampart_0.4.0-alpha.10_ARCH.deb`, Debian internal `0.4.0~alpha.10`, and RPM
-`0.4.0-0.alpha.11.fc43/fc44`. Its permanent source is
-`79ae500106e5d89b0b65b04bfa48e010dcdb39ac`; see the [hosted publication record](RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification).
+The current published release is `v0.4.0-alpha.11`, with public DEB filename
+`noderampart_0.4.0-alpha.11_ARCH.deb`, Debian internal `0.4.0~alpha.11`, and RPM
+`0.4.0-0.alpha.12.fc43/fc44`. Its permanent source is
+`2c9d4416adef3cb64e0523a1b9ac1e691b121c16`; see the [hosted publication record](RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification).
 <!-- current-release:end -->
 
 Same-source local runtime evidence and final hosted-byte evidence are separate.
-The final hosted Debian13 amd64 and Fedora44 x86_64 packages passed bounded
-upgrade/service/SSH/GeoIP smoke checks. The other four hosted package runtime
-cases and the 18-program binary vulnerability scans remain NOT RUN.
+The alpha.11 hosted bytes have native first-install, basic SQLite and GeoIP
+NO/help/cancel evidence on Debian 12/13 and Fedora 43/44 x86_64, with applicable
+upgrade, reinstall, normal restart and DEB/RPM remove/purge results. Debian12
+normal durable ACK passed. Fedora native durable ACK, complete journal fault
+recovery, real MaxMind download, the GeoIP YES-save loop, native ARM64 and the
+18-program binary vulnerability scans remain NOT RUN. See the publication
+record for the scoped Pre-release waiver and exact coverage.
 Local/CI artifacts do not inherit release provenance by sharing a version or
 source tree. [LATEST_RELEASE](../LATEST_RELEASE) records the current documentation
 pin; the maintained bootstrap resolves public Releases online independently of

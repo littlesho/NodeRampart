@@ -2,15 +2,15 @@
 
 <!-- current-release:start -->
 Current download and verification examples select published
-[v0.4.0-alpha.10](#alpha10-publication-and-public-distribution-verification).
-Its frozen source is `79ae500106e5d89b0b65b04bfa48e010dcdb39ac`, Debian native
-version is `0.4.0~alpha.10`, and RPM is `0.4.0-0.alpha.11.fc43/fc44`.
+[v0.4.0-alpha.11](#alpha11-pre-release-publication-and-distribution-verification).
+Its frozen source is `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`, Debian native
+version is `0.4.0~alpha.11`, and RPM is `0.4.0-0.alpha.12.fc43/fc44`.
 Later main installer/documentation commits do not become the source of these
 published assets or attestations.
 <!-- current-release:end -->
 
 Use the [maintained entry](../README.md#install-the-newest-published-release)
-for default-latest installation. The alpha.10 Release bootstrap is a frozen
+for default-latest installation. The alpha.11 Release bootstrap is a frozen
 source snapshot with dynamic default resolution; pass an explicit version when
 using the pinned Release-asset example. The current documentation record is [LATEST_RELEASE](../LATEST_RELEASE),
 separate from development `VERSION` and never an online fallback.
@@ -61,11 +61,11 @@ complete the download set.
 
 <!-- current-release:start -->
 For the current published release, public DEB names are
-`noderampart_0.4.0-alpha.10_ARCH.deb`, with native version `0.4.0~alpha.10`.
-RPM names contain `0.4.0-0.alpha.11.fc43` or `0.4.0-0.alpha.11.fc44`;
+`noderampart_0.4.0-alpha.11_ARCH.deb`, with native version `0.4.0~alpha.11`.
+RPM names contain `0.4.0-0.alpha.12.fc43` or `0.4.0-0.alpha.12.fc44`;
 the source RPM uses Fedora 44. SBOM/buildinfo names append `.spdx.json` and
 `.buildinfo.json` to the exact public package filename. Checksums and
-attestations bind those filenames and bytes. The [publication record](#alpha10-publication-and-public-distribution-verification)
+attestations bind those filenames and bytes. The [publication record](#alpha11-pre-release-publication-and-distribution-verification)
 identifies the hosted source, run and evidence scope.
 <!-- current-release:end -->
 
@@ -115,25 +115,25 @@ source you have reviewed; do not treat a value downloaded beside the package as
 independent evidence of the expected source.
 
 <!-- current-release:start -->
-The example selects published `v0.4.0-alpha.10`, whose reviewed source is
-`79ae500106e5d89b0b65b04bfa48e010dcdb39ac`. Confirm that identity against the
+The example selects published `v0.4.0-alpha.11`, whose reviewed source is
+`2c9d4416adef3cb64e0523a1b9ac1e691b121c16`. Confirm that identity against the
 public source before using it as an expected value. Missing statements cannot
 pass verification; do not substitute another release's attestations.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.10 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.11 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.10_amd64.deb
-EXPECTED_COMMIT='79ae500106e5d89b0b65b04bfa48e010dcdb39ac'
+PACKAGE=noderampart_0.4.0-alpha.11_amd64.deb
+EXPECTED_COMMIT='2c9d4416adef3cb64e0523a1b9ac1e691b121c16'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.10 \
+  --source-ref refs/tags/v0.4.0-alpha.11 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
@@ -143,7 +143,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.10 \
+  --source-ref refs/tags/v0.4.0-alpha.11 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document/v2.3 \
@@ -153,7 +153,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.10 \
+  --source-ref refs/tags/v0.4.0-alpha.11 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
@@ -193,13 +193,13 @@ reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 <!-- current-release:start -->
 For the current published release, the exact asset set is 22 files:
 
-- `noderampart_0.4.0-alpha.10_amd64.deb` and `noderampart_0.4.0-alpha.10_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.11.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.11.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.11.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.11.fc44.aarch64.rpm`.
+- `noderampart_0.4.0-alpha.11_amd64.deb` and `noderampart_0.4.0-alpha.11_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.12.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.12.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.12.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.12.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.11.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.12.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
 
 <!-- current-release:end -->
@@ -222,36 +222,13 @@ must be recorded as unavailable, not checksum or provenance passes. Publish the
 same verified draft only when the explicitly authorized release task's required
 gates and artifact/runtime acceptance have passed.
 
-### Alpha.11 candidate preparation (unpublished)
+### Alpha.11 preparation and scoped publication decision
 
-Development `VERSION` and the release tooling now target `0.4.0-alpha.11`.
-This candidate is not a publication record: `LATEST_RELEASE` and the current
-examples above continue to describe the actually published alpha.10.
+The original preparation targeted `0.4.0-alpha.11` while the current public pin still described alpha.10. The actual [publication record](#alpha11-pre-release-publication-and-distribution-verification) below supersedes that unpublished state; it does not rewrite the original preparation/FAILURE evidence.
 
-The candidate DEB native version is `0.4.0~alpha.11`; its two public filenames
-use `noderampart_0.4.0-alpha.11_{amd64,arm64}.deb`. RPM Version is `0.4.0`,
-Release is `0.alpha.12.fc43/fc44`, and the source RPM is
-`noderampart-0.4.0-0.alpha.12.fc44.src.rpm`. The same 22-file structure applies:
-six runtime packages, their twelve SPDX/buildinfo sidecars, one source RPM,
-`bootstrap.sh`, `release.json` and `SHA256SUMS`. The checksum file covers the
-other 21 assets.
+The DEB native version is `0.4.0~alpha.11`; public filenames are `noderampart_0.4.0-alpha.11_{amd64,arm64}.deb`. RPM Version is `0.4.0`, Release `0.alpha.12.fc43/fc44`; the source RPM is `noderampart-0.4.0-0.alpha.12.fc44.src.rpm`. Freeze successful hosted Draft bytes before native acceptance and bind every result to source C and asset set A. No fixture or manual timer enable replaces legitimate credentialed YES-save acceptance.
 
-Freeze the successful tag-triggered workflow's actual Draft bytes before the
-required Debian 12/13 and Fedora 43/44 x86_64 acceptance. Record the source C,
-numeric Release ID and asset IDs/digests as one immutable set A. Installation,
-alpha.10 upgrade, reinstall, GeoIP real-form YES/NO and new-process readback,
-SQLite/journal, reboot persistence and removal/purge results must bind to C/A.
-The real GeoIP YES save needs safely stored legitimate MaxMind credentials and
-license confirmation; a fixture or external timer enable cannot replace it.
-Missing required acceptance blocks publication. Preserve historical failures,
-skips and unobserved event order; do not retry failed gates until green.
-
-Alpha.11 retains **Alpha** product maturity. When all its authorized gates pass,
-publish the same verified Draft ID with `draft=false`, `prerelease=false` and
-`make_latest="true"`, then perform the public/Latest readbacks below. This
-distribution metadata does not certify beta/stable readiness, native ARM64,
-72-hour soak or production deployment. None of those unrun cases becomes PASS
-through four x86_64 VM results.
+On 2026-10-08 the maintainer explicitly accepted a **SCOPED_PRE_RELEASE_WAIVER** for missing Fedora native durable ACK and moved real MaxMind/GeoIP YES to their own VPS after Pre-release. Publish only the same verified numeric ID with `draft=false`, `prerelease=true`, `make_latest="false"`. Original PRE-RELEASE-GATE BLOCKED and failures remain retained; those unexecuted scenarios are not PASS. The planned ordinary Release/Latest promotion is deferred until user VPS feedback and new explicit authority. Four x86_64 VMs do not certify native ARM64, long soak, stable readiness or production.
 
 ## Current release and installer policy
 
@@ -290,14 +267,15 @@ maintainer decision. Published asset bytes, checksum manifests, attestations and
 tag targets remain immutable. Deliver default changes through maintained main
 and future releases, never by replacing a published bootstrap.
 
-An explicitly authorized release task selects its newly published, accepted
+A task explicitly authorized for final Latest selects its newly published, accepted
 release from reviewed main as **GitHub Latest**. A merge alone authorizes no tag
 or Release. Keep the workflow's strict `draft=true`, `prerelease=true` staging;
 only final publication of the verified same numeric ID uses `draft=false`,
 `prerelease=false`, `make_latest="true"`. GitHub [does not permit drafts or
 prereleases to be Latest](https://docs.github.com/en/rest/releases/releases#update-a-release).
-If a future user chooses `prerelease=true`, explain that it cannot also satisfy
-Latest before publishing. Retain the alpha/beta/RC tag and its maturity notice;
+If the maintainer chooses `prerelease=true`, publish with `make_latest="false"`
+and explain that it cannot also satisfy Latest. Alpha.11 currently uses this
+Pre-release channel; formal Release/Latest is not yet authorized. Retain the alpha/beta/RC tag and its maturity notice;
 platform flags do not waive product maturity gates.
 
 Confirm Latest from actual GET responses and page/download redirects, not from
@@ -312,28 +290,31 @@ distribution setting.
 
 A release task is complete after this sequence:
 
-1. Publish the already reviewed and accepted same Release ID as authorized
-   Latest, retaining an explicit Alpha notice for an alpha tag. Then read back its real public state,
+1. Publish the reviewed same Release ID in the explicitly authorized channel,
+   retaining an Alpha notice. Set Latest only when separately authorized for that
+   channel; a Pre-release stays non-Latest. Read back its real public state,
    tag/source and asset identities. Resolve the complete product Release list,
    including prereleases; do not infer the newest release from `VERSION`.
 2. Update `LATEST_RELEASE`, current documentation, examples and feature summaries
    to that real release. Keep native DEB/RPM naming and expected source digests
    consistent with the recorded publication identity. Check current Wiki/pinned
    guide/Release-body installation recommendations if those surfaces exist.
-3. Capture the complete fixed-repository Release list and actual Latest response
-   in private evidence, then
-   run the public-state checker only after a successful bounded fetch:
+3. For this Pre-release, capture the complete fixed-repository published list,
+   then run the list-only check after a successful bounded fetch:
 
    ```sh
    SYNC_EVIDENCE_DIR=$(mktemp -d)
    timeout 120s gh api --paginate 'repos/littlesho/NodeRampart/releases?per_page=100' \
      > "$SYNC_EVIDENCE_DIR/releases.json" &&
-   timeout 45s gh api 'repos/littlesho/NodeRampart/releases/latest' \
-     > "$SYNC_EVIDENCE_DIR/latest.json" &&
      python3 scripts/check-current-release.py \
-       --published-releases-json "$SYNC_EVIDENCE_DIR/releases.json" \
-       --published-latest-json "$SYNC_EVIDENCE_DIR/latest.json"
+       --published-releases-json "$SYNC_EVIDENCE_DIR/releases.json"
    ```
+
+   Separately read GitHub Latest to verify alpha.11 was not selected; an actual
+   404 is an unset Latest, not a Latest PASS. Do not supply
+   `--published-latest-json` for this Pre-release. For a later explicitly
+   authorized ordinary Release/Latest promotion only, capture the real Latest
+   object and pass that optional parameter with the complete list.
 
    The checker accepts one Release array, concatenated page arrays or slurped
    page arrays, bounded to 20 MiB, 20 pages and 2,000 entries. Preserve both fetch
@@ -1620,3 +1601,72 @@ BUILD_DATE 保留原 Git 字符串。真实草稿 22 项身份、六组配对、
 其他运行组合、18 程序新二进制扫描、真实通知、收费、ARM64 和生产仍 NOT RUN。
 公开后 22 项新匿名下载、21 条 checksum 均通过，按完全相同的 subject digest
 复用原 28 项验签，未重跑密码学命令；旧失败和漏洞披露保留。
+
+
+<a id="alpha11-pre-release-publication-and-distribution-verification"></a>
+
+## Alpha.11 Pre-release publication and distribution verification
+
+Published [v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) is the highest public product version, **Alpha / Pre-release**, not GitHub Latest. The maintainer approved **SCOPED_PRE_RELEASE_WAIVER** for missing Fedora native durable ACK. The original PRE-RELEASE-GATE BLOCKED and historical failures remain unchanged.
+
+| Field | Value |
+| --- | --- |
+| Tag | `v0.4.0-alpha.11` (annotated) |
+| Tag object | `3c1a175000cd59668e2db0e98b1ab10f957f2616` |
+| Source commit | `2c9d4416adef3cb64e0523a1b9ac1e691b121c16` |
+| Source tree | `8cb7a70af1b4bbae2db27c0f755c0e3df55d670b` |
+| Release ID | `403384051` |
+| Published UTC | `2026-10-08T03:08:01Z` |
+| Public state | `draft=false`, `prerelease=true`, publication requested `make_latest="false"` |
+| GitHub Latest | Not alpha.11; real before/after anonymous API response is 404 (unset) |
+| Project / DEB / RPM | `0.4.0-alpha.11` / `0.4.0~alpha.11` / `0.4.0-0.alpha.12.fc43/fc44` |
+| Frozen asset-set identity A | `456da439d5a45ae78bf610c9b029866b923d2d5c6fb8c689eea63f1f7589eb68` |
+| SHA256SUMS SHA256 | `79734fb957a1767aba4af783db17a17184e43c95b7c03db77fed5c10d3314ed2` |
+| BUILD_DATE | `2026-10-05T12:23:07+08:00` from C |
+
+C is the formal merged release source; subsequent documentation main D does not replace C, move the tag or rebuild the assets. Main C [CI37263281706](https://github.com/littlesho/NodeRampart/actions/runs/37263281706) / attempt1 passed 16 jobs, with CodeQL37263281187 / attempt1 passed 2 analyses. The [Release37265168287](https://github.com/littlesho/NodeRampart/actions/runs/37265168287) / attempt1 passed 17 jobs, actual checkout C. Ubuntu program toolchain is Go1.26.8; Fedora runtime metadata records Go1.26.8-X:nodwarf5. The Go1.26.0 source declaration is not a prebuilt-install requirement. Config/API/sensor/database remain 1/1/5/14.
+
+### Accepted scope and unexecuted cases
+
+Four x86_64 lab VMs (Debian12/13, Fedora43/44) passed first-install, basic SQLite/schema14/integrity/consistent backup checks and English/Chinese TUI/setup NO readback, help and cancel. Applicable upgrades from real alpha.10, same-version reinstalls and normal service cycles passed. RPM soft stop/start passed; Debian VM soft reboot is not claimed. Keep-data removal/reinstall passed on Debian12 and the RPM family (explicit rpmsave restoration); final purge passed once on Debian12 and Fedora43. Outside protected backup/sentinels remained unchanged. These family paths are not four-VM purge coverage.
+
+Debian12 normal trusted OpenSSH durable ACK passed for ordinary pending0 events and one normal service cycle. **Fedora43/44 native durable ACK is NOT RUN**: private MAC-label parsing FAILURE prevented the scene from starting. No product defect is confirmed there, and no evidence proves Fedora ACK works. Ordinary ACK does not prove natural fault, quiet recovery or trusted-once pending1 recovery; complete journal fault recovery remains NOT RUN.
+
+Real MaxMind download and YES-save → exit → new-process YES → actual systemd timer-state closure remain NOT RUN / BLOCKED_BY_LAB_CONNECTIVITY. No MaxMind credentials/license-sensitive input was supplied to lab VMs. Native ARM64, long soak, real VPS and actual third-party notification delivery remain NOT RUN. All four VMs ended STOPPED; original failed environments/evidence were retained, not restored away. Old journal event ordering, old Fedora44 initial status errno and Windows Invalid argument interoperability causes are not backfilled from later successes.
+
+The waiver accepts missing Fedora evidence only for this Alpha Pre-release. User VPS installation, personal license confirmation, real download and timer persistence are subsequent user acceptance. Formal Release or GitHub Latest needs that feedback and new explicit permission, with Fedora ACK coverage reconsidered. See the [English](../README.md#vps-pre-release-acceptance) and [Chinese](../README.zh-CN.md#vps-pre-release-acceptance) handoff; no Codex VPS deployment was performed.
+
+### Public bytes and authenticated proof reuse
+
+The same numeric Draft was published with one PATCH; tag/source/name/target and all 22 asset IDs, sizes and digests remained fixed. Anonymous curl requests used no Authorization, token environment, netrc or curlrc. All 22 files (108,090,970 content bytes) matched A; `sha256sum --check --strict SHA256SUMS` returned 0 for its 21 non-self entries. The full public list was one complete page with 10 objects and selected alpha.11 by product semantic precedence, including prereleases. Public page returned 200 and displayed Pre-release; maintained raw-main and fixed Release bootstrap bytes both match the frozen source hash `16c158c822494352e554f25e9f9fc4f49c4d8c9702f1e23fb9423bf27187b03e`.
+
+The archived 22 provenance subject bindings and 6 runtime SPDX bindings were reused by identical digest, bound to `littlesho/NodeRampart`, `.github/workflows/release.yml`, `refs/tags/v0.4.0-alpha.11`, source/signer digest C, invocation `https://github.com/littlesho/NodeRampart/actions/runs/37265168287/attempts/1`, and deny-self-hosted. There are 22 assets and 28 proof bindings, verified by 7 commands; no new signature commands or asset replacement occurred. Provenance and reachable-source security gates do not imply a full independent binary scan of 18 hosted programs.
+
+Public bootstrap `--help` and pinned `--version v0.4.0-alpha.11 --help` entry checks passed without installing on the host. Public package installation/default-resolution execution on a VPS remains user work; network fetch/byte identity and the complete-list check are distinct from installed runtime evidence. Current documentation uses only `--published-releases-json`; optional formal-Latest validation was NOT RUN.
+
+| Asset ID | Name | Bytes | SHA256 |
+| --- | --- | ---: | --- |
+| 611571283 | `SHA256SUMS` | 2372 | `79734fb957a1767aba4af783db17a17184e43c95b7c03db77fed5c10d3314ed2` |
+| 611571286 | `bootstrap.sh` | 18568 | `16c158c822494352e554f25e9f9fc4f49c4d8c9702f1e23fb9423bf27187b03e` |
+| 611571280 | `noderampart-0.4.0-0.alpha.12.fc43.aarch64.rpm` | 12367602 | `7bea01c6cdf8840c6dca0fdf54b6ddf60e1fbf2da570a552911134c727e40749` |
+| 611571281 | `noderampart-0.4.0-0.alpha.12.fc43.aarch64.rpm.buildinfo.json` | 5204 | `be48f193005af0d7a05a8b4e71e72b98dd200ffc7a763598f0ee6040ceffd778` |
+| 611571285 | `noderampart-0.4.0-0.alpha.12.fc43.aarch64.rpm.spdx.json` | 58829 | `935809e8d9d21002a525998dc7c403ebd6c4b5adad81a5fd7eb184cf68c2a6b0` |
+| 611571300 | `noderampart-0.4.0-0.alpha.12.fc43.x86_64.rpm` | 13329526 | `3d12780c280dc16402f61371d5a1cc9cc363e88425ba9f7d25cc8d5afb68b4f4` |
+| 611571313 | `noderampart-0.4.0-0.alpha.12.fc43.x86_64.rpm.buildinfo.json` | 5197 | `7c54f11519e57d18c9f2995e18388ef39cfb2b6a422a159dda06ab52fb08edd2` |
+| 611571315 | `noderampart-0.4.0-0.alpha.12.fc43.x86_64.rpm.spdx.json` | 58790 | `db7639f06400fc67eb113974a1408a133ef4f3f5be969330ae8f548b06799d0b` |
+| 611571314 | `noderampart-0.4.0-0.alpha.12.fc44.aarch64.rpm` | 12367602 | `4908613d3f20e68c991b342926263a7a618924d0d9f15dd3118d91bca90a1786` |
+| 611571323 | `noderampart-0.4.0-0.alpha.12.fc44.aarch64.rpm.buildinfo.json` | 5204 | `8a2ce5ff676c0e1027f00911bd84e9b5fb6f76684484db07fd729d58f475b897` |
+| 611571334 | `noderampart-0.4.0-0.alpha.12.fc44.aarch64.rpm.spdx.json` | 58829 | `ca4c3d0fc61ca7e9937ab7fac6b6d6634f4c662d6210c87a35abda1c9a9b3fa6` |
+| 611571341 | `noderampart-0.4.0-0.alpha.12.fc44.src.rpm` | 31457558 | `c16e84927b2783b4cefa97432dc889f9f7ca166c6677a9ab5a839381f154a0f8` |
+| 611571348 | `noderampart-0.4.0-0.alpha.12.fc44.x86_64.rpm` | 13329526 | `02f0b3f04642b77b0bf918b0c3d1a81a4a129a725e93b4be1702ae06fe57d5aa` |
+| 611571355 | `noderampart-0.4.0-0.alpha.12.fc44.x86_64.rpm.buildinfo.json` | 5197 | `c0b96a2f3a78a5a43fb4e3a6dff4e85ba7d6f3449246e8a9d00f4b226398b52a` |
+| 611571356 | `noderampart-0.4.0-0.alpha.12.fc44.x86_64.rpm.spdx.json` | 58790 | `427e5707e4f7eaf9ec4f7c60a80b6fb60a27643a3e6458489b0dd8f3fba518d7` |
+| 611571357 | `noderampart_0.4.0-alpha.11_amd64.deb` | 12886160 | `f6897054aa0d63ae49d4f735edae7ae5d22495fd08ff5060bdcd0a1fec151ed3` |
+| 611571367 | `noderampart_0.4.0-alpha.11_amd64.deb.buildinfo.json` | 6884 | `8664eb87d11852c4da7517bfc5f1a6d6c58c0314891b4eb783c51ff1922e733d` |
+| 611571368 | `noderampart_0.4.0-alpha.11_amd64.deb.spdx.json` | 63178 | `211e43db0956c2b4181e424d4ab42ebd323805cae399cc5e31a25ba056fc05ed` |
+| 611571382 | `noderampart_0.4.0-alpha.11_arm64.deb` | 11935588 | `f4b27e4e7882dc78f18b870ab517e662fc6de210ac35983ef06c3d0f9b8442b3` |
+| 611571379 | `noderampart_0.4.0-alpha.11_arm64.deb.buildinfo.json` | 6890 | `705f48a3d8b6ef3658ff4a688c79f85ab17308b36c23c56551d271f4dea0af90` |
+| 611571384 | `noderampart_0.4.0-alpha.11_arm64.deb.spdx.json` | 63178 | `db784b75c2b9b95730249d2a51ec207382fd49c7fc059630a79ed13946a389e4` |
+| 611571385 | `release.json` | 298 | `3fd843a2a19b6180559e35cabb24c7a6d23d1ccda4f295d9feecf4e710bfb90b` |
+
+中文：alpha.11 已以同一个403384051公开为 Pre-release，未设Latest；C/tag/A永久不变。22项匿名字节及21条校验通过，复用同字节22+6证明。四机限定运行证据与家族卸载／purge通过，但Fedora原生ACK、完整故障恢复、真实MaxMind／YES闭环、ARM64、长期soak、VPS与真实通知仍未测；旧BLOCKED／FAILURE不改为通过。本人VPS验收后，正式Release／Latest须再次授权。

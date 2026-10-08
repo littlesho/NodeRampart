@@ -2,9 +2,24 @@
 
 <!-- current-release:start -->
 The newest published product release is
-[v0.4.0-alpha.10](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.10),
+[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11),
 an alpha prerelease without GitHub's “Latest” badge.
 <!-- current-release:end -->
+
+## Alpha.11 scoped Pre-release acceptance
+
+The [alpha.11 publication record](RELEASE_VERIFICATION.md#alpha11-pre-release-publication-and-distribution-verification) binds the same 22 hosted assets to source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`. Four x86_64 VMs (Debian12/13, Fedora43/44) passed first-install, basic SQLite and English/Chinese NO-readback/help/cancel checks. Applicable upgrades, reinstalls, normal service cycles, RPM soft stop/start, DEB/RPM keep-data paths and family purge passed. Debian12 normal pending=0 trusted durable ACK passed; ordinary ACK does not establish fault recovery. All 22 assets passed anonymous byte/SHA checks and 21 checksum entries, reusing the same 22 provenance and six SPDX bindings.
+
+**Fedora43/44 native durable ACK remains NOT RUN:** a private MAC-label parser failure prevented the scene from starting. No product defect is confirmed in that scene, and there is no evidence of success. The maintainer's **SCOPED_PRE_RELEASE_WAIVER** accepts this coverage gap only for alpha.11 Pre-release; the original PRE-RELEASE-GATE BLOCKED and all failures remain unchanged.
+
+Complete journal fault/quiet/trusted-once recovery, real MaxMind download and YES-save/new-process/systemd closure, native ARM64, long soak, real VPS deployment and actual third-party notification delivery remain **NOT RUN**. The lab cannot reach MaxMind; no credentials/license-sensitive input was supplied. VPS installation, license confirmation and real GeoIP acceptance are user work after publication. A full new binary vulnerability scan of the 18 hosted programs was not performed; provenance and reachable-source checks are distinct evidence.
+
+This is **Alpha / Pre-release**, not stable or production-ready, and not GitHub Latest. Formal Release/Latest requires user VPS feedback and new explicit approval, including reconsidering Fedora ACK. No old tag, asset, failure or historical cause is rewritten by publication.
+
+中文：四台 x86_64 的限定首装、SQLite、NO 回填／帮助／取消及适用生命周期已通过；Debian12 普通 ACK 不等于故障恢复。Fedora43/44 原生 ACK 因私有工具失败未执行，本次例外只允许 Alpha 预发布；旧 BLOCKED／FAILURE 保留。真实 MaxMind／YES 闭环、原生 ARM64、长期 soak、VPS 和真实通知仍未测，正式 Release／Latest 等待本人 VPS 反馈及新授权。
+
+## Historical alpha.10 acceptance
+
 Its [publication record](RELEASE_VERIFICATION.md#alpha10-publication-and-public-distribution-verification)
 binds the original 22 hosted assets to the frozen release source. Authenticated
 22 provenance and six package-subject SPDX checks passed. Final hosted Debian13
@@ -206,7 +221,7 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
 
 - Natural SSH record-quality pending onset and its recovery chain; injected or
   known-pending independent-copy results do not prove that natural chain.
-- Fedora first-control availability timing and native VM race checks.
+- Fedora native durable ACK and adversarial availability/native VM race checks. The new fixed-budget first-install result does not cover these cases.
 - Real `arm64` runtime; cross-builds do not execute the sensor.
 - Authenticated MaxMind downloads with real customer credentials and live
   Telegram/Webhook delivery and HTTPS heartbeat to actual receivers. Tests use synthetic
