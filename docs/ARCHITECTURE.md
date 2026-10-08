@@ -8,7 +8,7 @@ flowchart TD
     S -->|"bounded Unix IPC"| D["noderampartd<br/>no capabilities"]
     J["journald"] --> D
     D --> Q["SQLite and outbox"]
-    D --> T["Telegram / fixed Webhook HTTPS"]
+    D --> T["Optional notification HTTPS<br/>12 fixed channels"]
     D --> H["Optional fixed HTTPS heartbeat"]
     C["root CLI"] -->|"0600 control socket"| D
 ```

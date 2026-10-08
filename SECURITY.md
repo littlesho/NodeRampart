@@ -3,7 +3,9 @@
 ## Supported versions
 
 <!-- current-release:start -->
-`v0.4.0-alpha.11` is the newest published release, an alpha prerelease. Security
+`v0.4.0-alpha.11` is the newest published release and
+[GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with
+`draft=false` and `prerelease=false`. Product maturity remains **Alpha**. Security
 fixes are applied to the latest alpha branch only until a stable support policy
 is published.
 <!-- current-release:end -->
@@ -20,7 +22,7 @@ The maintainer will acknowledge a complete report when possible, coordinate a fi
 
 ## Deployment warning
 
-The alpha has not completed independent security review, the full distribution/architecture VM matrix, or sustained high-rate testing. The [current validation scope and limitations](docs/ALPHA_LIMITATIONS.md) distinguish bounded acceptance from unfinished work. Source publication is not package-release or production-readiness approval. NodeRampart is an observation tool and does not replace provider DDoS protection, a correctly configured firewall, SSH hardening, patch management, or backups.
+NodeRampart is an Alpha observation tool. Keep provider DDoS protection, a correctly configured firewall, SSH hardening, patch management and backups in place. The [current validation scope and limitations](docs/ALPHA_LIMITATIONS.md) describe completed acceptance and remaining work: independent security review, the full distribution/architecture VM matrix and sustained high-rate testing are unfinished. GitHub Release/Latest status does not establish production readiness.
 
 ## Installation and management boundaries
 

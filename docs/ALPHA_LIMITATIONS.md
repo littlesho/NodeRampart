@@ -10,15 +10,15 @@ an ordinary GitHub Release selected as [GitHub Latest](https://github.com/little
 
 The [alpha.11 promotion record](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion) binds the same 22 hosted assets to source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`. Four x86_64 VMs (Debian12/13, Fedora43/44) passed first-install, basic SQLite and English/Chinese NO-readback/help/cancel checks. Applicable upgrades, reinstalls, normal service cycles, RPM soft stop/start, DEB/RPM keep-data paths and family purge passed. Debian12 normal pending=0 trusted durable ACK passed; ordinary ACK does not establish fault recovery. All 22 assets passed new anonymous byte/SHA checks and 21 checksum entries after promotion, reusing the same 22 provenance and six SPDX bindings.
 
-**Fedora43/44 native durable ACK remains NOT RUN:** a private MAC-label parser failure prevented the scene from starting. No product defect is confirmed in that scene, and there is no evidence of success. The original **SCOPED_PRE_RELEASE_WAIVER** and PRE-RELEASE-GATE BLOCKED retain their historical scope. The maintainer separately and explicitly accepted this gap for the current Alpha Release/Latest promotion; no failure is changed to PASS.
+**Fedora43/44 native durable ACK remains NOT RUN:** a private MAC-label parser failure prevented the scenario from starting, leaving its product behavior untested. The maintainer explicitly accepted this gap for the current Alpha Release/Latest promotion. The original **SCOPED_PRE_RELEASE_WAIVER**, PRE-RELEASE-GATE BLOCKED and FAILURE results remain in the dated release record.
 
-**USER-REPORTED VPS ACCEPTANCE PASS:** anonymous published-package download/upgrade, original bug retest, real City/ASN downloads with the maintainer's legitimate credentials and personal license confirmation, and YES save → full exit → new-process YES → actual systemd timer enabled. This is a user report, without independent automated VPS logs or credentials. The lab's real MaxMind/YES cases remain historical **NOT RUN / BLOCKED_BY_LAB_CONNECTIVITY**; Codex did not deploy to the VPS or repeat the tests.
+**USER-REPORTED PASS — VPS acceptance:** anonymous published-package download/upgrade, original bug retest, real City/ASN downloads with the maintainer's legitimate credentials and personal license confirmation, and YES save → full exit → new-process YES → actual systemd timer enabled. The user performed and reported these checks; independent automated VPS logs were not obtained. The lab's real MaxMind/YES cases retain their historical **NOT RUN / BLOCKED_BY_LAB_CONNECTIVITY** results.
 
-Complete journal fault/quiet/trusted-once recovery, native ARM64, long soak and actual third-party notification delivery remain **NOT RUN**, alongside Fedora ACK. A full independent binary vulnerability scan of the 18 hosted programs was not performed; provenance and reachable-source checks are distinct evidence. The VPS report does not prove Fedora ACK or fault recovery.
+Complete journal fault/quiet/trusted-once recovery, native ARM64, long soak and actual third-party notification delivery remain **NOT RUN**, alongside Fedora ACK. A full independent binary vulnerability scan of the 18 hosted programs was not performed; provenance and reachable-source checks are distinct evidence.
 
-This is an ordinary GitHub Release / Latest with **Alpha** product maturity. `prerelease=false` is distribution metadata, not stable or production-readiness certification. Source C, tag and all assets remain frozen; old failures and historical unknown causes stay unchanged.
+`prerelease=false` is distribution metadata; stable and production-readiness gates remain unfinished. Source C, tag and all assets remain frozen.
 
-中文：四台 x86_64 的限定首装、SQLite、NO 回填／帮助／取消及适用生命周期已通过；Debian12 普通 ACK 不等于故障恢复。本人 VPS 匿名升级、Bug 修复复测、合法许可下真实 City／ASN 下载与 YES 保存闭环仅记为 **USER-REPORTED PASS**，不冒充独立日志。Fedora43/44 原生 ACK、完整故障恢复、ARM64 和长期 soak 仍为 **NOT RUN**，本次普通 Release／Latest 晋级已明确接受这些 Alpha 风险；旧 BLOCKED／FAILURE 与实验室不可达记录保留。Latest 不改变 Alpha 成熟度，也不证明 stable 或生产就绪。
+中文：四台 x86_64 的限定首装、SQLite、NO 回填／帮助／取消及适用生命周期已通过；Debian12 普通 ACK 的范围限于正常持久确认。用户完成并报告 VPS 匿名升级、Bug 复测、合法许可下真实 City／ASN 下载与 YES 保存闭环，记为 **USER-REPORTED PASS**，未取得独立自动化 VPS 日志。Fedora43/44 原生 ACK、完整故障恢复、ARM64、长期 soak 和真实第三方通知均为 **NOT RUN**，18 个程序的完整独立二进制漏洞扫描也未执行。本次普通 Release／Latest 晋级明确接受这些 Alpha 风险；旧 BLOCKED／FAILURE 与实验室不可达记录保留。稳定性与生产就绪门槛仍未完成。
 
 ## Historical alpha.10 acceptance
 
@@ -122,7 +122,7 @@ was published as an alpha prerelease at `2026-09-30T18:54:24Z` from
 download/checksum checks and matched the authenticated 22 provenance / six
 runtime SPDX proofs. Exact final-package upgrades and lifecycle checks passed
 on Debian 12/13 and Fedora 43/44 x86_64; public bootstrap with separate setup
-passed on Debian 13 and Fedora 44. See the [current acceptance](ALPHA6_ACCEPTANCE.md#publication-and-distribution-2026-10-01)
+passed on Debian 13 and Fedora 44. See the [historical acceptance](ALPHA6_ACCEPTANCE.md#publication-and-distribution-2026-10-01)
 and [distribution record](RELEASE_VERIFICATION.md#alpha6-publication-and-distribution-verification).
 Earlier locally stamped `0.4.0-alpha` / `unknown` packages and test-merge packages
 are separate evidence, not proof of the final release bytes.
@@ -225,9 +225,10 @@ City/ASN 归档的完整离线校验通过，不等于新包或用户正式下�
   known-pending independent-copy results do not prove that natural chain.
 - Fedora native durable ACK and adversarial availability/native VM race checks. The new fixed-budget first-install result does not cover these cases.
 - Real `arm64` runtime; cross-builds do not execute the sensor.
-- Authenticated MaxMind downloads with real customer credentials and live
-  Telegram/Webhook delivery and HTTPS heartbeat to actual receivers. Tests use synthetic
-  credentials, generated MMDB data and mocked HTTP responses.
+- Independent automated acceptance of authenticated MaxMind downloads and the
+  GeoIP YES-save loop; the VPS checks above are **USER-REPORTED PASS**. Lab tests
+  use synthetic credentials, generated MMDB data and mocked HTTP responses.
+- Live Telegram/Webhook delivery and HTTPS heartbeat to actual receivers.
 - Every systemd hardening directive under adversarial workloads.
 - Dedicated AppArmor confinement or a NodeRampart-specific SELinux policy.
 - Arbitrary package rollback and database downgrade; the documented Debian

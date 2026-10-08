@@ -4,21 +4,26 @@
 
 NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成日报，并可通过多种通知渠道发送告警、恢复通知和日报摘要。安装后用中文终端菜单完成配置、查看状态和报告，无需搭建 Web 面板。
 
-它负责观察和提醒，不会自动封禁 IP 或修改防火墙，不保存或分析应用层通信内容，也不会新增 Web 监听端口。它不是 DDoS 防护或流量清洗服务。
-
 [English](README.md) · [详细操作说明](docs/V0.4_OPERATIONS.md) · [安全政策](SECURITY.md) · [当前限制](docs/ALPHA_LIMITATIONS.md)
 
 ## 版本状态与验收范围
 
 <!-- current-release:start -->
-**[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) 是最高已公开产品版本，现为普通 GitHub Release 和 [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest)。** 产品成熟度仍为 **Alpha**；这些分发设置不是 stable 或生产就绪认证。本版修复 GeoIP timer 状态回填，升级依赖／构建要求，并完善 journal 测试同步及终端观察。
+**[GitHub Latest：v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/latest)** 是最新公开产品版本，现为普通 GitHub Release（`draft=false`、`prerelease=false`）。产品成熟度仍为 **Alpha**，尚未覆盖的验收范围见下文。本版修复 GeoIP 每日更新状态回填，升级依赖与 Go 构建要求，并完善 journal 和终端回归测试。
 <!-- current-release:end -->
 
-冻结 hosted 资产已在 Debian12/13、Fedora43/44 四台 x86_64 实验机通过限定首装、基础 SQLite、中英文 TUI/setup NO 回填、帮助和取消；适用的升级／重装、正常服务生命周期、DEB/RPM 保留数据卸载及家族 purge 通过。Debian12 正常可信 durable ACK 通过，完整故障恢复未测。22 项匿名下载及 21 条 checksum 与已认证的 22 个 provenance／6 个 SPDX 绑定一致。
+| 验收项目 | 结果与范围 |
+| --- | --- |
+| Debian 12/13、Fedora 43/44，x86_64 | **PASS**：公开发行包的首装、基础 SQLite、中英文 TUI/setup NO 回填、帮助与取消。 |
+| DEB/RPM 生命周期 | **PASS**：适用的升级／重装、正常服务生命周期与保留数据卸载；完整清除（purge）在 Debian 12 和 Fedora 43 核验。 |
+| Debian 12 journal 持久化确认（durable ACK） | **PASS**：正常可信 OpenSSH 事件及一次正常服务生命周期。 |
+| 发行下载与供应链验证 | **PASS**：22 项匿名资产下载、21 条 checksum、22 条 provenance 绑定与六条运行包 SPDX 绑定。 |
 
-**USER-REPORTED VPS ACCEPTANCE PASS**：维护者本人报告匿名下载／升级成功、原 Bug 复测确认修复、合法凭据及本人许可确认后的真实 City／ASN 下载，以及 GeoIP **YES 保存 → 完全退出 → 新进程仍 YES → 实际 systemd timer 为 enabled**。这是用户报告，不冒充独立自动日志。**Fedora43/44 原生 durable ACK、完整 journal 故障恢复、原生 ARM64、长期 soak 仍为 NOT RUN**，本次 Alpha 晋级明确接受这些缺口。Fedora 场景因私有 MAC 标签解析失败未启动，既不能证明产品有缺陷，也不能证明该场景正常。详见[晋级记录](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion)及[当前限制](docs/ALPHA_LIMITATIONS.md)。
+**USER-REPORTED PASS**：维护者报告 VPS 匿名下载／升级、原 Bug 复测、合法许可下的 MaxMind City/ASN 下载，以及 GeoIP **YES 保存 → 完全退出 → 新进程仍为 YES → systemd timer 为 enabled**。未取得独立自动化 VPS 测试日志。
 
-当前安装示例随最新公开版本更新。历史验收与已知风险在[发布验证](docs/RELEASE_VERIFICATION.md)和 [CHANGELOG](CHANGELOG.md)中保留原范围；已发布的程序、包内文档、tag 和资产保持冻结快照。
+**NOT RUN**：Fedora 43/44 原生 durable ACK、完整 journal 故障恢复、原生 ARM64、长期持续运行（soak）、真实第三方通知投递，以及 18 个公开发行程序的完整独立二进制漏洞扫描。稳定版与生产就绪程度尚未确认。历史失败和证据范围见[当前晋级与验收记录](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion)及 [Alpha 限制](docs/ALPHA_LIMITATIONS.md)。
+
+安装示例跟随最新公开版本。[历史版本](https://github.com/littlesho/NodeRampart/releases)、[发布验证](docs/RELEASE_VERIFICATION.md)和 [CHANGELOG](CHANGELOG.md)保留早期版本及其原始结果。
 
 ## 能帮你做什么？
 
@@ -35,11 +40,15 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 还可以合并重复告警、设置到期自动解除的静默、补齐缺失日报、备份数据库，以及通过离线脱敏元数据比较不同检测阈值。
 
+### 产品范围
+
+NodeRampart 观察网络元数据与 SSH 事件，保存本地报告并发送已配置的通知。它保持防火墙规则不变，不封禁 IP、不保存或分析应用层通信内容，也不开放 Web 面板端口。DDoS 防护与流量清洗需要单独的服务。
+
 <a id="固定版本安装"></a>
 
 ## 默认安装最新公开版本
 
-安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要 systemd，以及具有 root 或 sudo 权限的终端。维护入口需要 curl、有效 HTTPS 证书、Python 3 和 util-linux 中的 `prlimit`，以有界解析 JSON。这些是安装器依赖，daemon 不新增 Python 依赖；安装无需 Go、Node、Docker 或 GitHub CLI。ARM64 包已提供，原生 ARM64 运行尚未验收。
+安装器面向 **Debian 12/13、Fedora 43/44**，支持 **amd64/x86_64、arm64/aarch64**。需要 systemd，以及具有 root 或 sudo 权限的终端。维护入口需要 curl、有效 HTTPS 证书、Python 3 和 util-linux 中的 `prlimit`，以有界解析 JSON。这些是安装器依赖，daemon 不新增 Python 依赖；安装无需 Go、Node、Docker 或 GitHub CLI。ARM64 包已提供，验收范围见上文。Ubuntu 不在维护安装器的支持列表中。
 
 维护入口在省略 `--version` 时，按版本优先级选择最高的公开产品版本，包含 alpha/beta/RC 预发布版。先下载到独立目录并查看脚本：
 
@@ -85,34 +94,14 @@ sudo noderampart setup --language zh
 ~~~
 
 1. **基本设置**：选择网卡、SSH 监控、检测阈值、时区和日报时间。不提供外部账户，也能使用基础观察功能。
-2. **通知渠道（可选）**：打开共用页面，选择需要的渠道。不需要 Telegram 账户也能完成基础设置。按渠道说明使用受保护凭据入口，秘密输入隐藏；保存不会自动向平台验证或入队／发送测试。应用已启用设置后，可按规则正常投递通知。测试须另选一个目标，付费渠道还需独立预览和费用确认。
-3. **本地 GeoIP（可选）**：输入自己的 MaxMind Account ID 和 License Key，确认已接受其条款，程序自动下载 City 和 ASN 两个数据库。每日更新可自行开启。
+2. **通知渠道（可选）**：选择渠道，按其说明使用受保护的凭据入口，秘密输入会隐藏。基础配置无需通知账户。保存、测试和付费渠道确认规则见[通知渠道](#通知渠道)。
+3. **本地 GeoIP（可选）**：下载合法授权的 City 和 ASN 数据库，选择是否启用每日更新。步骤见 [GeoIP 安装与验证](#本地-geoip)。
 4. **出站费用估算（可选）**：选择 AWS 或 OCI、对应区域/分组，并填写分配给本机的整月免费额度。
 5. 配置完成后选择**启动已配置的服务**，再查看**当前运行状态**。
 
-菜单用方向键和 Enter 操作，表单用 Tab/Shift+Tab 切换字段，Escape 返回。也可在菜单中随时切换中文和 English。
+菜单用方向键和 Enter 操作，表单用 Tab/Shift+Tab 切换字段，Escape 返回。可在语言菜单中切换中文和 English，也可使用 `--language zh` / `--language en` 选项。
 
 报告时区选择离线工作；通知语言与界面语言独立，修改设置不会翻译旧队列正文。参见[时区与 Telegram 语言](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language)和下方各渠道说明。从 setup 进入后，“返回”／Escape 回到首次设置；从 `tui` 进入后回到主菜单。
-
-<a id="vps-pre-release-acceptance"></a>
-
-## 本人 VPS 验收与本地 GeoIP 核对
-
-维护者本人 VPS 安装、真实 City／ASN 下载和 YES 持久回填已按上述范围记为 **USER-REPORTED PASS**。在其它服务器安装前，查看 Alpha 限制并自行备份。预期程序版本为 `0.4.0-alpha.11`，永久发行源为 `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`；之后的 main 文档提交不代表包已重建。以下清单保留供本地核对：
-
-1. 用 `sudo noderampart version` 核对版本／源码，查看正常服务与采集状态。
-2. 若选择 GeoIP，在本地 setup 输入本人合法 MaxMind 凭据，并亲自确认许可条款；不要把凭据发到聊天、录屏或报告。完成真实 City／ASN 下载并查看产品更新结果。实验室 NO 回填不能证明真实下载或 YES 保存。
-3. 从 `tui` 或 `setup` 打开独立“每日更新”表单，保存 **YES**，彻底退出，再启动新进程重进表单，确认仍为 YES，并与以下只读 systemd 状态一致：
-
-   ~~~bash
-   sudo systemctl show noderampart-geoip-update.timer \
-     --property=LoadState,UnitFileState,ActiveState,SubState,NextElapseUSecRealtime
-   sudo systemctl list-timers --all noderampart-geoip-update.timer
-   ~~~
-
-4. 可再保存 **NO**、退出、重进确认 NO；这条反向闭环不在本次 VPS 报告范围内。记录实际入口／语言、程序版本和 timer 字段，不含凭据。enabled 但 inactive／failed 仍表示 YES；下载成功与 updater 健康须分别判断。读取异常不能当作 NO。启用 timer 可能触发 Persistent 补跑更新。
-
-维护者在报告 VPS 验收并接受剩余 Alpha 缺口后，已明确授权同一 Release 晋级及 Latest。Fedora durable ACK 和完整故障恢复仍未验证，不能由 GeoIP 结果替代。Codex 未部署到 VPS 或重复本人测试。
 
 ## 平时怎么使用？
 
@@ -133,6 +122,11 @@ sudo noderampart tui --language zh
 | 云公网出站费用估算 | 获取公开价格、比较已缓存的 AWS/OCI 估算、填写自定义价格。 |
 | 备份、回放与隐私 | 备份数据库、验证备份、离线比较检测规则。 |
 | 服务与卸载 | 启动、停止、重启、恢复之前的配置或卸载。 |
+
+历史日报详情会显示当时保存的费率和免费额度；事件详情可以查看触发告警的阈值、
+观测值和覆盖情况。告警状态页还能区分检查中、超时和结果待保存。
+
+报告、事件和通知可直接从列表进入详情；翻页保留查询时间段和游标。保存配置前会显示设置的旧值与新值。
 
 ## 通知渠道
 
@@ -165,14 +159,11 @@ sudo noderampart tui --language zh
 
 ### Telegram 设置
 
-使用自己的 [BotFather](https://t.me/BotFather) 创建 Bot，先与它发起对话或加入目标群组，再从“通知渠道”选择 **设置 Telegram**，隐藏输入 Token 和数字 Chat ID。Token 保存在权限受限的本地文件，不应放进命令参数。[完整设置与目标隔离说明](docs/V0.4_OPERATIONS.md#telegram)。
+通过 [BotFather](https://t.me/BotFather) 创建自己的 Bot，先与新 Bot 发起对话或将其加入目标群组，再从“通知渠道”选择 **设置 Telegram**，隐藏输入 Token 和数字 Chat ID。Token 保存在权限受限的本地文件，不应放进命令参数。[完整设置与目标隔离说明](docs/V0.4_OPERATIONS.md#telegram)。
 
 更换 Bot／Chat 或收紧隐私后，旧未发消息会隔离；切回旧目标不会自动接管。同目标换 Token 保留重试和限流状态；在“通知消息列表”检查后，再明确丢弃不需要的隔离正文。在途请求可能在原收件方完成，隔离未发消息仍遵循七天到期规则。
 
 ## 新告警和证据包怎么用？
-
-历史日报详情会显示当时保存的费率和免费额度；事件详情可以查看触发告警的阈值、
-观测值和覆盖情况。告警状态页还能区分检查中、超时和结果待保存。
 
 在**功能配置**中开启“公网出站预算告警”或“采集与存储健康告警”，填写阈值后检查并保存。两组告警默认关闭。月流量可设为 `107374182400` 字节（100 GiB），分别在 80% 和 100% 提醒；费用预算还需先配置费用估算。
 
@@ -232,13 +223,31 @@ ACK 另行说明派生事件及通知入队决策是否已持久化；队列拒�
 历史缺失、裁剪或过载时不作提示；修改配置或隐私 key 后重启会重新观察七天。
 沿用现有隐私设置，不额外保存原始地址或建立另一份基线。
 
-HTTPS 外部心跳是独立、可选的健康上报机制，不是第 13 个通知渠道。它区分进程存活和功能降级，不新增监听端口。[心跳配置](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook)。
+HTTPS 外部心跳是与通知渠道并列的可选健康上报功能。它区分进程存活与功能降级，不新增监听端口。[心跳配置](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook)。
 
-## 本地 GeoIP
+<a id="本地-geoip"></a>
+<a id="vps-pre-release-acceptance"></a>
+<a id="本人-vps-验收与本地-geoip-核对"></a>
 
-需要你自己的 [MaxMind GeoLite 账户](https://www.maxmind.com/en/geolite2/signup)，并已接受 [GeoLite 条款](https://www.maxmind.com/en/geolite/eula)。向导可以自动下载 City 和 ASN 两个库，并按你的选择定期更新；本项目不会代注册、代接受条款或直接捆绑这些数据库。运行时通过本地库查询，地理位置仅供参考。也可以跳过，或使用已经合法取得的本地 MMDB。[详细说明](docs/V0.4_OPERATIONS.md#local-geoip)。
+## 本地 GeoIP 安装与验证
 
-GeoIP 下载验证后若内容相同，会保留当前数据库和服务，避免无意义重启。报告、Incident 和通知可以直接从列表进入详情；翻页保留查询时间段和游标。保存配置前会显示设置的旧值与新值。
+GeoIP 通过本地数据库补充大致的国家、城市和 ASN 信息。可使用已合法取得的 MMDB 文件，或在向导中用自己的 [MaxMind GeoLite 账户](https://www.maxmind.com/en/geolite2/signup)下载 City 和 ASN 数据库。请自行接受 [GeoLite 条款](https://www.maxmind.com/en/geolite/eula)；NodeRampart 不捆绑数据库，也不代注册账户。GeoIP 为可选功能。
+
+1. 运行 `sudo noderampart version` 和 `sudo noderampart status`，检查已安装程序、服务和采集状态。固定安装 alpha.11 时，预期版本为 `0.4.0-alpha.11`，源码提交为 `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`。
+2. 在 `sudo noderampart setup --language zh` 中选择**下载本地 GeoIP（可选）**，或在 `sudo noderampart tui --language zh` 中选择**本地 GeoIP 数据库 → 设置本地 GeoIP 下载**。通过受保护的表单输入自己的 Account ID 和 License Key，确认许可条款后下载 City 和 ASN，查看更新结果与库龄。不要将凭据放入聊天、录屏或报告。
+3. 如需每日更新，打开 **tui → 本地 GeoIP 数据库 → GeoIP 每日更新**，保存 **YES**，完全退出，再启动新进程重开表单。表单应仍显示 YES。用以下只读 systemd 命令核对：
+
+   ~~~bash
+   sudo systemctl show noderampart-geoip-update.timer \
+     --property=LoadState,UnitFileState,ActiveState,SubState,NextElapseUSecRealtime
+   sudo systemctl list-timers --all noderampart-geoip-update.timer
+   ~~~
+
+4. 如需关闭每日更新，保存 **NO**，退出后重开表单，确认显示 NO。再次检查 timer；收集诊断材料时，记录实际结果。
+
+YES 对应 `UnitFileState=enabled` 或 `enabled-runtime`，即使 timer 当前为 inactive 或 failed，也仍表示已启用。更新器健康与下载成功须分别检查。读取失败会报错，不会当作 NO。启用这个持久 timer 可能立即补跑错过的更新。
+
+验证后的下载内容相同时，现有数据库和服务继续运行，无需重启配置。数据库路径与更新行为见 [GeoIP 操作说明](docs/V0.4_OPERATIONS.md#local-geoip)；[验收记录](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion)分别列出实验室检查和维护者的 VPS 报告。
 
 ## 费用估算应该怎么看？
 
@@ -250,7 +259,7 @@ GeoIP 下载验证后若内容相同，会保留当前数据库和服务，避�
 
 ## 完整本地报告、趋势和结算周期预测
 
-以下命令读取本地 daemon。新日报保存完整结构化内容；通知采用各渠道的短摘要或批准模板，不发送整份本地报告。历史快照不可变，旧快照保留原短正文，明确说明原始完整内容不可用，不会重建后冒充原快照。
+以下命令读取本地 daemon。新日报保存完整结构化内容；通知采用各渠道的短摘要或批准模板，不发送整份本地报告。历史快照保持不变，旧快照保留原短正文，并明确显示原始完整内容不可用。
 
 ~~~bash
 sudo noderampart report export --date 2026-09-29 --format html
@@ -317,8 +326,8 @@ SSH 会话没有终端时，可用 ssh -t 分配终端，或使用原有的非�
 
 `upgrade preflight` 只检查指定备份、配置、密钥、磁盘和本地包元数据，不升级；`upgrade rehearse` 验证临时恢复副本并清理。缺乏已验证目标信息时，目标 schema 兼容性仍为 unknown。`threshold preview` 离线比较当前/候选规则；TUI 将草稿试运行接到原有确认保存流程。有界本地 `threshold feedback` 标记不训练或自动调规则。[操作示例与限制](docs/V0.4_OPERATIONS.md#upgrade-preflight-and-restore-rehearsal)。
 
+日报保存估算所用的单价、来源、免费额度、字节单位和观测流量，便于复算；补报使用生成时配置，已有存档不重新计价。升级前备份数据库，并分别保护匹配的配置和凭据；旧程序不能直接打开较新 schema。参见[升级与回退](docs/V0.4_OPERATIONS.md#upgrades-and-removal)和[历史发布核验](docs/RELEASE_VERIFICATION.md)。包内 README／许可证保持其冻结发布源码快照；之后的文档更新不替换包字节，也不安装完整离线手册。
+
 开发资料：[开发指南](docs/DEVELOPMENT.md)、[架构](docs/ARCHITECTURE.md)、[威胁模型](docs/THREAT_MODEL.md)、[贡献说明](CONTRIBUTING.md)。普通测试不需要抓包权限；特权测试仅在可丢弃的授权实验虚拟机中进行。
 
 项目原创代码采用 [MIT License](LICENSE)。编译依赖保留各自许可证，见[第三方声明](THIRD_PARTY_NOTICES.md)；MaxMind 数据使用独立的数据许可。
-
-日报保存估算所用的单价、来源、免费额度、字节单位和观测流量，便于复算；补报使用生成时配置，已有存档不重新计价。升级前备份数据库，并分别保护匹配的配置和凭据；旧程序不能直接打开较新 schema。参见[升级与回退](docs/V0.4_OPERATIONS.md#upgrades-and-removal)和[历史发布核验](docs/RELEASE_VERIFICATION.md)。包内 README／许可证保持其冻结发布源码快照；之后的文档更新不替换包字节，也不安装完整离线手册。

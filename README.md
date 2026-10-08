@@ -4,21 +4,26 @@
 
 NodeRampart watches your server in the background. It records events, builds daily reports and can send alerts, recovery notices and daily summaries through multiple notification channels. A terminal menu guides you through setup and everyday management over SSH.
 
-It observes and reports. It does not block IP addresses, change your firewall, inspect application payloads or open a web dashboard port. It is not DDoS mitigation or a traffic-scrubbing service.
-
 [中文说明](README.zh-CN.md) · [Detailed operations](docs/V0.4_OPERATIONS.md) · [Security](SECURITY.md) · [Limitations](docs/ALPHA_LIMITATIONS.md)
 
 ## Version status and validation scope
 
 <!-- current-release:start -->
-**[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11) is the highest published product version, an ordinary GitHub Release and [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest).** Product maturity remains **Alpha**; these distribution settings do not certify stable or production readiness. This version fixes GeoIP timer-state readback, updates dependencies/build requirements and improves journal-test synchronization and terminal observation.
+**[GitHub Latest: v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/latest)** is the newest published product version and an ordinary GitHub Release (`draft=false`, `prerelease=false`). Product maturity remains **Alpha**, with the validation gaps below. This version fixes GeoIP daily-update state readback, updates dependencies and Go build requirements, and improves journal and terminal regression tests.
 <!-- current-release:end -->
 
-The frozen hosted assets passed scoped first-install, basic SQLite, English/Chinese TUI/setup NO readback, help and cancel checks on Debian 12/13 and Fedora 43/44 x86_64. Applicable upgrade/reinstall, normal service lifecycle, DEB/RPM keep-data removal and family purge checks passed. Debian12 normal trusted durable ACK passed; full fault recovery did not. All 22 anonymous downloads and 21 checksum entries match the authenticated 22 provenance and six SPDX bindings.
+| Validation | Result and scope |
+| --- | --- |
+| Debian 12/13 and Fedora 43/44, x86_64 | **PASS:** first install, basic SQLite, English/Chinese TUI/setup NO readback, help and cancel with the published packages. |
+| DEB/RPM lifecycle | **PASS:** applicable upgrades/reinstalls, normal service cycles and keep-data removal; purge checked on Debian 12 and Fedora 43. |
+| Debian 12 durable journal acknowledgement (ACK) | **PASS:** normal trusted OpenSSH events and one normal service cycle. |
+| Release downloads and supply-chain verification | **PASS:** 22 anonymous asset downloads, 21 checksum entries, 22 provenance bindings and six runtime-package SPDX bindings. |
 
-**USER-REPORTED VPS ACCEPTANCE PASS:** the maintainer reports successful anonymous download/upgrade, verification of the original bug fix, legitimate licensed City/ASN downloads, and GeoIP **YES save → full exit → new-process YES → actual systemd timer enabled**. This is a user report, without independent automated VPS logs. **Fedora43/44 native durable ACK, complete journal fault recovery, native ARM64 and long soak remain NOT RUN**, explicitly accepted for this Alpha promotion. A private MAC-label failure prevented the Fedora ACK scenario from starting; it proves neither a product defect nor success. See the [promotion record](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion) and [current limitations](docs/ALPHA_LIMITATIONS.md).
+**USER-REPORTED PASS:** the maintainer reports anonymous VPS download/upgrade, retesting the original bug, licensed MaxMind City/ASN downloads, and GeoIP **YES save → full exit → new-process YES → systemd timer enabled**. Independent automated VPS logs were not collected.
 
-Current installation examples follow the newest published release. Earlier acceptance results and known risks keep their original scope in [release verification](docs/RELEASE_VERIFICATION.md) and [CHANGELOG](CHANGELOG.md). Published package programs, documentation, tags and assets remain their frozen snapshots.
+**NOT RUN:** Fedora 43/44 native durable ACK, complete journal fault recovery, native ARM64, long soak, actual third-party notification delivery and full independent vulnerability scans of the 18 hosted programs. Stable and production readiness remain unestablished. See the [current promotion and validation record](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion) and [Alpha limitations](docs/ALPHA_LIMITATIONS.md) for retained failures and evidence boundaries.
+
+Installation examples follow the newest published release. [Historical releases](https://github.com/littlesho/NodeRampart/releases), [release verification](docs/RELEASE_VERIFICATION.md) and [CHANGELOG](CHANGELOG.md) retain earlier versions and their original results.
 
 ## What can it do?
 
@@ -35,11 +40,15 @@ Current installation examples follow the newest published release. Earlier accep
 
 You can also merge repeated alerts, set silences that expire automatically, fill missing daily reports, create database backups and compare detection thresholds using offline anonymized metadata.
 
+### Product scope
+
+NodeRampart observes network metadata and SSH events, stores local reports and sends configured notifications. It leaves firewall rules unchanged, does not block IPs or inspect application payloads, and opens no web dashboard port. DDoS mitigation and traffic scrubbing require separate services.
+
 <a id="install-a-pinned-release"></a>
 
 ## Install the newest published release
 
-The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. The maintained entry needs curl, working HTTPS certificates, Python 3 and `prlimit` (util-linux) for bounded JSON parsing. These are installer dependencies; the daemon gains no Python dependency. Go, Node, Docker and GitHub CLI are unnecessary for installation. ARM64 packages are available; native ARM64 runtime remains unvalidated.
+The installer targets **Debian 12/13** and **Fedora 43/44**, on **amd64/x86_64** and **arm64/aarch64**. Use a systemd host and a terminal with root or sudo access. The maintained entry needs curl, working HTTPS certificates, Python 3 and `prlimit` (util-linux) for bounded JSON parsing. These are installer dependencies; the daemon gains no Python dependency. Go, Node, Docker and GitHub CLI are unnecessary for installation. ARM64 packages are available; see the validation scope above. Ubuntu is outside the maintained installer's supported host list.
 
 The maintained entry resolves the highest published product version, including alpha/beta/RC prereleases, when `--version` is omitted. Download into a separate directory and inspect the script:
 
@@ -85,34 +94,14 @@ sudo noderampart setup
 ~~~
 
 1. **Basic settings:** choose network interfaces, SSH monitoring, thresholds, timezone and report time. The defaults work without external accounts.
-2. **Notification channels (optional):** open the shared page and choose a channel. No Telegram account is required to finish basic setup. Follow the selected channel's protected credential instructions; secret inputs are hidden. Saving does not automatically validate with the platform or queue/send a test. Enabled channels can then deliver eligible notifications under their configured rules. A test is a separate action for one selected target, with an additional preview and cost confirmation for paid channels.
-3. **Local GeoIP, optional:** supply your own MaxMind Account ID and License Key, confirm that you have accepted its terms, then download the City and ASN databases. Daily updates are optional.
+2. **Notification channels (optional):** choose a channel and follow its protected credential instructions; secret inputs are hidden. Basic setup works without a notification account. See [notification channels](#notification-channels) for saving, testing and paid-channel confirmation rules.
+3. **Local GeoIP (optional):** download licensed City and ASN databases and choose whether to enable daily updates. Follow the [GeoIP setup and verification guide](#local-geoip).
 4. **Egress estimates, optional:** choose AWS or OCI, the appropriate region/group, and the monthly free allowance assigned to this host.
 5. Choose **Start configured services**, then inspect **Current status**.
 
 Use arrow keys and Enter for menus, Tab/Shift+Tab for form fields, and Escape to go back. English and Chinese are available from the language menu or the --language en / --language zh option.
 
 The report timezone selector works offline. Notification language is separate from UI language; changing either does not translate old queued messages. See [timezone and Telegram language](docs/V0.4_OPERATIONS.md#timezone-selector-and-telegram-language) and the channel-specific guides below. From this setup page, **Back** / Escape returns to setup; from `tui`, it returns to the main menu.
-
-<a id="vps-pre-release-acceptance"></a>
-
-## VPS acceptance and local GeoIP verification
-
-The maintainer's VPS installation, real City/ASN download and YES persistence are recorded above as **USER-REPORTED PASS**. Review the Alpha limits and make your own backup before installing on another server. Expected program version is `0.4.0-alpha.11`, with permanent release source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`; later main documentation is not a new package build. This checklist remains available for local verification:
-
-1. Check `sudo noderampart version`, normal service status and collection on your own VPS.
-2. If you choose GeoIP, enter your legitimate MaxMind credentials locally through setup and personally confirm its license terms. Keep credentials out of chat, recordings and reports. Complete the real City/ASN download and inspect the product's update result; the lab's NO checks do not prove download or YES-save success.
-3. Open the independent daily-update form from `tui` or `setup`, save **YES**, fully exit, start a new process and reopen the form. It must show YES and agree with this read-only systemd query:
-
-   ~~~bash
-   sudo systemctl show noderampart-geoip-update.timer \
-     --property=LoadState,UnitFileState,ActiveState,SubState,NextElapseUSecRealtime
-   sudo systemctl list-timers --all noderampart-geoip-update.timer
-   ~~~
-
-4. Optionally save **NO**, exit and reopen to check NO; this reverse loop was not part of the reported VPS acceptance. Record the actual entry/language, version and timer fields without credentials. Enabled-but-inactive/failed still means YES; updater health/download success is a separate result. A read error must not be treated as NO. Enabling the timer can run a persistent/catch-up update.
-
-The maintainer explicitly authorized same-ID Release/Latest promotion after reporting VPS acceptance and accepting the remaining Alpha gaps. Fedora durable ACK and complete fault recovery remain unverified; GeoIP acceptance does not establish either result. Codex did not deploy to the VPS or repeat the user's tests.
 
 ## Everyday use
 
@@ -137,6 +126,8 @@ Closing the menu leaves the background services running.
 Historical report details show the saved tariff and free allowance used at the
 time. Incident details explain recorded alert thresholds and observations; the
 alert status page distinguishes checks in progress, timeouts and pending writes.
+
+Reports, incidents and notifications open directly from their lists; paging preserves the query period and cursors. Configuration review shows old and new values before saving.
 
 ## Notification channels
 
@@ -250,13 +241,31 @@ Missing, pruned or overloaded history suppresses hints. Restarting after a
 configuration or privacy-key change starts a new observation period. Existing
 privacy settings apply; no additional raw addresses or baseline are stored.
 
-HTTPS heartbeat is a separate, optional health-reporting mechanism, not a thirteenth notification channel. It distinguishes process liveness from functional degradation and opens no listener. [Heartbeat configuration](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook).
+HTTPS heartbeat is an optional health-reporting feature alongside notification channels. It distinguishes process liveness from functional degradation and opens no listener. [Heartbeat configuration](docs/V0.4_OPERATIONS.md#fixed-https-heartbeat-and-webhook).
 
-## Local GeoIP
+<a id="local-geoip"></a>
+<a id="vps-pre-release-acceptance"></a>
+<a id="vps-acceptance-and-local-geoip-verification"></a>
 
-Obtain your own [MaxMind GeoLite account](https://www.maxmind.com/en/geolite2/signup) and accept the [GeoLite terms](https://www.maxmind.com/en/geolite/eula). The menu can then download both City and ASN databases and optionally keep them updated. NodeRampart does not bundle GeoLite data or enroll on your behalf. Address lookups use the local databases; locations are approximate. You can skip GeoIP or use already licensed local MMDB files. [GeoIP details](docs/V0.4_OPERATIONS.md#local-geoip).
+## Local GeoIP setup and verification
 
-Identical verified GeoIP updates keep the active databases and services running without a configuration restart. Saved reports, incidents and notifications open directly from their lists; paging preserves the query period and cursors. Configuration review shows old and new values before saving.
+GeoIP adds approximate country, city and ASN information through local databases. You can use already licensed MMDB files or download City and ASN through setup with your own [MaxMind GeoLite account](https://www.maxmind.com/en/geolite2/signup). Accept the [GeoLite terms](https://www.maxmind.com/en/geolite/eula) yourself; NodeRampart does not bundle the data or enroll on your behalf. GeoIP is optional.
+
+1. Run `sudo noderampart version` and `sudo noderampart status` to check the installed program, services and collection. For a pinned alpha.11 installation, expect version `0.4.0-alpha.11` and source commit `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`.
+2. In `sudo noderampart setup`, choose **Download local GeoIP (optional)**; in `sudo noderampart tui`, choose **Local GeoIP databases → Set up local GeoIP downloads**. Enter your own Account ID and License Key in the protected form, confirm the license terms, and download City and ASN. Inspect the update result and database age. Keep credentials out of chat, recordings and reports.
+3. To enable daily updates, open **tui → Local GeoIP databases → Daily GeoIP updates**, save **YES**, fully exit and reopen it in a new process. It should still show YES. Compare it with these read-only systemd queries:
+
+   ~~~bash
+   sudo systemctl show noderampart-geoip-update.timer \
+     --property=LoadState,UnitFileState,ActiveState,SubState,NextElapseUSecRealtime
+   sudo systemctl list-timers --all noderampart-geoip-update.timer
+   ~~~
+
+4. To disable daily updates, save **NO**, exit and reopen the form to confirm NO. Inspect the timer again and record the actual result if you are collecting diagnostic evidence.
+
+YES reflects `UnitFileState=enabled` or `enabled-runtime`, even if the timer is inactive or failed. Check updater health and download success separately. Read errors are reported as errors, not NO. Enabling this persistent timer can trigger a missed update immediately.
+
+Identical verified downloads keep the active databases and services running without a configuration restart. See [GeoIP operations](docs/V0.4_OPERATIONS.md#local-geoip) for database paths and update behavior; the [validation record](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion) distinguishes lab checks from the maintainer's VPS report.
 
 ## Understanding the cost estimate
 
@@ -264,7 +273,7 @@ This feature estimates **public Internet egress only**. It does not calculate in
 
 The menu shows official tariff sources, retrieval/effective dates, calculation units, shared allowance information, observed traffic and coverage. It fetches prices when you ask and retains the previous cache on download failure. An old cache is identified as such. No AWS or OCI credentials are needed.
 
-Guest TX is not identical to billable Internet egress. Free allowances and pricing tiers may be shared with other services or hosts. Assign only this host's monthly share; the default is **zero**. The selectable bytes-per-GB assumption is displayed rather than treated as a verified provider meter. [Calculation details](docs/V0.4_OPERATIONS.md#egress-estimates).
+Guest TX is not identical to billable Internet egress. Free allowances and pricing tiers may be shared with other services or hosts. Assign only this host's monthly share; the default is **zero**. The selectable bytes-per-GB value is an explicit calculation assumption. [Calculation details](docs/V0.4_OPERATIONS.md#egress-estimates).
 
 ## Full local reports, trends and cycle forecasts
 

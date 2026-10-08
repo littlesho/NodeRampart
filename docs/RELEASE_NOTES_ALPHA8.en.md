@@ -1,5 +1,10 @@
 # Proposed release notes — NodeRampart v0.4.0-alpha.8
 
+Historical pre-publication draft from 2026-10-01. Alpha.8 was published on
+2026-10-02; see its [publication record](RELEASE_VERIFICATION.md#alpha8-publication-and-distribution-verification).
+The text below preserves the earlier stage, including its defaults and NOT RUN
+results. Use the [current guide](../README.md) for installation today.
+
 **Unpublished draft text.** This file is not a GitHub draft/Release, release date,
 asset claim or authorization to publish. Final tag/source, hosted build and
 attestation identities will be supplied only by separately authorized stages.

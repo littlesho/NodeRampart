@@ -74,9 +74,8 @@ Rules still use `time.LoadLocation` and standard `time/tzdata` fallback; the
 directory supplies names, not another rule engine. Review a supported Go ZIP,
 regenerate sorted entry names, keep `Local` separate, and run the timezone,
 config and console tests before updating. Common city names and Chinese region
-labels are small reviewed tables. `x/text v0.21.0`, already in the dependency
-graph, is now direct only for offline CLDR country names in Telegram text;
-there is no new dependency or online translation.
+labels are small reviewed tables. The pinned direct dependency `x/text v0.42.0`
+provides offline CLDR country names in Telegram text. Translation uses local data.
 
 时区目录来自上述 Go ZIP 的完整名称/别名列表，来源摘要和更新方法保存在文件头。
 更新时审阅支持的 Go ZIP、排序名称、单独保留 `Local`，运行时区/配置/界面回归；
