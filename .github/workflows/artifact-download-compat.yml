@@ -29,17 +29,17 @@ jobs:
         run: python3 scripts/check-artifact-download.py check-source
       - name: Create deterministic package and nonmatching fixtures
         run: python3 scripts/check-artifact-download.py create-packages "$RUNNER_TEMP/artifact-fixtures"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-deb-amd64
           path: ${{ runner.temp }}/artifact-fixtures/release-deb-amd64/
           if-no-files-found: error
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-rpm-fc44-amd64
           path: ${{ runner.temp }}/artifact-fixtures/release-rpm-fc44-amd64/
           if-no-files-found: error
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: compat-decoy
           path: ${{ runner.temp }}/artifact-fixtures/compat-decoy/
@@ -62,7 +62,7 @@ jobs:
         run: python3 scripts/check-artifact-download.py check-sbom release-input
       - name: Create deterministic SBOM fixtures
         run: python3 scripts/check-artifact-download.py create-sbom "$RUNNER_TEMP/artifact-sbom-fixtures"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-sbom
           path: ${{ runner.temp }}/artifact-sbom-fixtures/release-sbom/
