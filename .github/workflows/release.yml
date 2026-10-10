@@ -76,7 +76,7 @@ jobs:
             go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "GOARCH=$RELEASE_ARCH"
           done
           test -x "$CHECK_DIR/usr/libexec/noderampart/manage-remove"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-deb-${{ matrix.arch }}
           path: dist/*.deb
@@ -126,7 +126,7 @@ jobs:
           if [ "$RELEASE_FEDORA:$RELEASE_ARCH" = 44:amd64 ]; then
             cp dist/rpm/noderampart-0.4.0-0.alpha.12.fc44.src.rpm dist/publish/
           fi
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-rpm-fc${{ matrix.fedora }}-${{ matrix.arch }}
           path: dist/publish/*
@@ -162,7 +162,7 @@ jobs:
           while IFS= read -r -d '' PACKAGE; do
             python3 scripts/release_sbom.py "$PACKAGE" --syft "$TOOL_PARENT/syft/syft" --output dist/sbom
           done < <(find release-input -type f \( -name '*.deb' -o -name '*.rpm' \) ! -name '*.src.rpm' -print0)
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-sbom
           path: dist/sbom/*
