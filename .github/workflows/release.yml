@@ -38,7 +38,7 @@ jobs:
         run: ./scripts/release-metadata.sh >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.8
+          go-version: 1.26.9
           cache: true
       - name: Required validation
         run: ./scripts/validate.sh
@@ -58,7 +58,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.8
+          go-version: 1.26.9
           cache: true
       - name: Build and inspect Debian package
         env:
@@ -76,7 +76,7 @@ jobs:
             go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "GOARCH=$RELEASE_ARCH"
           done
           test -x "$CHECK_DIR/usr/libexec/noderampart/manage-remove"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-deb-${{ matrix.arch }}
           path: dist/*.deb
@@ -126,7 +126,7 @@ jobs:
           if [ "$RELEASE_FEDORA:$RELEASE_ARCH" = 44:amd64 ]; then
             cp dist/rpm/noderampart-0.4.0-0.alpha.12.fc44.src.rpm dist/publish/
           fi
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-rpm-fc${{ matrix.fedora }}-${{ matrix.arch }}
           path: dist/publish/*
@@ -143,11 +143,11 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.8
+          go-version: 1.26.9
           cache: true
       - name: Install package inspection tools
         run: sudo apt-get update && sudo apt-get install -y rpm
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: release-*
           path: release-input
@@ -162,7 +162,7 @@ jobs:
           while IFS= read -r -d '' PACKAGE; do
             python3 scripts/release_sbom.py "$PACKAGE" --syft "$TOOL_PARENT/syft/syft" --output dist/sbom
           done < <(find release-input -type f \( -name '*.deb' -o -name '*.rpm' \) ! -name '*.src.rpm' -print0)
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-sbom
           path: dist/sbom/*
@@ -181,7 +181,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: release-*
           path: release-input
