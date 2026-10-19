@@ -9,7 +9,7 @@ import re
 import stat
 
 
-DOWNLOAD_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
+DOWNLOAD_SHA = "9000827ccba6bdab643e8b6fd33ac0654aef8333"
 FIXTURES = {
     "release-deb-amd64": {
         "synthetic_amd64.deb": b"\x00synthetic Debian artifact fixture\xff\r\n",
