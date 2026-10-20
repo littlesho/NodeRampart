@@ -585,12 +585,16 @@ class InstallerTests(unittest.TestCase):
         for distribution, version in (('debian', '12'), ('debian', '13'), ('fedora', '43'), ('fedora', '44')):
             with self.subTest(distribution=distribution, version=version):
                 self.alpha12_target(distribution, version)
-                self.env.update(MOCK_DEB_INSTALLED='1', MOCK_DEB_INSTALLED_VERSION='0.4.0~alpha.13',
+                self.env.update(SCENARIO='downgrade', MOCK_DEB_INSTALLED='1',
+                                MOCK_DEB_INSTALLED_VERSION='0.4.0~alpha.13',
                                 MOCK_RPM_INSTALLED='1', MOCK_RPM_VERSION='0.4.0-0.alpha.14.fc' + version)
                 (self.lab / 'commands.jsonl').unlink(missing_ok=True)
                 result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.12', '--no-setup')
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('downgrade', result.stderr)
+                if distribution == 'debian':
+                    self.assertIn(['dpkg', '--compare-versions', '0.4.0~alpha.13', 'le', '0.4.0~alpha.12'],
+                                  self.commands())
                 self.assertFalse(any(row[0] == 'curl' for row in self.commands()))
                 self.assert_no_install()
 

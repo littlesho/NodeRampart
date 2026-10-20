@@ -115,7 +115,9 @@ class SBOMTests(unittest.TestCase):
 
     def test_source_rpm_and_arbitrary_package_names_are_rejected(self):
         for name in ('noderampart-0.4.0-0.alpha.13.fc44.src.rpm',
-                     'noderampart_0.4.0-alpha.10_amd64.deb', 'noderampart-0.4.0-0.alpha.11.fc44.x86_64.rpm',
+                     'noderampart_0.4.0-alpha.10_amd64.deb', 'noderampart_0.4.0-alpha.11_amd64.deb',
+                     'noderampart-0.4.0-0.alpha.11.fc44.x86_64.rpm',
+                     'noderampart-0.4.0-0.alpha.12.fc44.x86_64.rpm',
                      'other_0.4.0~alpha.12_amd64.deb',
                      'noderampart_0.4.0~alpha.12_amd64.deb/../escape', 'noderampart_0.4.0~alpha.12_i386.deb'):
             with self.subTest(name=name), self.assertRaises(ValueError):
@@ -157,7 +159,7 @@ class SBOMTests(unittest.TestCase):
         release.validate_uploaded(document, assets)
         for separator in ('-', '~'):
             for arch in ('amd64', 'arm64'):
-                name = f'noderampart_0.4.0{separator}alpha.11_{arch}.deb'
+                name = f'noderampart_0.4.0{separator}alpha.12_{arch}.deb'
                 self.assertEqual(release.package_identity(name),
                                  {'name': 'noderampart', 'version': '0.4.0~alpha.12', 'architecture': arch})
                 self.assertEqual(name in release.runtime_packages(), separator == '-')
@@ -167,7 +169,7 @@ class SBOMTests(unittest.TestCase):
         for changed in (assets[:-1], assets + [assets[0]],
                         [dict(asset, state='starter') if index == 0 else asset for index, asset in enumerate(assets)],
                         [dict(assets[0], name='extra.txt')] + assets[1:],
-                        [dict(asset, name=asset['name'].replace('-alpha.11_', '.alpha.11_')) for asset in assets]):
+                        [dict(asset, name=asset['name'].replace('-alpha.12_', '.alpha.12_')) for asset in assets]):
             with self.assertRaises(ValueError):
                 release.validate_uploaded(document, changed)
         for name in ('bad~name', '.hidden', 'trailing.', 'a/b', 'a%20b', 'a b'):

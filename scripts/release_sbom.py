@@ -46,10 +46,10 @@ file:
 
 
 def package_arch(name):
-    match = re.fullmatch(r"noderampart_0\.4\.0(?:~|-)alpha\.11_(amd64|arm64)\.deb", name)
+    match = re.fullmatch(r"noderampart_0\.4\.0(?:~|-)alpha\.12_(amd64|arm64)\.deb", name)
     if match:
         return match[1]
-    match = re.fullmatch(r"noderampart-0\.4\.0-0\.alpha\.12\.fc(43|44)\.(x86_64|aarch64)\.rpm", name)
+    match = re.fullmatch(r"noderampart-0\.4\.0-0\.alpha\.13\.fc(43|44)\.(x86_64|aarch64)\.rpm", name)
     if match:
         return {"x86_64": "amd64", "aarch64": "arm64"}[match[2]]
     raise ValueError("unsupported runtime package name")
@@ -66,7 +66,7 @@ def package_identity(name):
     arch = package_arch(name)
     if name.endswith('.deb'):
         return {'name': 'noderampart', 'version': '0.4.0~alpha.12', 'architecture': arch}
-    match = re.fullmatch(r'noderampart-(0\.4\.0-0\.alpha\.12\.fc(?:43|44))\.(x86_64|aarch64)\.rpm', name)
+    match = re.fullmatch(r'noderampart-(0\.4\.0-0\.alpha\.13\.fc(?:43|44))\.(x86_64|aarch64)\.rpm', name)
     return {'name': 'noderampart', 'version': match[1], 'architecture': match[2]}
 
 
