@@ -3,7 +3,7 @@
 ## Supported versions
 
 <!-- current-release:start -->
-`v0.4.0-alpha.11` is the newest published release and
+`v0.4.0-alpha.12` is the newest published release and
 [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with
 `draft=false` and `prerelease=false`. Product maturity remains **Alpha**. Security
 fixes are applied to the latest alpha branch only until a stable support policy

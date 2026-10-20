@@ -9,19 +9,19 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 ## 版本状态与验收范围
 
 <!-- current-release:start -->
-**[GitHub Latest：v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/latest)** 是最新公开产品版本，现为普通 GitHub Release（`draft=false`、`prerelease=false`）。产品成熟度仍为 **Alpha**，尚未覆盖的验收范围见下文。本版修复 GeoIP 每日更新状态回填，升级依赖与 Go 构建要求，并完善 journal 和终端回归测试。
+**[GitHub Latest：v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/latest)** 是最新公开版本，现为普通 GitHub Release（`draft=false`、`prerelease=false`）。产品成熟度仍为 **Alpha**，尚未完成的验收范围见下文。本次维护版本升级 x/sys、x/text、固定 SHA 的 artifact Actions 和 已修复安全问题的 Go CI／Release 工具链。
 <!-- current-release:end -->
 
 | 验收项目 | 结果与范围 |
 | --- | --- |
-| Debian 12/13、Fedora 43/44，x86_64 | **PASS**：公开发行包的首装、基础 SQLite、中英文 TUI/setup NO 回填、帮助与取消。 |
-| DEB/RPM 生命周期 | **PASS**：适用的升级／重装、正常服务生命周期与保留数据卸载；完整清除（purge）在 Debian 12 和 Fedora 43 核验。 |
-| Debian 12 journal 持久化确认（durable ACK） | **PASS**：正常可信 OpenSSH 事件及一次正常服务生命周期。 |
-| 发行下载与供应链验证 | **PASS**：22 项匿名资产下载、21 条 checksum、22 条 provenance 绑定与六条运行包 SPDX 绑定。 |
+| alpha.12 CI | **PASS**：main 16/16、Tag 触发 Release 17/17，包括安全／Fuzz、Go 验证、双架构及 Debian/Fedora 包。 |
+| alpha.12 Draft 供应链 | **PASS（维护者发布前验收）**：22 项下载文件／API SHA256、21 条校验和、6 组 SPDX／buildinfo、22 项 provenance 与 6 项 SPDX 签名。发布后的独立匿名下载仍为 **NOT RUN**。 |
+| Debian 12/13、Fedora 43/44 原生 x86_64 | 旧 **alpha.11** 的限定首装、SQLite 和生命周期曾 PASS；新的 alpha.12 发行包 **尚未重新原生复测**。 |
+| Debian 12 普通 durable ACK | 旧 **alpha.11** 的限定 PASS；alpha.12 原生 ACK **NOT RUN**。 |
 
-**USER-REPORTED PASS**：维护者报告 VPS 匿名下载／升级、原 Bug 复测、合法许可下的 MaxMind City/ASN 下载，以及 GeoIP **YES 保存 → 完全退出 → 新进程仍为 YES → systemd timer 为 enabled**。未取得独立自动化 VPS 测试日志。
+**历史 USER-REPORTED PASS（仅 alpha.11）**：维护者曾报告 VPS 匿名下载／升级、原 Bug 复测、合法许可下的 MaxMind City/ASN 下载，以及 GeoIP **YES 保存 → 完全退出 → 新进程仍为 YES → systemd timer 为 enabled**。未取得独立自动化 VPS 测试日志。
 
-**NOT RUN**：Fedora 43/44 原生 durable ACK、完整 journal 故障恢复、原生 ARM64、长期持续运行（soak）、真实第三方通知投递，以及 18 个公开发行程序的完整独立二进制漏洞扫描。稳定版与生产就绪程度尚未确认。历史失败和证据范围见[当前晋级与验收记录](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion)及 [Alpha 限制](docs/ALPHA_LIMITATIONS.md)。
+**alpha.12 NOT RUN**：VPS 实际升级／Bug 复测、原生 ARM64、Fedora journal durable ACK／完整故障恢复、长期 soak、真实第三方通知投递及完整独立二进制漏洞扫描。alpha.11 历史 VM／VPS 证据不自动继承到新发行字节；稳定／生产就绪尚未建立。详见[alpha.12 发布记录](docs/RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication)与 [Alpha 限制](docs/ALPHA_LIMITATIONS.md)。
 
 安装示例跟随最新公开版本。[历史版本](https://github.com/littlesho/NodeRampart/releases)、[发布验证](docs/RELEASE_VERIFICATION.md)和 [CHANGELOG](CHANGELOG.md)保留早期版本及其原始结果。
 
@@ -68,15 +68,15 @@ sudo noderampart setup --language zh
 ### 固定版本以便复现
 
 <!-- current-release:start -->
-用 `--version v0.4.0-alpha.11` 精确固定当前公开版；显式版本不查询默认 Release 列表，也不静默换版。alpha.11 Release 的 bootstrap 是冻结源码快照，省略版本仍可跟随以后公开的新版本。使用该资产复现 alpha.11 安装时，**必须显式传入版本**：
+用 `--version v0.4.0-alpha.12` 精确固定当前公开版；显式版本不查询默认 Release 列表，也不静默换版。alpha.12 Release 的 bootstrap 是冻结源码快照，省略版本仍可跟随以后公开的新版本。使用该资产复现 alpha.12 安装时，**必须显式传入版本**：
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.11/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.12/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.11 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.12 --no-setup
 sudo noderampart setup --language zh
 ~~~
 <!-- current-release:end -->
@@ -233,7 +233,7 @@ HTTPS 外部心跳是与通知渠道并列的可选健康上报功能。它区�
 
 GeoIP 通过本地数据库补充大致的国家、城市和 ASN 信息。可使用已合法取得的 MMDB 文件，或在向导中用自己的 [MaxMind GeoLite 账户](https://www.maxmind.com/en/geolite2/signup)下载 City 和 ASN 数据库。请自行接受 [GeoLite 条款](https://www.maxmind.com/en/geolite/eula)；NodeRampart 不捆绑数据库，也不代注册账户。GeoIP 为可选功能。
 
-1. 运行 `sudo noderampart version` 和 `sudo noderampart status`，检查已安装程序、服务和采集状态。固定安装 alpha.11 时，预期版本为 `0.4.0-alpha.11`，源码提交为 `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`。
+1. 运行 `sudo noderampart version` 和 `sudo noderampart status`，检查已安装程序、服务和采集状态。固定安装 alpha.12 时，预期版本为 `0.4.0-alpha.12`，源码提交为 `ab6e5d26b6aa7084b969e9a45081af2e2af2c9ed`。
 2. 在 `sudo noderampart setup --language zh` 中选择**下载本地 GeoIP（可选）**，或在 `sudo noderampart tui --language zh` 中选择**本地 GeoIP 数据库 → 设置本地 GeoIP 下载**。通过受保护的表单输入自己的 Account ID 和 License Key，确认许可条款后下载 City 和 ASN，查看更新结果与库龄。不要将凭据放入聊天、录屏或报告。
 3. 如需每日更新，打开 **tui → 本地 GeoIP 数据库 → GeoIP 每日更新**，保存 **YES**，完全退出，再启动新进程重开表单。表单应仍显示 YES。用以下只读 systemd 命令核对：
 
