@@ -30,8 +30,11 @@ The current release is [v0.4.0-alpha.12 / GitHub Latest](https://github.com/litt
   subjects and six SPDX signatures with source-ref/digest/signer checks.
 - Published the same Release ID `418421512` at `2026-10-20T14:15:32Z`
   as ordinary Release and GitHub Latest (`draft=false`, `prerelease=false`).
-  Product maturity is still Alpha. Post-publication independent anonymous
-  re-download and alpha.12 native VPS/ARM64/soak remain NOT RUN here; the
+  Product maturity is still Alpha. On 2026-10-21 (UTC+8), a separate
+  maintainer-run no-auth public HTTP audit reported **22/22** anonymous
+  asset-byte/API SHA256 matches, **21/21** pinned SHA256SUMS checks, release.json,
+  inventory and two Latest snapshots PASS. Local audit evidence was retained
+  by the maintainer; alpha.12 native VPS/ARM64/soak remain NOT RUN, and the
   alpha.11 native evidence remains historical.
 
 ## 0.4.0-alpha.11 - 2026-10-08 (UTC; Alpha)

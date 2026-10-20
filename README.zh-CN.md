@@ -9,13 +9,14 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 ## 版本状态与验收范围
 
 <!-- current-release:start -->
-**[GitHub Latest：v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/latest)** 是最新公开版本，现为普通 GitHub Release（`draft=false`、`prerelease=false`）。产品成熟度仍为 **Alpha**，尚未完成的验收范围见下文。本次维护版本升级 x/sys、x/text、固定 SHA 的 artifact Actions 和 已修复安全问题的 Go CI／Release 工具链。
+**[GitHub Latest：v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/latest)** 是最新公开版本，现为普通 GitHub Release（`draft=false`、`prerelease=false`）。产品成熟度仍为 **Alpha**，尚未完成的验收范围见下文。本次维护版本升级 x/sys、x/text、固定 SHA 的 artifact Actions，以及已修复安全问题的 Go CI／Release 工具链。
 <!-- current-release:end -->
 
 | 验收项目 | 结果与范围 |
 | --- | --- |
 | alpha.12 CI | **PASS**：main 16/16、Tag 触发 Release 17/17，包括安全／Fuzz、Go 验证、双架构及 Debian/Fedora 包。 |
-| alpha.12 Draft 供应链 | **PASS（维护者发布前验收）**：22 项下载文件／API SHA256、21 条校验和、6 组 SPDX／buildinfo、22 项 provenance 与 6 项 SPDX 签名。发布后的独立匿名下载仍为 **NOT RUN**。 |
+| alpha.12 Draft 供应链 | **PASS（维护者发布前验收）**：22 项下载文件／API SHA256、21 条校验和、6 组 SPDX／buildinfo、22 项 provenance 与 6 项 SPDX 签名。 |
+| alpha.12 公开匿名分发 | **USER-REPORTED PASS（2026-10-21，UTC+8）**：无凭据匿名下载全部 22 个公开资产，22/22 字节／公开 API SHA256 一致，21/21 固定校验和一致，release.json、包清单及两次 Latest 快照通过。未进行实际安装或 VPS 运行测试。 |
 | Debian 12/13、Fedora 43/44 原生 x86_64 | 旧 **alpha.11** 的限定首装、SQLite 和生命周期曾 PASS；新的 alpha.12 发行包 **尚未重新原生复测**。 |
 | Debian 12 普通 durable ACK | 旧 **alpha.11** 的限定 PASS；alpha.12 原生 ACK **NOT RUN**。 |
 

@@ -15,7 +15,8 @@ NodeRampart watches your server in the background. It records events, builds dai
 | Validation | Result and scope |
 | --- | --- |
 | Alpha.12 CI | **PASS:** main CI 16/16 and tagged Release CI 17/17, including safety/fuzz, Go validation, amd64/arm64 and Debian/Fedora packages. |
-| Alpha.12 hosted Draft supply chain | **PASS (maintainer-verified before publication):** 22 downloaded file SHA256/API digests, 21 checksum entries, six SPDX/buildinfo pairs, 22 provenance and six SPDX attestations. Post-publication anonymous download is **NOT RUN** in this record. |
+| Alpha.12 hosted Draft supply chain | **PASS (maintainer-verified before publication):** 22 downloaded asset/API SHA256 digests, 21 checksum entries, six SPDX/buildinfo pairs, 22 provenance and six SPDX attestations. |
+| Alpha.12 published asset distribution | **USER-REPORTED PASS (2026-10-21, UTC+8):** fresh anonymous, no-auth HTTP download of all 22 assets; 22/22 byte/API SHA256 matches, 21/21 pinned SHA256SUMS entries, release.json, package inventory and two Latest API snapshots passed. No actual installation or VPS runtime validation was performed. |
 | Native Debian 12/13 and Fedora 43/44 x86_64 | Limited first-install, SQLite and lifecycle checks were PASS for **historical alpha.11**. They were **NOT RUN** again on the newly built alpha.12 hosted packages. |
 | Debian 12 normal durable journal ACK | Limited **historical alpha.11** PASS; alpha.12 native ACK is **NOT RUN**. |
 
