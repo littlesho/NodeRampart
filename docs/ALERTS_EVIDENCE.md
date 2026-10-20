@@ -2,11 +2,11 @@
 
 <!-- current-release:start -->
 Budget/health alerts, local evidence and the SSH/GeoIP diagnostic additions below
-are included in published [v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11).
+are included in published [v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.12).
 Current public installation selects this Alpha release, an ordinary GitHub
-Release and Latest; see its [promotion and validation scope](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion).
+Release and Latest; see its [publication and validation scope](RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication).
 
-预算、健康告警、离线证据与下文 SSH/GeoIP 诊断已包含在公开 alpha.11 中。
+预算、健康告警、离线证据与下文 SSH/GeoIP 诊断已包含在公开 alpha.12 中。
 该版本已设为普通 GitHub Release／Latest，产品成熟度仍为 Alpha；CLI 与 daemon 应配套升级。
 <!-- current-release:end -->
 Both new alert groups are **off by default**. Open `sudo noderampart tui

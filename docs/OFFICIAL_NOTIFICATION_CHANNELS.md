@@ -3,9 +3,9 @@
 [简体中文](OFFICIAL_NOTIFICATION_CHANNELS.zh-CN.md) · [First six native channels](NOTIFICATION_CHANNELS.md) · [Privacy](PRIVACY.md) · [User agreement](USER_AGREEMENT.md)
 
 <!-- current-release:start -->
-This guide targets the newest published release, **[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11)**,
+This guide targets the newest published release, **[v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.12)**,
 an ordinary GitHub Release selected as [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest).
-Product maturity remains **Alpha**; see the [promotion and validation scope](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion).
+Product maturity remains **Alpha**; see the [publication and validation scope](RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication).
 <!-- current-release:end -->
 
 It includes `qqbot`, `line`,
