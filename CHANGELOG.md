@@ -4,6 +4,22 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 
 The current release is [v0.4.0-alpha.11 / GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with Alpha product maturity. Older entries preserve their publication-time defaults, validation results and development milestones. Use the [current installation guide](README.md#install-the-newest-published-release) for installation today.
 
+## 0.4.0-alpha.12 - release preparation (2026-10-20 UTC; Alpha)
+
+- Integrate Dependabot #54–#57: x/sys v0.49.0 and x/text v0.43.0,
+  including indirect Go module checksum changes and third-party notices.
+- Update SHA-pinned upload-artifact to v7.0.2 and download-artifact to
+  v8.0.2, preserving strict artifact-download fixture and SHA validation.
+- Pin CI and release Go to the security-fixed 1.26.9, retaining the
+  Go 1.26.0 minimum and the separate fuzz-only toolchain.
+- Dependency integration CI 16/16, artifact compatibility 3/3 and CodeQL
+  passed. After merge, Fedora 44 x86_64 failed before checkout/build when
+  the Fedora metadata mirror was unreachable (curl error 7). Original
+  attempt 1 remains FAILURE; its authorized failed-job retry passed
+  and main CI records 16/16 PASS on attempt 2.
+- Prepare consistent alpha.12 identities for native packages, installer,
+  SBOM inventory and release provenance; production runtime, tagged hosted
+  release, publication and latest promotion require separate evidence.
 ## 0.4.0-alpha.11 - 2026-10-08 (UTC; Alpha)
 
 - Read the actual GeoIP timer enable state on every daily-update and setup
