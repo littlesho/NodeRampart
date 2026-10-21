@@ -7,7 +7,7 @@ The current module and dependency graph require **Go 1.26.0 or newer**:
 `golang.org/x/text v0.43.0` declare Go 1.26.0. SQLite requires the matching
 `modernc.org/libc v1.77.1`.
 The source also uses `os.Root`
-(introduced in Go 1.24). CI pins Go 1.26.9 for validation; that tested toolchain
+(introduced in Go 1.24). CI pins Go 1.26.10 for validation; that tested toolchain
 is not the project's minimum, and it does not prove a Go 1.26.0 runtime test.
 This requirement applies to source builds; installing a prebuilt package does
 not require Go.
@@ -171,13 +171,16 @@ accepted. Local checks do not execute hosted workflows or publish drafts.
 CI also builds Fedora 43/44 RPM/SRPMs for both architectures and runs seven separate bounded fuzz
 jobs for SSH text, journal JSON/checkpoints, sensor IPC frames, configuration,
 Ethernet decoding, route attributes and replay metadata. Only these fuzz jobs
-pin Go 1.27.1, which fixes the parent/child deadline cancellation race in
+pin Go 1.27.3, which retains the fix for the parent/child deadline cancellation race in
 [golang/go#75804](https://github.com/golang/go/issues/75804). The shared workflow
 applies this pin to PR/main CI and future release safety checks. Ordinary tests,
-race, coverage, Ubuntu builds and release validation retain Go 1.26.9; Fedora
-packages retain their native build toolchain. Each fuzz job mutates inputs for
+race, coverage, Ubuntu builds and release validation retain Go 1.26.10; Fedora
+jobs install a SHA256-verified upstream Go 1.26.10 toolchain before compilation,
+not relying on the lagging distro golang RPM. The actual RPM binaries must
+report Go 1.26.10 via Go build metadata. Released alpha.12 bytes are frozen and
+were compiled with Go 1.26.9; upgrading this main workflow cannot patch them. Each fuzz job mutates inputs for
 30 seconds with two workers, a two-minute command timeout and a ten-minute job
-budget. Run one locally with an isolated Go 1.27.1 binary on `PATH`:
+budget. Run one locally with an isolated Go 1.27.3 binary on `PATH`:
 
 ```bash
 GOTOOLCHAIN=local GOMAXPROCS=2 GOMEMLIMIT=768MiB go test ./internal/collector -run='^$' \

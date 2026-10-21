@@ -68,11 +68,11 @@ class ValidationTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.project = self.root / "project"
         (self.project / "scripts").mkdir(parents=True)
-        (self.project / "VERSION").write_text("0.4.0-alpha.12\n")
+        (self.project / "VERSION").write_text("0.4.0-alpha.13\n")
         for name in ("validate.sh", "build-release.sh", "release-metadata.sh"):
             shutil.copyfile(REPO / "scripts" / name, self.project / "scripts" / name)
         package = self.project / "scripts/build-deb.sh"
-        package.write_text("#!/bin/sh\nmkdir -p dist\nprintf 'synthetic package\\n' > dist/noderampart_0.4.0~alpha.12_${ARCH}.deb\nprintf 'package fixture reached\\n'\n")
+        package.write_text("#!/bin/sh\nmkdir -p dist\nprintf 'synthetic package\\n' > dist/noderampart_0.4.0~alpha.13_${ARCH}.deb\nprintf 'package fixture reached\\n'\n")
         package.chmod(0o755)
         self.mocks = self.root / "mocks"
         self.mocks.mkdir()
@@ -236,8 +236,8 @@ class ValidationTests(unittest.TestCase):
         self.assertIn("package fixture reached", result.stdout)
         self.assertIn(["git", ["-c", 'safe.directory=' + str(self.project), "ls-files", "--others", "--exclude-standard", "--", ".", ":(exclude)release-input"], None], self.commands())
         self.assertIn(["make", ["build"], None], self.commands())
-        self.assertTrue((self.project / 'dist/noderampart_0.4.0-alpha.12_amd64.deb').is_file())
-        self.assertFalse((self.project / 'dist/noderampart_0.4.0~alpha.12_amd64.deb').exists())
+        self.assertTrue((self.project / 'dist/noderampart_0.4.0-alpha.13_amd64.deb').is_file())
+        self.assertFalse((self.project / 'dist/noderampart_0.4.0~alpha.13_amd64.deb').exists())
 
     def test_source_metadata_is_verified_once_and_has_a_real_commit_date(self):
         self.env['EXPECTED_COMMIT'] = HEAD
@@ -270,13 +270,40 @@ class ValidationTests(unittest.TestCase):
                 self.assertFalse(any(row[0] == 'make' for row in self.commands()))
 
     def test_official_release_preserves_existing_portable_output(self):
-        output = self.project / 'dist/noderampart_0.4.0-alpha.12_amd64.deb'
+        output = self.project / 'dist/noderampart_0.4.0-alpha.13_amd64.deb'
         output.parent.mkdir()
         output.write_bytes(b'retained previous artifact')
         result = self.run_script('build-release.sh', '--deb', 'amd64')
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(output.read_bytes(), b'retained previous artifact')
         self.assertFalse(any(row[0] == 'make' for row in self.commands()))
+
+    def test_go_security_toolchain_pins_all_hosted_build_paths(self):
+        ci = (REPO / ".github/workflows/ci.yml").read_text()
+        release = (REPO / ".github/workflows/release.yml").read_text()
+        fuzz = (REPO / ".github/workflows/safety.yml").read_text()
+        helper = (REPO / "scripts/ci-install-pinned-go-fedora.sh").read_text()
+        source_files = (REPO / "packaging/source-files.txt").read_text()
+        for workflow in (ci, release):
+            self.assertEqual(workflow.count("go-version: 1.26.10"), 3)
+            self.assertNotIn("go-version: 1.26.9", workflow)
+            self.assertEqual(workflow.count("sh ./scripts/ci-install-pinned-go-fedora.sh"), 1)
+            self.assertEqual(workflow.count(
+                "test \"$(GOTOOLCHAIN=local go version)\" = 'go version go1.26.10 linux/amd64'"), 1)
+            rpm = workflow.split("container: registry.fedoraproject.org/fedora:", 1)[1]
+            self.assertIn("GOTOOLCHAIN: local", rpm)
+        self.assertIn("go-version: 1.27.3", fuzz)
+        self.assertNotIn("go-version: 1.27.1", fuzz)
+        self.assertIn("go1.26.10.linux-amd64.tar.gz", helper)
+        self.assertIn("ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5", helper)
+        self.assertIn("sha256sum --check --status", helper)
+        self.assertIn("--proto-redir '=https'", helper)
+        self.assertIn('"$GITHUB_PATH"', helper)
+        self.assertIn("scripts/ci-install-pinned-go-fedora.sh", source_files.splitlines())
+        # Package provenance must reject a binary compiled with the old
+        # vulnerable standard library even if Go module scans are clean.
+        sbom = (REPO / "scripts/release_sbom.py").read_text()
+        self.assertIn('binary.get("go_version") != "go1.26.10"', sbom)
 
     def test_ci_and_release_share_same_commit_safety_and_metadata_gates(self):
         safety = (REPO / '.github/workflows/safety.yml').read_text()
@@ -305,10 +332,10 @@ class ValidationTests(unittest.TestCase):
         self.assertIn('./scripts/build-release.sh --rpm "$RELEASE_ARCH"', rpm_ci)
         self.assertIn('name: noderampart-fedora${{ matrix.fedora }}-${{ matrix.arch }}-rpm', rpm_ci)
         self.assertIn('--check-upload uploaded-release.json uploaded-assets.json', release)
-        self.assertIn('PACKAGE="dist/noderampart_0.4.0-alpha.12_${RELEASE_ARCH}.deb"', release)
-        self.assertIn('PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.13.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"', release)
-        self.assertEqual(release.count('subject-path: dist/release/noderampart_0.4.0-alpha.12_'), 2)
-        self.assertEqual(release.count('subject-path: dist/release/noderampart-0.4.0-0.alpha.13.'), 4)
+        self.assertIn('PACKAGE="dist/noderampart_0.4.0-alpha.13_${RELEASE_ARCH}.deb"', release)
+        self.assertIn('PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.14.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"', release)
+        self.assertEqual(release.count('subject-path: dist/release/noderampart_0.4.0-alpha.13_'), 2)
+        self.assertEqual(release.count('subject-path: dist/release/noderampart-0.4.0-0.alpha.14.'), 4)
 
 
 if __name__ == "__main__":

@@ -38,7 +38,7 @@ jobs:
         run: ./scripts/release-metadata.sh >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.9
+          go-version: 1.26.10
           cache: true
       - name: Required validation
         run: ./scripts/validate.sh
@@ -58,7 +58,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.9
+          go-version: 1.26.10
           cache: true
       - name: Build and inspect Debian package
         env:
@@ -67,13 +67,14 @@ jobs:
           BUILD_DATE: ${{ needs.validate.outputs.build_date }}
         run: |
           ./scripts/build-release.sh --deb "$RELEASE_ARCH"
-          PACKAGE="dist/noderampart_0.4.0-alpha.12_${RELEASE_ARCH}.deb"
+          PACKAGE="dist/noderampart_0.4.0-alpha.13_${RELEASE_ARCH}.deb"
           test "$(dpkg-deb -f "$PACKAGE" Architecture)" = "$RELEASE_ARCH"
           CHECK_DIR=$(mktemp -d)
           trap 'rm -rf -- "$CHECK_DIR"' EXIT
           dpkg-deb -x "$PACKAGE" "$CHECK_DIR"
           for binary in noderampart noderampartd noderampart-sensor; do
             go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "GOARCH=$RELEASE_ARCH"
+            go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "go1.26.10"
           done
           test -x "$CHECK_DIR/usr/libexec/noderampart/manage-remove"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -94,11 +95,13 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - name: Install distribution build dependencies
-        run: dnf install -y git golang rpm-build systemd-rpm-macros make python3 tar gzip diffutils findutils cpio
+        run: dnf install -y git golang rpm-build systemd-rpm-macros make python3 tar gzip diffutils findutils cpio curl coreutils
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Install verified upstream Go 1.26.10 (Fedora)
+        run: sh ./scripts/ci-install-pinned-go-fedora.sh
       - name: Build and inspect Fedora package
         env:
           RELEASE_ARCH: ${{ matrix.arch }}
@@ -107,24 +110,26 @@ jobs:
           BUILD_DATE: ${{ needs.validate.outputs.build_date }}
           GOTOOLCHAIN: local
         run: |
+          test "$(GOTOOLCHAIN=local go version)" = 'go version go1.26.10 linux/amd64'
           go mod download
           go mod verify
           ./scripts/build-release.sh --rpm "$RELEASE_ARCH"
           case "$RELEASE_ARCH" in amd64) RPM_ARCH=x86_64;; arm64) RPM_ARCH=aarch64;; esac
-          PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.13.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"
+          PACKAGE="dist/rpm/noderampart-0.4.0-0.alpha.14.fc${RELEASE_FEDORA}.${RPM_ARCH}.rpm"
           test "$(rpm -qp --qf '%{ARCH}' "$PACKAGE")" = "$RPM_ARCH"
           CHECK_DIR=$(mktemp -d)
           trap 'rm -rf -- "$CHECK_DIR"' EXIT
           rpm2cpio "$PACKAGE" | (cd "$CHECK_DIR" && cpio -id --quiet --no-absolute-filenames './usr/bin/*' './usr/libexec/noderampart/*')
           for binary in noderampart noderampartd noderampart-sensor; do
             go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "GOARCH=$RELEASE_ARCH"
+            go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "go1.26.10"
           done
           test -x "$CHECK_DIR/usr/libexec/noderampart/manage-remove"
           python3 scripts/test-packaging.py
           mkdir -p dist/publish
           cp "$PACKAGE" dist/publish/
           if [ "$RELEASE_FEDORA:$RELEASE_ARCH" = 44:amd64 ]; then
-            cp dist/rpm/noderampart-0.4.0-0.alpha.13.fc44.src.rpm dist/publish/
+            cp dist/rpm/noderampart-0.4.0-0.alpha.14.fc44.src.rpm dist/publish/
           fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -143,7 +148,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.9
+          go-version: 1.26.10
           cache: true
       - name: Install package inspection tools
         run: sudo apt-get update && sudo apt-get install -y rpm
@@ -197,33 +202,33 @@ jobs:
       - name: Attest Debian amd64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart_0.4.0-alpha.12_amd64.deb
-          sbom-path: dist/release/noderampart_0.4.0-alpha.12_amd64.deb.spdx.json
+          subject-path: dist/release/noderampart_0.4.0-alpha.13_amd64.deb
+          sbom-path: dist/release/noderampart_0.4.0-alpha.13_amd64.deb.spdx.json
       - name: Attest Debian arm64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart_0.4.0-alpha.12_arm64.deb
-          sbom-path: dist/release/noderampart_0.4.0-alpha.12_arm64.deb.spdx.json
+          subject-path: dist/release/noderampart_0.4.0-alpha.13_arm64.deb
+          sbom-path: dist/release/noderampart_0.4.0-alpha.13_arm64.deb.spdx.json
       - name: Attest Fedora 43 x86_64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.13.fc43.x86_64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.13.fc43.x86_64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.14.fc43.x86_64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.14.fc43.x86_64.rpm.spdx.json
       - name: Attest Fedora 43 aarch64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.13.fc43.aarch64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.13.fc43.aarch64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.14.fc43.aarch64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.14.fc43.aarch64.rpm.spdx.json
       - name: Attest Fedora 44 x86_64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.13.fc44.x86_64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.13.fc44.x86_64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.14.fc44.x86_64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.14.fc44.x86_64.rpm.spdx.json
       - name: Attest Fedora 44 aarch64 SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/noderampart-0.4.0-0.alpha.13.fc44.aarch64.rpm
-          sbom-path: dist/release/noderampart-0.4.0-0.alpha.13.fc44.aarch64.rpm.spdx.json
+          subject-path: dist/release/noderampart-0.4.0-0.alpha.14.fc44.aarch64.rpm
+          sbom-path: dist/release/noderampart-0.4.0-0.alpha.14.fc44.aarch64.rpm.spdx.json
       - name: Create draft for maintainer review
         env:
           GH_TOKEN: ${{ github.token }}

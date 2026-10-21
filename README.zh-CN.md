@@ -24,6 +24,8 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 
 **alpha.12 NOT RUN**：VPS 实际升级／Bug 复测、原生 ARM64、Fedora journal durable ACK／完整故障恢复、长期 soak、真实第三方通知投递及完整独立二进制漏洞扫描。alpha.11 历史 VM／VPS 证据不自动继承到新发行字节；稳定／生产就绪尚未建立。详见[alpha.12 发布记录](docs/RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication)与 [Alpha 限制](docs/ALPHA_LIMITATIONS.md)。
 
+**安全维护说明（2026-10-21）**：alpha.12 公开二进制由 Go 1.26.9 编译，受 [CVE-2026-111943 / GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809) 影响。正准备使用 Go 1.26.10 重编译的 alpha.13 安全维护版；原发行资产未覆盖，服务器更新 Go 编译器也不会自动修补已经构建的程序。
+
 安装示例跟随最新公开版本。[历史版本](https://github.com/littlesho/NodeRampart/releases)、[发布验证](docs/RELEASE_VERIFICATION.md)和 [CHANGELOG](CHANGELOG.md)保留早期版本及其原始结果。
 
 ## 能帮你做什么？

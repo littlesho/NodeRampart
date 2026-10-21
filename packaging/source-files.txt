@@ -519,6 +519,7 @@ packaging/sysusers.d/noderampart.conf
 scripts/bootstrap.sh
 scripts/build-deb.sh
 scripts/build-release.sh
+scripts/ci-install-pinned-go-fedora.sh
 scripts/build-rpm.sh
 scripts/check-artifact-download.py
 scripts/check-current-release.py

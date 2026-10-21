@@ -39,7 +39,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.9
+          go-version: 1.26.10
           cache: true
 
       - name: Required candidate validation
@@ -63,7 +63,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.9
+          go-version: 1.26.10
           cache: true
 
       - name: Build static Linux binaries
@@ -103,7 +103,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.9
+          go-version: 1.26.10
           cache: true
 
       - name: Build Debian package
@@ -134,12 +134,14 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Install native Fedora build tools
-        run: dnf install -y git golang rpm-build systemd-rpm-macros make python3 tar gzip diffutils findutils
+        run: dnf install -y git golang rpm-build systemd-rpm-macros make python3 tar gzip diffutils findutils curl coreutils
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Install verified upstream Go 1.26.10 (Fedora)
+        run: sh ./scripts/ci-install-pinned-go-fedora.sh
       - name: Build through the actual release RPM entry point
         env:
           GOTOOLCHAIN: local
@@ -148,6 +150,7 @@ jobs:
           RELEASE_ARCH: ${{ matrix.arch }}
           GIT_TEST_ASSUME_DIFFERENT_OWNER: "1"
         run: |
+          test "$(GOTOOLCHAIN=local go version)" = 'go version go1.26.10 linux/amd64'
           go mod download
           go mod verify
           ./scripts/build-release.sh --rpm "$RELEASE_ARCH"

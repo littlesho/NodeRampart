@@ -4,6 +4,28 @@ All notable changes will be documented here. NodeRampart follows Semantic Versio
 
 The current release is [v0.4.0-alpha.12 / GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with Alpha product maturity. Older entries preserve their publication-time defaults, validation results and development milestones. Use the [current installation guide](README.md#install-the-newest-published-release) for installation today.
 
+## 0.4.0-alpha.13 - security maintenance candidate (2026-10-21 UTC; Alpha)
+
+- **Security: CVE-2026-111943 / GO-2026-6809.** Go 1.26.9
+  embeds a vulnerable crypto/x509 standard-library certificate-chain verifier.
+  The 2026-10-21 main validation run 39558165468 failed its real
+  govulncheck reachability gate; original FAILURE is retained, not rerun
+  or hidden. The required Go upstream repair is 1.26.10.
+- Pin hosted CI, release validation and Ubuntu builds to Go 1.26.10.
+  Fedora 43/44 RPM jobs use the upstream Go 1.26.10 Linux x86_64
+  compiler archive, checked against the official fixed SHA256 before
+  it enters PATH, instead of trusting the distro's lagging Go 1.26.9.
+  Verify the resulting release programs report exactly go1.26.10.
+  Upgrade the separate fuzz-only Go version to 1.27.3.
+- Prepare strict independent native identities for alpha.13:
+  Debian `0.4.0~alpha.13`, RPM `0.4.0-0.alpha.14.fc43/fc44`,
+  explicit installer mapping and six-package SPDX/buildinfo checks.
+  Preserve strict 22-asset Release Draft and provenance gates.
+- **Candidate only.** No alpha.13 Tag/Release is implied by this entry.
+  Public GitHub Latest stays alpha.12 until a new alpha.13 Release has
+  passed source, hosted package, SBOM and distribution verification.
+  Existing alpha.12 signed assets and source remain immutable.
+
 ## 0.4.0-alpha.12 - 2026-10-20 (UTC; Alpha)
 
 - Integrate Dependabot #54–#57: x/sys v0.49.0 and x/text v0.43.0,
