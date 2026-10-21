@@ -161,7 +161,7 @@ class SBOMTests(unittest.TestCase):
         release.validate_uploaded(document, assets)
         for separator in ('-', '~'):
             for arch in ('amd64', 'arm64'):
-                name = f'noderampart_0.4.0{separator}alpha.12_{arch}.deb'
+                name = f'noderampart_0.4.0{separator}alpha.13_{arch}.deb'
                 self.assertEqual(release.package_identity(name),
                                  {'name': 'noderampart', 'version': '0.4.0~alpha.13', 'architecture': arch})
                 self.assertEqual(name in release.runtime_packages(), separator == '-')
