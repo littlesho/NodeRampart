@@ -168,10 +168,15 @@ class SBOMTests(unittest.TestCase):
         for fedora in (43, 44):
             self.assertEqual(release.package_identity(f'noderampart-0.4.0-0.alpha.14.fc{fedora}.x86_64.rpm')['version'],
                              f'0.4.0-0.alpha.14.fc{fedora}')
+        typo_assets = [dict(asset, name=asset['name'].replace('-alpha.13_', '.alpha.13_'))
+                       for asset in assets]
+        self.assertNotEqual([asset['name'] for asset in typo_assets],
+                            [asset['name'] for asset in assets],
+                            'negative filename fixture must actually change an asset name')
         for changed in (assets[:-1], assets + [assets[0]],
                         [dict(asset, state='starter') if index == 0 else asset for index, asset in enumerate(assets)],
                         [dict(assets[0], name='extra.txt')] + assets[1:],
-                        [dict(asset, name=asset['name'].replace('-alpha.12_', '.alpha.12_')) for asset in assets]):
+                        typo_assets):
             with self.assertRaises(ValueError):
                 release.validate_uploaded(document, changed)
         for name in ('bad~name', '.hidden', 'trailing.', 'a/b', 'a%20b', 'a b'):
