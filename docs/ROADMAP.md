@@ -42,8 +42,9 @@
   prior alpha.6 acceptance does not certify the new package bytes.
 
 <!-- current-release:start -->
-## `v0.4.0-alpha.11` — current published alpha
+## `v0.4.0-alpha.12` — current published alpha
 
+- Alpha.12 updates x/sys, x/text, pinned artifact Actions and the security-fixed Go CI/release toolchain. Product maturity remains Alpha; native alpha.12 runtime/soak tests remain NOT RUN.
 - GeoIP setup and daily-update forms read the actual timer enablement on each
   opening. Terminal regression tests and journal-test synchronization are updated,
   alongside the pinned Go dependency graph; see the [changelog](../CHANGELOG.md).
@@ -53,7 +54,7 @@
   allowlisted SSH/GeoIP diagnostics; updater privilege-drop/readiness and guarded
   unit migration fixes. Config/API/sensor/DB remain 1/1/5/14; upgrade CLI/daemon
   together. Identity-aware sensor receipt diagnosis and early RPM installation
-  conflict checks remain included; see the [promotion scope](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion).
+  conflict checks remain included; see the [publication scope](RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication).
 - Current install and verification examples track this published release; the
   maintained bootstrap resolves future published versions when actively invoked.
 <!-- current-release:end -->

@@ -118,24 +118,21 @@ numbering is independent of the project prerelease index. Use each build script'
 reported output path; ordinary validation/package builds create no tag or Release.
 
 <!-- current-release:start -->
-The current published release is `v0.4.0-alpha.11`, with public DEB filename
-`noderampart_0.4.0-alpha.11_ARCH.deb`, Debian internal `0.4.0~alpha.11`, and RPM
-`0.4.0-0.alpha.12.fc43/fc44`. Its permanent source is
-`2c9d4416adef3cb64e0523a1b9ac1e691b121c16`; see the [hosted promotion record](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion).
+The current published release is `v0.4.0-alpha.12`, with public DEB filename
+`noderampart_0.4.0-alpha.12_ARCH.deb`, Debian internal `0.4.0~alpha.12`, and RPM
+`0.4.0-0.alpha.13.fc43/fc44`. Its permanent source is
+`ab6e5d26b6aa7084b969e9a45081af2e2af2c9ed`; see the [hosted promotion record](RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication).
 <!-- current-release:end -->
 
 Same-source local runtime evidence and final hosted-byte evidence are separate.
-The alpha.11 hosted bytes have native first-install, basic SQLite and GeoIP
+The historical alpha.11 hosted bytes have native first-install, basic SQLite and GeoIP
 NO/help/cancel evidence on Debian 12/13 and Fedora 43/44 x86_64, with applicable
 upgrade, reinstall, normal restart and DEB/RPM remove/purge results. Debian12
 normal durable ACK passed. Fedora native durable ACK, complete journal fault
 recovery, native ARM64, long soak and the 18-program independent binary
 vulnerability scans remain NOT RUN. VPS anonymous upgrade, bug retest, licensed
 City/ASN download and the YES-save/new-process/timer-enabled loop are
-USER-REPORTED PASS, not independent automated VPS logs. The same Release is now
-GitHub Latest with Alpha maturity and explicit acceptance of the remaining
-coverage gaps. See the promotion record for the exact scope and historical
-Pre-release waiver.
+USER-REPORTED PASS, not independent automated VPS logs. That alpha.11 Release was selected as GitHub Latest at its promotion, but has been superseded by alpha.12. Historical native evidence does not certify alpha.12 hosted bytes; their own native/lifecycle and long-soak validation remain NOT RUN. See the historical promotion record for the original acceptance scope and Pre-release waiver.
 Local/CI artifacts do not inherit release provenance by sharing a version or
 source tree. [LATEST_RELEASE](../LATEST_RELEASE) records the current documentation
 pin; the maintained bootstrap resolves public Releases online independently of

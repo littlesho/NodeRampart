@@ -2,15 +2,23 @@
 
 <!-- current-release:start -->
 The newest published product release is
-[v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.11),
+[v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.12),
 an ordinary GitHub Release selected as [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest). Product maturity remains Alpha.
 <!-- current-release:end -->
+
+## Alpha.12 distribution acceptance and outstanding native validation
+
+The [alpha.12 publication record](RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication) binds 22 hosted assets to frozen source `ab6e5d26b6aa7084b969e9a45081af2e2af2c9ed`. Main CI (16/16) and tag-triggered Release CI (17/17) passed on attempt 1. Before publication, the maintainer independently checked fresh authenticated Draft downloads: 22 SHA256/API digests, 21 checksums, six runtime-package SPDX/buildinfo pairs, 22 provenance subjects and six SPDX signatures with source-ref/digest/signer constraints. The same Release ID 418421512 was published as an ordinary Release and confirmed as GitHub Latest.
+
+**Post-publication anonymous re-download: USER-REPORTED PASS (2026-10-21, UTC+8).** In a fresh local directory, the maintainer ran a no-auth HTTP audit and reported 22/22 published asset byte hashes matching public API SHA256, 21/21 SHA256SUMS entries, release.json/native inventory and two Latest API snapshots PASS. This is the maintainer's script output, not an independently reproduced network trace or VPS execution. Native alpha.12 VPS upgrades, x86_64 lifecycle retests, native ARM64 runtime, Fedora journal durable ACK and fault recovery, long soak and real third-party notifications remain NOT RUN. Earlier alpha.11 native and user-reported VPS evidence is historical and does not qualify newly built alpha.12 bytes. Independent full binary vulnerability scans of the 18 hosted alpha.12 Go programs were also NOT RUN; signed provenance and Go 1.26.9 reachable-source scans have narrower coverage.
+
+中文：alpha.12 的 main CI（16/16）、正式 Release（17/17）与发布前 Draft 下载／签名验收通过，同一 Release ID 已确认是普通 Release／GitHub Latest。**2026-10-21 维护者完成了发布后的匿名全量资产下载验收（22/22 字节／API SHA256、21/21 SHA256SUMS，USER-REPORTED PASS）**。alpha.12 原生 VPS、ARM64、长期 soak 等运行验收仍为 NOT RUN；旧版证据不自动继承。产品仍然处于 Alpha 阶段。
 
 ## Alpha.11 acceptance and ordinary Release promotion
 
 The [alpha.11 promotion record](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion) binds the same 22 hosted assets to source `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`. Four x86_64 VMs (Debian12/13, Fedora43/44) passed first-install, basic SQLite and English/Chinese NO-readback/help/cancel checks. Applicable upgrades, reinstalls, normal service cycles, RPM soft stop/start, DEB/RPM keep-data paths and family purge passed. Debian12 normal pending=0 trusted durable ACK passed; ordinary ACK does not establish fault recovery. All 22 assets passed new anonymous byte/SHA checks and 21 checksum entries after promotion, reusing the same 22 provenance and six SPDX bindings.
 
-**Fedora43/44 native durable ACK remains NOT RUN:** a private MAC-label parser failure prevented the scenario from starting, leaving its product behavior untested. The maintainer explicitly accepted this gap for the current Alpha Release/Latest promotion. The original **SCOPED_PRE_RELEASE_WAIVER**, PRE-RELEASE-GATE BLOCKED and FAILURE results remain in the dated release record.
+**Fedora43/44 native durable ACK remains NOT RUN:** a private MAC-label parser failure prevented the scenario from starting, leaving its product behavior untested. The maintainer explicitly accepted this gap for the historical alpha.11 Alpha Release/Latest promotion. The original **SCOPED_PRE_RELEASE_WAIVER**, PRE-RELEASE-GATE BLOCKED and FAILURE results remain in the dated release record.
 
 **USER-REPORTED PASS — VPS acceptance:** anonymous published-package download/upgrade, original bug retest, real City/ASN downloads with the maintainer's legitimate credentials and personal license confirmation, and YES save → full exit → new-process YES → actual systemd timer enabled. The user performed and reported these checks; independent automated VPS logs were not obtained. The lab's real MaxMind/YES cases retain their historical **NOT RUN / BLOCKED_BY_LAB_CONNECTIVITY** results.
 

@@ -2,9 +2,9 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-The current release is [v0.4.0-alpha.11 / GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with Alpha product maturity. Older entries preserve their publication-time defaults, validation results and development milestones. Use the [current installation guide](README.md#install-the-newest-published-release) for installation today.
+The current release is [v0.4.0-alpha.12 / GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with Alpha product maturity. Older entries preserve their publication-time defaults, validation results and development milestones. Use the [current installation guide](README.md#install-the-newest-published-release) for installation today.
 
-## 0.4.0-alpha.12 - release preparation (2026-10-20 UTC; Alpha)
+## 0.4.0-alpha.12 - 2026-10-20 (UTC; Alpha)
 
 - Integrate Dependabot #54–#57: x/sys v0.49.0 and x/text v0.43.0,
   including indirect Go module checksum changes and third-party notices.
@@ -17,9 +17,26 @@ The current release is [v0.4.0-alpha.11 / GitHub Latest](https://github.com/litt
   the Fedora metadata mirror was unreachable (curl error 7). Original
   attempt 1 remains FAILURE; its authorized failed-job retry passed
   and main CI records 16/16 PASS on attempt 2.
-- Prepare consistent alpha.12 identities for native packages, installer,
-  SBOM inventory and release provenance; production runtime, tagged hosted
-  release, publication and latest promotion require separate evidence.
+- Alpha.12 identity PR #59 initially failed deterministic downgrade-fixture and
+  stale-SBOM package-name tests, retained as original FAILURE without rerun.
+  A later fix passed PR checks and merged normally as source `ab6e5d26b6aa7084b969e9a45081af2e2af2c9ed`;
+  main [CI 39379877658](https://github.com/littlesho/NodeRampart/actions/runs/39379877658)
+  passed 16/16 on attempt 1.
+- Annotated tag `v0.4.0-alpha.12` points to that exact source. Tag-triggered
+  [Release 39426641237](https://github.com/littlesho/NodeRampart/actions/runs/39426641237)
+  passed 17/17 (attempt 1) and produced Draft ID 418421512 with 22 assets.
+- Two maintainer-run authenticated Draft downloads verified 22 byte/API SHA256
+  hashes, 21 SHA256SUMS entries, six SPDX/buildinfo pairs, 22 provenance
+  subjects and six SPDX signatures with source-ref/digest/signer checks.
+- Published the same Release ID `418421512` at `2026-10-20T14:15:32Z`
+  as ordinary Release and GitHub Latest (`draft=false`, `prerelease=false`).
+  Product maturity is still Alpha. On 2026-10-21 (UTC+8), a separate
+  maintainer-run no-auth public HTTP audit reported **22/22** anonymous
+  asset-byte/API SHA256 matches, **21/21** pinned SHA256SUMS checks, release.json,
+  inventory and two Latest snapshots PASS. Local audit evidence was retained
+  by the maintainer; alpha.12 native VPS/ARM64/soak remain NOT RUN, and the
+  alpha.11 native evidence remains historical.
+
 ## 0.4.0-alpha.11 - 2026-10-08 (UTC; Alpha)
 
 - Read the actual GeoIP timer enable state on every daily-update and setup

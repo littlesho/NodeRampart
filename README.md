@@ -9,19 +9,20 @@ NodeRampart watches your server in the background. It records events, builds dai
 ## Version status and validation scope
 
 <!-- current-release:start -->
-**[GitHub Latest: v0.4.0-alpha.11](https://github.com/littlesho/NodeRampart/releases/latest)** is the newest published product version and an ordinary GitHub Release (`draft=false`, `prerelease=false`). Product maturity remains **Alpha**, with the validation gaps below. This version fixes GeoIP daily-update state readback, updates dependencies and Go build requirements, and improves journal and terminal regression tests.
+**[GitHub Latest: v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/latest)** is the newest published product version and an ordinary GitHub Release (`draft=false`, `prerelease=false`). Product maturity remains **Alpha**, with the validation gaps below. This maintenance release updates x/sys, x/text, SHA-pinned artifact Actions and the patched Go CI/release toolchain.
 <!-- current-release:end -->
 
 | Validation | Result and scope |
 | --- | --- |
-| Debian 12/13 and Fedora 43/44, x86_64 | **PASS:** first install, basic SQLite, English/Chinese TUI/setup NO readback, help and cancel with the published packages. |
-| DEB/RPM lifecycle | **PASS:** applicable upgrades/reinstalls, normal service cycles and keep-data removal; purge checked on Debian 12 and Fedora 43. |
-| Debian 12 durable journal acknowledgement (ACK) | **PASS:** normal trusted OpenSSH events and one normal service cycle. |
-| Release downloads and supply-chain verification | **PASS:** 22 anonymous asset downloads, 21 checksum entries, 22 provenance bindings and six runtime-package SPDX bindings. |
+| Alpha.12 CI | **PASS:** main CI 16/16 and tagged Release CI 17/17, including safety/fuzz, Go validation, amd64/arm64 and Debian/Fedora packages. |
+| Alpha.12 hosted Draft supply chain | **PASS (maintainer-verified before publication):** 22 downloaded asset/API SHA256 digests, 21 checksum entries, six SPDX/buildinfo pairs, 22 provenance and six SPDX attestations. |
+| Alpha.12 published asset distribution | **USER-REPORTED PASS (2026-10-21, UTC+8):** fresh anonymous, no-auth HTTP download of all 22 assets; 22/22 byte/API SHA256 matches, 21/21 pinned SHA256SUMS entries, release.json, package inventory and two Latest API snapshots passed. No actual installation or VPS runtime validation was performed. |
+| Native Debian 12/13 and Fedora 43/44 x86_64 | Limited first-install, SQLite and lifecycle checks were PASS for **historical alpha.11**. They were **NOT RUN** again on the newly built alpha.12 hosted packages. |
+| Debian 12 normal durable journal ACK | Limited **historical alpha.11** PASS; alpha.12 native ACK is **NOT RUN**. |
 
-**USER-REPORTED PASS:** the maintainer reports anonymous VPS download/upgrade, retesting the original bug, licensed MaxMind City/ASN downloads, and GeoIP **YES save → full exit → new-process YES → systemd timer enabled**. Independent automated VPS logs were not collected.
+**HISTORICAL USER-REPORTED PASS (alpha.11 only):** the maintainer reported anonymous VPS download/upgrade, retesting the original bug, licensed MaxMind City/ASN downloads, and GeoIP **YES save → full exit → new-process YES → systemd timer enabled**. Independent automated VPS logs were not collected.
 
-**NOT RUN:** Fedora 43/44 native durable ACK, complete journal fault recovery, native ARM64, long soak, actual third-party notification delivery and full independent vulnerability scans of the 18 hosted programs. Stable and production readiness remain unestablished. See the [current promotion and validation record](docs/RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion) and [Alpha limitations](docs/ALPHA_LIMITATIONS.md) for retained failures and evidence boundaries.
+**NOT RUN for alpha.12:** native VPS upgrade/bug retest, real native ARM64, Fedora journal durable ACK/full recovery, long soak, third-party notification delivery and complete independent binary vulnerability scans. Historical alpha.11 VM/VPS evidence does not certify alpha.12 bytes. Stable and production readiness remain unestablished. See the [alpha.12 publication record](docs/RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication) and [Alpha limitations](docs/ALPHA_LIMITATIONS.md).
 
 Installation examples follow the newest published release. [Historical releases](https://github.com/littlesho/NodeRampart/releases), [release verification](docs/RELEASE_VERIFICATION.md) and [CHANGELOG](CHANGELOG.md) retain earlier versions and their original results.
 
@@ -68,15 +69,15 @@ The installer prints and fixes one selected Release for the whole invocation, ve
 ### Pin a reproducible release
 
 <!-- current-release:start -->
-Use `--version v0.4.0-alpha.11` to pin the current published release exactly. A pin does not query the default Release list or silently substitute another version. The alpha.11 bootstrap is a frozen source snapshot whose default can follow later published versions. **Pass the version explicitly** to keep this asset installation pinned to alpha.11:
+Use `--version v0.4.0-alpha.12` to pin the current published release exactly. A pin does not query the default Release list or silently substitute another version. The alpha.12 bootstrap is a frozen source snapshot whose default can follow later published versions. **Pass the version explicitly** to keep this asset installation pinned to alpha.12:
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.11/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.12/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.11 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.12 --no-setup
 sudo noderampart setup
 ~~~
 <!-- current-release:end -->
@@ -251,7 +252,7 @@ HTTPS heartbeat is an optional health-reporting feature alongside notification c
 
 GeoIP adds approximate country, city and ASN information through local databases. You can use already licensed MMDB files or download City and ASN through setup with your own [MaxMind GeoLite account](https://www.maxmind.com/en/geolite2/signup). Accept the [GeoLite terms](https://www.maxmind.com/en/geolite/eula) yourself; NodeRampart does not bundle the data or enroll on your behalf. GeoIP is optional.
 
-1. Run `sudo noderampart version` and `sudo noderampart status` to check the installed program, services and collection. For a pinned alpha.11 installation, expect version `0.4.0-alpha.11` and source commit `2c9d4416adef3cb64e0523a1b9ac1e691b121c16`.
+1. Run `sudo noderampart version` and `sudo noderampart status` to check the installed program, services and collection. For a pinned alpha.12 installation, expect version `0.4.0-alpha.12` and source commit `ab6e5d26b6aa7084b969e9a45081af2e2af2c9ed`.
 2. In `sudo noderampart setup`, choose **Download local GeoIP (optional)**; in `sudo noderampart tui`, choose **Local GeoIP databases → Set up local GeoIP downloads**. Enter your own Account ID and License Key in the protected form, confirm the license terms, and download City and ASN. Inspect the update result and database age. Keep credentials out of chat, recordings and reports.
 3. To enable daily updates, open **tui → Local GeoIP databases → Daily GeoIP updates**, save **YES**, fully exit and reopen it in a new process. It should still show YES. Compare it with these read-only systemd queries:
 
