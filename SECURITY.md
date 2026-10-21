@@ -3,7 +3,7 @@
 ## Supported versions
 
 <!-- current-release:start -->
-`v0.4.0-alpha.12` is the newest published release and
+`v0.4.0-alpha.13` is the newest published release and
 [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with
 `draft=false` and `prerelease=false`. Product maturity remains **Alpha**. Security
 fixes are applied to the latest alpha branch only until a stable support policy
@@ -16,20 +16,11 @@ CVE-2026-111943 / GO-2026-6809 concerns distrust of known compromised
 intermediate CA certificates in Go's standard-library TLS certificate
 verification. Public alpha.12 binaries were compiled with Go 1.26.9,
 which the upstream Go vulnerability database marks affected. The
-newest vulnerable-compiler CI scan failed on
+historical vulnerable-compiler CI scan failed on
 [main CI 39558165468](https://github.com/littlesho/NodeRampart/actions/runs/39558165468);
 that original failure is retained.
 
-The remediation candidate upgrades release and CI Go to 1.26.10,
-uses an independently SHA256-checked upstream compiler in Fedora 43/44
-build jobs, and requires Go 1.26.10 in final package buildinfo. A new
-Release is required to distribute recompiled executables; modifying
-existing tag/attestations or server-side Go installations does not fix
-already built Go binaries. Until that new release has passed its
-reviewed Draft and distribution gates, alpha.12 remains the published
-Latest with this known security limitation. See the
-[Go security advisory](https://pkg.go.dev/vuln/GO-2026-6809).
-
+Published [v0.4.0-alpha.13](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.13) replaces the latest distributable Go executables with Go 1.26.10 builds. Fedora 43/44 packages use a SHA256-verified upstream Go compiler; the maintainer's Draft audit checked all 18 packaged program build versions. Release ID `419678004` passed 22/22 anonymous public asset hashes and 21/21 pinned checksums. The original alpha.12 Tag, source, binaries and attestations remain immutable and affected; installing a new Go compiler on a host does not patch existing binaries. This release remains Alpha and native ARM64/VPS/soak are NOT RUN. See the [Go advisory](https://pkg.go.dev/vuln/GO-2026-6809) and [scoped verification](docs/RELEASE_VERIFICATION.md#alpha13-ordinary-release-and-latest-publication).
 
 ## Reporting a vulnerability
 

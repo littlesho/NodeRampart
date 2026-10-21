@@ -2,7 +2,7 @@
 
 <!-- current-release:start -->
 [简体中文](NOTIFICATION_CHANNELS.zh-CN.md). This guide targets the current published
-[v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.12).
+[v0.4.0-alpha.13](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.13).
 <!-- current-release:end -->
 
 These six native channels first shipped in alpha.8 and share the notification
