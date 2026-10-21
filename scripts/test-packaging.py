@@ -985,7 +985,7 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
 
     def test_public_alpha_suffix_native_versions_keep_release_order(self):
         native_versions = []
-        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9', '.10', '.11', '.12'):
+        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9', '.10', '.11', '.12', '.13'):
             with self.subTest(suffix=suffix):
                 version = '0.4.0-alpha' + suffix
                 self.write(self.project / 'VERSION', version + '\n')
@@ -1008,6 +1008,22 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
             for previous, current in zip(native_versions, native_versions[1:] + ['0.4.0']):
                 result = subprocess.run([shutil.which('dpkg'), '--compare-versions', previous, 'lt', current], check=False)
                 self.assertEqual(result.returncode, 0)
+
+    def test_rpm_candidate_alpha13_matches_native_spec_and_rejects_next_unknown(self):
+        self.prepare_rpm_source("0.4.0-alpha.13")
+        result = self.run_script("scripts/build-rpm.sh")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        spec = (self.lab / "rpm-spec").read_text()
+        self.assertIn("Release:        0.alpha.14%{?dist}\n", spec)
+        self.assertIn("%global noderampart_version 0.4.0-alpha.13\n", spec)
+        self.assertEqual(len([row for row in self.commands() if row[0] == "rpmbuild"]), 1)
+        (self.lab / "commands.jsonl").unlink()
+        self.write(self.project / "VERSION", "0.4.0-alpha.14\n")
+        result = self.run_script("scripts/build-rpm.sh")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("through alpha.13", result.stderr)
+        self.assertFalse(any(row[0] in ("rpmbuild", "tar") or row[:2] == ["go", "mod"]
+                             for row in self.commands()))
 
     def test_rpm_source_package_retains_build_provenance(self):
         self.env.update(COMMIT="c84af25a7261", BUILD_DATE="2026-09-09T00:00:00Z")
