@@ -2,9 +2,9 @@
 
 All notable changes will be documented here. NodeRampart follows Semantic Versioning after `1.0.0`; alpha configuration and storage schemas may change.
 
-The current release is [v0.4.0-alpha.12 / GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with Alpha product maturity. Older entries preserve their publication-time defaults, validation results and development milestones. Use the [current installation guide](README.md#install-the-newest-published-release) for installation today.
+The current release is [v0.4.0-alpha.13 / GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with Alpha product maturity. Older entries preserve their publication-time defaults, validation results and development milestones. Use the [current installation guide](README.md#install-the-newest-published-release) for installation today.
 
-## 0.4.0-alpha.13 - security maintenance candidate (2026-10-21 UTC; Alpha)
+## 0.4.0-alpha.13 - published security maintenance (2026-10-21 UTC; Alpha)
 
 - **Security: CVE-2026-111943 / GO-2026-6809.** Go 1.26.9
   embeds a vulnerable crypto/x509 standard-library certificate-chain verifier.
@@ -17,14 +17,47 @@ The current release is [v0.4.0-alpha.12 / GitHub Latest](https://github.com/litt
   it enters PATH, instead of trusting the distro's lagging Go 1.26.9.
   Verify the resulting release programs report exactly go1.26.10.
   Upgrade the separate fuzz-only Go version to 1.27.3.
-- Prepare strict independent native identities for alpha.13:
+- Ship strict independent native identities for alpha.13:
   Debian `0.4.0~alpha.13`, RPM `0.4.0-0.alpha.14.fc43/fc44`,
   explicit installer mapping and six-package SPDX/buildinfo checks.
   Preserve strict 22-asset Release Draft and provenance gates.
-- **Candidate only.** No alpha.13 Tag/Release is implied by this entry.
-  Public GitHub Latest stays alpha.12 until a new alpha.13 Release has
-  passed source, hosted package, SBOM and distribution verification.
-  Existing alpha.12 signed assets and source remain immutable.
+- **Published release:** PR #61 merged normally into source
+  `33ecc1539824c7a27b181f057b580b32b4058f32` (tree `a11c68d6e3e291e358dda3ad5d74e48eb3211f9b`).
+  PR [CI 39607025199](https://github.com/littlesho/NodeRampart/actions/runs/39607025199)
+  16/16 and 22/22 GitHub checks, post-merge
+  [main CI 39610983442](https://github.com/littlesho/NodeRampart/actions/runs/39610983442)
+  16/16 and 18/18 GitHub checks, and tagged
+  [Release CI 39616215679](https://github.com/littlesho/NodeRampart/actions/runs/39616215679)
+  17/17 all passed on attempt 1. Go vulnerability scanning found no
+  reachable vulnerabilities under the Go 1.26.10 validation toolchain.
+- Annotated `v0.4.0-alpha.13` Tag object
+  `c46daddb78e7069989b2234e65cd0505e04bb283` peels to the
+  exact source above. Draft ID `419678004` was published unchanged at
+  `2026-10-21T15:04:28Z` as an ordinary Release / GitHub Latest
+  (`draft=false`, `prerelease=false`), product maturity still Alpha.
+  All 22 uploaded assets have immutable SHA256 digests; published
+  `SHA256SUMS` SHA256 is
+  `6b866a033630325bbbff040e828e6f00a7407e3fa7dc735a58fe9a1d18af0c81`.
+- **Maintainer-reported Draft verification:** two fresh authenticated
+  downloads each passed 22/22 asset/API digests, 21/21 checksums, six
+  SPDX/buildinfo pairs, Go 1.26.10 in all 18 packaged programs,
+  22 provenance subjects and six SPDX attestations.
+- **Maintainer-reported anonymous public audit (2026-10-21, UTC+8):**
+  fresh no-auth downloads passed 22/22 public asset byte/API SHA256,
+  21/21 independent pinned SHA256SUMS checks, `release.json`, native
+  inventory and two Latest API snapshots. GitHub API independently
+  confirmed the Release identity, published state and 22 asset SHA256
+  digests; local network audit logs remain with the maintainer.
+- **Retained failures:** original main Go vulnerability CI 39558165468,
+  and prior PR #61 CI attempts 39577016442, 39579099347,
+  39595572684, 39599064798 and 39603842026 remain FAILURE, without
+  reruns or masking. The final success belongs to a new, reviewed SHA.
+  Original alpha.12 source, Tag and assets were not overwritten.
+- **NOT RUN on alpha.13 hosted bytes:** native x86_64/ARM64 runtime,
+  VPS upgrade/GeoIP and durable journal ACK, Fedora fault recovery,
+  long soak, real external notifications and independent comprehensive
+  binary vulnerability analysis. Passing hosted builds and signatures
+  is not production-readiness certification.
 
 ## 0.4.0-alpha.12 - 2026-10-20 (UTC; Alpha)
 

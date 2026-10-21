@@ -9,22 +9,22 @@ NodeRampart 在服务器后台观察网络和 SSH 登录，保存事件、生成
 ## 版本状态与验收范围
 
 <!-- current-release:start -->
-**[GitHub Latest：v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/latest)** 是最新公开版本，现为普通 GitHub Release（`draft=false`、`prerelease=false`）。产品成熟度仍为 **Alpha**，尚未完成的验收范围见下文。本次维护版本升级 x/sys、x/text、固定 SHA 的 artifact Actions，以及已修复安全问题的 Go CI／Release 工具链。
+**[GitHub Latest：v0.4.0-alpha.13](https://github.com/littlesho/NodeRampart/releases/latest)** 为最新公开普通 GitHub Release（`draft=false`、`prerelease=false`），产品成熟度仍为 **Alpha**。本次安全维护版以修复后的 Go 工具链重新编译 Debian/Fedora 包，修复 `crypto/x509` 的 GO-2026-6809 / CVE-2026-111943；此前已发布资产保持冻结。
 <!-- current-release:end -->
 
 | 验收项目 | 结果与范围 |
 | --- | --- |
-| alpha.12 CI | **PASS**：main 16/16、Tag 触发 Release 17/17，包括安全／Fuzz、Go 验证、双架构及 Debian/Fedora 包。 |
-| alpha.12 Draft 供应链 | **PASS（维护者发布前验收）**：22 项下载文件／API SHA256、21 条校验和、6 组 SPDX／buildinfo、22 项 provenance 与 6 项 SPDX 签名。 |
-| alpha.12 公开匿名分发 | **USER-REPORTED PASS（2026-10-21，UTC+8）**：无凭据匿名下载全部 22 个公开资产，22/22 字节／公开 API SHA256 一致，21/21 固定校验和一致，release.json、包清单及两次 Latest 快照通过。未进行实际安装或 VPS 运行测试。 |
-| Debian 12/13、Fedora 43/44 原生 x86_64 | 旧 **alpha.11** 的限定首装、SQLite 和生命周期曾 PASS；新的 alpha.12 发行包 **尚未重新原生复测**。 |
-| Debian 12 普通 durable ACK | 旧 **alpha.11** 的限定 PASS；alpha.12 原生 ACK **NOT RUN**。 |
+| alpha.13 CI | **PASS**：PR #61 16/16（22/22 Checks）、合并后的 main 16/16（18/18 Checks）、Tag Release 17/17，均为 Attempt #1；Secrets、7 项 Fuzz、CodeQL、Debian/Fedora 构建和 `govulncheck` 通过。 |
+| alpha.13 Draft 供应链 | **维护者报告 PASS**：两次新目录的认证 Draft 下载、22/22 资产／API SHA256、21/21 校验和、6 组 SPDX／buildinfo、18 个程序均为 Go 1.26.10、22 项 provenance 和 6 项 SPDX 签名，检查了源码／签名身份。 |
+| alpha.13 公开匿名分发 | **USER-REPORTED PASS（2026-10-21，UTC+8）**：新目录无凭据 HTTP 下载 22 个资产，22/22 字节／API SHA256 与 21/21 固定校验和一致，release.json／原生包清单、两次 Latest 快照通过；未执行实际装包或 VPS 运行。 |
+| Debian 12/13、Fedora 43/44 原生 x86_64 | 历史 alpha.11 的限定首装／SQLite／生命周期曾 PASS；新 alpha.13 发行包 **NOT RUN**。 |
+| Debian 12 普通 durable ACK | 历史 alpha.11 有限定 PASS；alpha.13 原生 ACK **NOT RUN**。 |
 
 **历史 USER-REPORTED PASS（仅 alpha.11）**：维护者曾报告 VPS 匿名下载／升级、原 Bug 复测、合法许可下的 MaxMind City/ASN 下载，以及 GeoIP **YES 保存 → 完全退出 → 新进程仍为 YES → systemd timer 为 enabled**。未取得独立自动化 VPS 测试日志。
 
-**alpha.12 NOT RUN**：VPS 实际升级／Bug 复测、原生 ARM64、Fedora journal durable ACK／完整故障恢复、长期 soak、真实第三方通知投递及完整独立二进制漏洞扫描。alpha.11 历史 VM／VPS 证据不自动继承到新发行字节；稳定／生产就绪尚未建立。详见[alpha.12 发布记录](docs/RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication)与 [Alpha 限制](docs/ALPHA_LIMITATIONS.md)。
+**alpha.13 NOT RUN**：VPS 实际升级／Bug 复测、原生 x86_64 生命周期／ACK 复测、原生 ARM64、Fedora journal durable ACK／完整故障恢复、长期 soak、第三方真实通知投递和完整独立二进制漏洞扫描。alpha.11／alpha.12 历史证据不自动证明新发行字节；稳定／生产就绪尚未建立。详见[alpha.13 发布记录](docs/RELEASE_VERIFICATION.md#alpha13-ordinary-release-and-latest-publication)与[Alpha 限制](docs/ALPHA_LIMITATIONS.md)。
 
-**安全维护说明（2026-10-21）**：alpha.12 公开二进制由 Go 1.26.9 编译，受 [CVE-2026-111943 / GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809) 影响。正准备使用 Go 1.26.10 重编译的 alpha.13 安全维护版；原发行资产未覆盖，服务器更新 Go 编译器也不会自动修补已经构建的程序。
+**安全维护说明（2026-10-21）**：已发布的 alpha.12 二进制仍使用 Go 1.26.9，受 [CVE-2026-111943 / GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809) 影响。现已公开采用 Go 1.26.10 重编译的 alpha.13；旧版资产保持不变，服务器升级编译器不会自动修补之前安装的程序。
 
 安装示例跟随最新公开版本。[历史版本](https://github.com/littlesho/NodeRampart/releases)、[发布验证](docs/RELEASE_VERIFICATION.md)和 [CHANGELOG](CHANGELOG.md)保留早期版本及其原始结果。
 
@@ -71,15 +71,15 @@ sudo noderampart setup --language zh
 ### 固定版本以便复现
 
 <!-- current-release:start -->
-用 `--version v0.4.0-alpha.12` 精确固定当前公开版；显式版本不查询默认 Release 列表，也不静默换版。alpha.12 Release 的 bootstrap 是冻结源码快照，省略版本仍可跟随以后公开的新版本。使用该资产复现 alpha.12 安装时，**必须显式传入版本**：
+用 `--version v0.4.0-alpha.13` 精确固定当前公开版；显式版本不查询默认 Release 列表，也不静默换版。alpha.13 Release 的 bootstrap 是冻结源码快照，省略版本仍可跟随以后公开的新版本。使用该资产复现 alpha.13 安装时，**必须显式传入版本**：
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.12/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.13/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.12 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.13 --no-setup
 sudo noderampart setup --language zh
 ~~~
 <!-- current-release:end -->
@@ -236,7 +236,7 @@ HTTPS 外部心跳是与通知渠道并列的可选健康上报功能。它区�
 
 GeoIP 通过本地数据库补充大致的国家、城市和 ASN 信息。可使用已合法取得的 MMDB 文件，或在向导中用自己的 [MaxMind GeoLite 账户](https://www.maxmind.com/en/geolite2/signup)下载 City 和 ASN 数据库。请自行接受 [GeoLite 条款](https://www.maxmind.com/en/geolite/eula)；NodeRampart 不捆绑数据库，也不代注册账户。GeoIP 为可选功能。
 
-1. 运行 `sudo noderampart version` 和 `sudo noderampart status`，检查已安装程序、服务和采集状态。固定安装 alpha.12 时，预期版本为 `0.4.0-alpha.12`，源码提交为 `ab6e5d26b6aa7084b969e9a45081af2e2af2c9ed`。
+1. 运行 `sudo noderampart version` 和 `sudo noderampart status`，检查已安装程序、服务和采集状态。固定安装 alpha.13 时，预期版本为 `0.4.0-alpha.13`，源码提交为 `33ecc1539824c7a27b181f057b580b32b4058f32`。
 2. 在 `sudo noderampart setup --language zh` 中选择**下载本地 GeoIP（可选）**，或在 `sudo noderampart tui --language zh` 中选择**本地 GeoIP 数据库 → 设置本地 GeoIP 下载**。通过受保护的表单输入自己的 Account ID 和 License Key，确认许可条款后下载 City 和 ASN，查看更新结果与库龄。不要将凭据放入聊天、录屏或报告。
 3. 如需每日更新，打开 **tui → 本地 GeoIP 数据库 → GeoIP 每日更新**，保存 **YES**，完全退出，再启动新进程重开表单。表单应仍显示 YES。用以下只读 systemd 命令核对：
 

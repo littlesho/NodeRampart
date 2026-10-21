@@ -2,9 +2,19 @@
 
 <!-- current-release:start -->
 The newest published product release is
-[v0.4.0-alpha.12](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.12),
+[v0.4.0-alpha.13](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.13),
 an ordinary GitHub Release selected as [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest). Product maturity remains Alpha.
 <!-- current-release:end -->
+
+## Alpha.13 distribution acceptance and outstanding native validation
+
+Published [alpha.13](RELEASE_VERIFICATION.md#alpha13-ordinary-release-and-latest-publication) is an ordinary GitHub Latest Release (ID `419678004`) with Alpha product maturity. Its frozen source is `33ecc1539824c7a27b181f057b580b32b4058f32`, tag object `c46daddb78e7069989b2234e65cd0505e04bb283`. PR #61 CI passed 16/16 with 22/22 checks, post-merge main CI passed 16/16 with 18/18 checks, and Tag Release CI passed 17/17 on the first attempt. Fedora 43/44 x86_64/aarch64 and Debian amd64/arm64 hosted builds passed; the maintainer's fresh Draft audit reported 22/22 bytes/API SHA256, 21/21 checksums, six SPDX/buildinfo pairs, all 18 packaged Go versions = go1.26.10, 22 provenance and six SPDX attestations with signer/source bindings. The same Draft ID was published as Latest.
+
+**Post-publication anonymous audit: USER-REPORTED PASS (2026-10-21, UTC+8).** A fresh no-auth HTTP run reported 22/22 public asset-byte/API digest matches, 21/21 independently pinned checksum matches, native package inventory, `release.json` and two Latest snapshots PASS. The local audit folder remains with the maintainer, not in this repository. GitHub API independently confirmed Release identity, states and asset SHA256 digests, but this does not replay the maintainer's unsigned HTTP traffic.
+
+**NOT RUN on the new alpha.13 hosted binaries:** native x86_64 install/upgrade/lifecycle and durable ACK tests, real ARM64 execution, VPS upgrade and GeoIP YES flows, Fedora durable journal ACK/fault recovery, long soak, real notification delivery and full independent vulnerability analysis of all 18 hosted binaries. Prior alpha.11/alpha.12 evidence is historical and does not qualify alpha.13 runtime readiness.
+
+中文：alpha.13 已公开为普通 Release／GitHub Latest，源码、Tag 与资产绑定不变。PR/main/Release CI 和发布前 Draft／发布后无凭据匿名下载验收均通过（后两项为维护者报告）。但原生 x86_64／ARM64、VPS、完整故障恢复、真实通知、长期 soak 和独立全程序漏洞分析均为 NOT RUN；产品仍是 Alpha，不等于生产就绪。
 
 ## Alpha.12 distribution acceptance and outstanding native validation
 
