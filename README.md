@@ -24,6 +24,8 @@ NodeRampart watches your server in the background. It records events, builds dai
 
 **NOT RUN for alpha.12:** native VPS upgrade/bug retest, real native ARM64, Fedora journal durable ACK/full recovery, long soak, third-party notification delivery and complete independent binary vulnerability scans. Historical alpha.11 VM/VPS evidence does not certify alpha.12 bytes. Stable and production readiness remain unestablished. See the [alpha.12 publication record](docs/RELEASE_VERIFICATION.md#alpha12-ordinary-release-and-latest-publication) and [Alpha limitations](docs/ALPHA_LIMITATIONS.md).
 
+**Security maintenance notice (2026-10-21):** alpha.12 hosted binaries were compiled with Go 1.26.9, affected by [CVE-2026-111943 / GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809). A Go 1.26.10 recompiled alpha.13 release is being prepared; no older published artifact has been overwritten. Updating the Go compiler on a server does not patch prebuilt binaries.
+
 Installation examples follow the newest published release. [Historical releases](https://github.com/littlesho/NodeRampart/releases), [release verification](docs/RELEASE_VERIFICATION.md) and [CHANGELOG](CHANGELOG.md) retain earlier versions and their original results.
 
 ## What can it do?
