@@ -655,6 +655,62 @@ class InstallerTests(unittest.TestCase):
                 self.assertTrue(any(row[-1].endswith('/v0.4.0-alpha.13/' + asset)
                                     for row in self.commands() if row[0] == 'curl'))
 
+    def alpha14_target(self, distribution='debian', version='13', machine='x86_64'):
+        self.alpha13_target(distribution, version, machine)
+        self.env['MOCK_ASSET'] = self.env['MOCK_ASSET'].replace('0.4.0-alpha.13', '0.4.0-alpha.14').replace('0.alpha.14.fc', '0.alpha.15.fc')
+        self.env['MOCK_DEB_VERSION'] = '0.4.0~alpha.14'
+        self.env['MOCK_RPM_IDENTITY'] = self.env['MOCK_RPM_IDENTITY'].replace('0.alpha.14.fc', '0.alpha.15.fc')
+        return self.env['MOCK_ASSET']
+
+    def test_alpha14_explicit_native_mapping_matrix(self):
+        for distribution, version in (('debian', '12'), ('debian', '13'), ('fedora', '43'), ('fedora', '44')):
+            for machine in ('x86_64', 'aarch64'):
+                with self.subTest(distribution=distribution, version=version, machine=machine):
+                    asset = self.alpha14_target(distribution, version, machine)
+                    self.env['SCENARIO'] = 'api_403'
+                    (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                    result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.14', '--no-setup')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    base = 'https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.14/'
+                    self.assertEqual([row[-1] for row in self.commands() if row[0] == 'curl'],
+                                     [base + 'SHA256SUMS', base + asset])
+                    manager = 'apt-get' if distribution == 'debian' else 'dnf'
+                    self.assertEqual(sum(row[:2] == [manager, 'install'] for row in self.commands()), 1)
+                    self.assertFalse(any(row[0] == 'systemctl' for row in self.commands()))
+
+    def test_alpha14_native_downgrade_refused_before_download(self):
+        for distribution, version in (('debian', '12'), ('debian', '13'), ('fedora', '43'), ('fedora', '44')):
+            with self.subTest(distribution=distribution, version=version):
+                self.alpha14_target(distribution, version)
+                self.env.update(SCENARIO='downgrade', MOCK_DEB_INSTALLED='1',
+                                MOCK_DEB_INSTALLED_VERSION='0.4.0~alpha.15',
+                                MOCK_RPM_INSTALLED='1', MOCK_RPM_VERSION='0.4.0-0.alpha.16.fc' + version)
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--version', 'v0.4.0-alpha.14', '--no-setup')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('downgrade', result.stderr)
+                if distribution == 'debian':
+                    self.assertIn(['dpkg', '--compare-versions', '0.4.0~alpha.15', 'le', '0.4.0~alpha.14'],
+                                  self.commands())
+                self.assertFalse(any(row[0] == 'curl' for row in self.commands()))
+                self.assert_no_install()
+
+    def test_alpha14_default_selects_highest_published_not_latest_badge(self):
+        for distribution, version in (('debian', '13'), ('fedora', '44')):
+            with self.subTest(distribution=distribution, version=version):
+                asset = self.alpha14_target(distribution, version)
+                self.release_pages([self.published('v0.4.0-alpha.12', id=12),
+                                    self.published('v0.4.0-alpha.13', id=13, is_latest=True),
+                                    self.published('v0.4.0-alpha.14', id=14)])
+                self.env['SCENARIO'] = ''
+                (self.lab / 'commands.jsonl').unlink(missing_ok=True)
+                result = self.run_script('bootstrap.sh', '--no-setup')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('Selected published NodeRampart release: v0.4.0-alpha.14', result.stdout)
+                self.assert_pinned_assets('v0.4.0-alpha.14')
+                self.assertTrue(any(row[-1].endswith('/v0.4.0-alpha.14/' + asset)
+                                    for row in self.commands() if row[0] == 'curl'))
+
     def test_alpha11_default_selects_published_semver_and_pins_native_assets(self):
         self.write(self.lab / 'VERSION', '99.0.0-alpha.99\n')
         for distribution, version in (('debian', '12'), ('debian', '13'), ('fedora', '43'), ('fedora', '44')):
