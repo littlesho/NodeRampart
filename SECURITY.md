@@ -3,7 +3,7 @@
 ## Supported versions
 
 <!-- current-release:start -->
-`v0.4.0-alpha.13` is the newest published release and
+`v0.4.0-alpha.14` is the newest published release and
 [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest), with
 `draft=false` and `prerelease=false`. Product maturity remains **Alpha**. Security
 fixes are applied to the latest alpha branch only until a stable support policy
@@ -20,7 +20,7 @@ historical vulnerable-compiler CI scan failed on
 [main CI 39558165468](https://github.com/littlesho/NodeRampart/actions/runs/39558165468);
 that original failure is retained.
 
-Published [v0.4.0-alpha.13](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.13) replaces the latest distributable Go executables with Go 1.26.10 builds. Fedora 43/44 packages use a SHA256-verified upstream Go compiler; the maintainer's Draft audit checked all 18 packaged program build versions. Release ID `419678004` passed 22/22 anonymous public asset hashes and 21/21 pinned checksums. The original alpha.12 Tag, source, binaries and attestations remain immutable and affected; installing a new Go compiler on a host does not patch existing binaries. This release remains Alpha and native ARM64/VPS/soak are NOT RUN. See the [Go advisory](https://pkg.go.dev/vuln/GO-2026-6809) and [scoped verification](docs/RELEASE_VERIFICATION.md#alpha13-ordinary-release-and-latest-publication).
+Published [v0.4.0-alpha.13](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.13) first replaced the vulnerable Go 1.26.9 executables with Go 1.26.10 builds. The newer [v0.4.0-alpha.14](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.14) retains Go 1.26.10 and upgrades the SQLite driver to v1.61.1. Fedora 43/44 packages use a SHA256-verified upstream Go compiler; the maintainer's Draft audit checked all 18 packaged program build versions. Release ID `419678004` passed 22/22 anonymous public asset hashes and 21/21 pinned checksums. The original alpha.12 Tag, source, binaries and attestations remain immutable and affected; installing a new Go compiler on a host does not patch existing binaries. Both releases remain Alpha; native ARM64/VPS/soak are NOT RUN for alpha.14. See the [Go advisory](https://pkg.go.dev/vuln/GO-2026-6809), [alpha.13 history](docs/RELEASE_VERIFICATION.md#alpha13-ordinary-release-and-latest-publication) and [current alpha.14 scope](docs/RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest-publication).
 
 ## Reporting a vulnerability
 

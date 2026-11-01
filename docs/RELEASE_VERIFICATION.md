@@ -2,16 +2,16 @@
 
 <!-- current-release:start -->
 Current download and verification examples select published
-[v0.4.0-alpha.13](#alpha13-ordinary-release-and-latest-publication), now an ordinary
+[v0.4.0-alpha.14](#alpha14-ordinary-release-and-latest-publication), now an ordinary
 GitHub Release and GitHub Latest with Alpha product maturity.
-Its frozen source is `33ecc1539824c7a27b181f057b580b32b4058f32`, Debian native
-version is `0.4.0~alpha.13`, and RPM is `0.4.0-0.alpha.14.fc43/fc44`.
+Its frozen source is `60adca24eea7a22694e688fd61b717dd1afe1fea`, Debian native
+version is `0.4.0~alpha.14`, and RPM is `0.4.0-0.alpha.15.fc43/fc44`.
 Later main installer/documentation commits do not become the source of these
 published assets or attestations.
 <!-- current-release:end -->
 
 Use the [maintained entry](../README.md#install-the-newest-published-release)
-for default-latest installation. The alpha.13 Release bootstrap is a frozen
+for default-latest installation. The alpha.14 Release bootstrap is a frozen
 source snapshot with dynamic default resolution; pass an explicit version when
 using the pinned Release-asset example. The current documentation record is [LATEST_RELEASE](../LATEST_RELEASE),
 separate from development `VERSION` and never an online fallback.
@@ -22,7 +22,7 @@ separate from development `VERSION` and never an online fallback.
 
 Quick navigation / 快速导航：
 [download and verify / 下载与验证](#download-and-verify) ·
-[current alpha.13 Release / Latest / 当前发行状态](#alpha13-ordinary-release-and-latest-publication) ·
+[current alpha.14 Release / Latest / 当前发行状态](#alpha14-ordinary-release-and-latest-publication) ·
 [initial alpha.11 Pre-release / 初次预发布历史](#alpha11-pre-release-publication-and-distribution-verification) ·
 [all published versions / 历史发行版](https://github.com/littlesho/NodeRampart/releases).
 
@@ -34,6 +34,98 @@ actual CI validation/build/package/fuzz check names observed in hosted runs
 before merging main, prevent force-push/deletion of release tags, and review
 the complete draft asset set before publication. Local scripts do not configure
 GitHub branch/tag rules or approve a release.
+
+<a id="alpha14-ordinary-release-and-latest-publication"></a>
+
+## Alpha.14 ordinary Release / GitHub Latest publication (2026-11-01 UTC)
+
+This is a **SQLite dependency-maintenance Alpha**, not a stable or production-ready
+support tier. `modernc.org/sqlite` advances from v1.60.1 to **v1.61.1**
+(with matched `modernc.org/libc v1.79.0`), avoiding the upstream
+v1.61.0 prepared-statement re-planning regression. The security-fixed Go
+1.26.10 toolchain and prior features are retained. Release bytes and
+attestations bind the frozen source; later documentation-only changes on
+main cannot retroactively rebuild or replace these assets.
+
+| Field | Value |
+| --- | --- |
+| Tag | `v0.4.0-alpha.14` (annotated; GitHub Tag unsigned, separate from signed build attestations) |
+| Tag object | `310f4377c9f64cbe6ba6212dcf89ca438cc08690` |
+| Source commit | `60adca24eea7a22694e688fd61b717dd1afe1fea` |
+| Source tree | `e1bca2097ecaf7cbbbabb4b2e9dbebf0860bab38` |
+| Source BUILD_DATE | `2026-10-31T16:37:26Z` (source committer timestamp, not publication time) |
+| Project / DEB / RPM | `0.4.0-alpha.14` / `0.4.0~alpha.14` / `0.4.0-0.alpha.15.fc43/fc44` |
+| Dependency PR #63 | [CI 41196036783 / attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/41196036783) **SUCCESS 16/16** |
+| PR #64 final candidate | [CI 41213199179 / attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/41213199179) **SUCCESS 16/16**, 22/22 GitHub Checks; artifact compatibility 3/3 |
+| Post-merge main | [CI 41220580049 / attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/41220580049) **SUCCESS 16/16**, 18/18 GitHub Checks including CodeQL |
+| Tag-triggered Release | [41296947030 / attempt 1](https://github.com/littlesho/NodeRampart/actions/runs/41296947030) **SUCCESS 17/17** |
+| Release ID | `430515276` (same Draft, publication and Latest) |
+| GitHub Release | [v0.4.0-alpha.14](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.14) |
+| Published UTC | `2026-11-01T15:17:23Z` |
+| Public state / Latest GET | `draft=false`, `prerelease=false`; Latest ID `430515276`, tag `v0.4.0-alpha.14` |
+| Uploaded assets | 22 `uploaded`: six runtime packages, 12 SPDX/buildinfo, one Fedora 44 source RPM, `bootstrap.sh`, `release.json`, `SHA256SUMS` |
+| SHA256SUMS SHA256 | `ce91de3cb84aed57f226589d6c9cc5642ed0f987ef0af6832b0cbb5ec4f31aa9` |
+| Hosted Go compiler | Go 1.26.10 in all 18 packaged programs; SHA256-verified upstream compiler for Fedora 43/44 |
+| Product maturity | **Alpha**; ordinary Release/Latest does not establish production readiness |
+
+**Draft-first supply chain: MAINTAINER-REPORTED PASS (2026-11-01, UTC+8).**
+Tag-triggered release CI passed validation, secrets, seven fuzz targets, Debian
+amd64/arm64, Fedora 43/44 x86_64/aarch64, SBOM and Draft creation in attempt 1.
+The maintainer's fresh authenticated PowerShell 7 Draft v3 audit reported
+**22/22** downloaded asset bytes and API SHA256/size matches, **21/21** checksum
+entries, six native identities/SPDX/buildinfo pairs, all **18** Go
+`go1.26.10` program records, **22/22** provenance and **6/6** SPDX
+attestations with exact source ref/digest and workflow signer constraints.
+Earlier audit runs stopped because of a Draft-by-tag API 404 and a PowerShell
+JSON date conversion issue, not an observed package content failure; original
+audit evidence is retained on the maintainer's machine. A read-only publication
+preflight reconfirmed all 22 asset IDs/digests; the **same Draft ID `430515276`**
+was promoted without rebuilding or replacing assets.
+
+**Post-publication anonymous download: USER-REPORTED PASS (2026-11-01, UTC+8).**
+In a fresh local directory, the maintainer reported `PUBLIC ANONYMOUS AUDIT
+PASS`: 22/22 public asset bytes matched public API SHA256 and all 21 pinned
+`SHA256SUMS` entries matched; the exact Tag/source and same Release ID
+agreed. The GitHub Release-by-ID, Release-by-Tag and Latest GET responses were
+independently checked, confirming the same ID, publication time, ordinary state,
+asset names/sizes/digests and the pinned manifest digest. The independent API
+read is **not** an independent replay of the local anonymous HTTP byte trace.
+Audit evidence directories are retained by the maintainer and not committed
+to the repository. No package installation or live VPS runtime testing was
+performed as part of this distribution audit.
+
+**Retained original CI FAILURES:** PR #64
+[41196384147](https://github.com/littlesho/NodeRampart/actions/runs/41196384147)
+failed four stale alpha.13 installer/release regression fixtures; new commit
+`56d5c157cb6f6e4d374373c97eacc765bdc0fb67` corrected the tests.
+[41197612664](https://github.com/littlesho/NodeRampart/actions/runs/41197612664)
+failed Debian and four Fedora packaging jobs when four Shell scripts
+lost Git executable modes; a subsequent commit
+`43b4d0a194b01458dbce7044aff4a0b667c70cbc` restored `100755`
+without modifying their content. Both original CI runs retain **FAILURE**;
+neither was rerun or disguised as success. The final PASS belongs to the new
+reviewed source.
+
+**NOT RUN for alpha.14 published bytes:** native Debian 12/13 and Fedora 43/44
+x86_64 installation/upgrade/lifecycle, actual ARM64 runtime, durable journal
+ACK/fault recovery, real VPS upgrade/GeoIP YES revalidation, sustained soak,
+actual third-party notification delivery and comprehensive independent binary
+vulnerability review of the 18 Go programs. Hosted `govulncheck`, artifact
+attestations and embedded toolchain metadata have a narrower meaning.
+Historical alpha.11/12/13 runtime evidence cannot certify alpha.14;
+**stable/production readiness is not established.**
+
+中文：alpha.14 升级 SQLite 至 v1.61.1。冻结源码 `60adca24eea7a22694e688fd61b717dd1afe1fea`，
+Tag 对象 `310f4377c9f64cbe6ba6212dcf89ca438cc08690`；
+PR #64、main、Tag Release CI 分别 16/16、16/16、17/17
+（最终候选 Attempt #1）PASS，原始两次 PR #64 CI FAILURE 保留。
+维护者报告 Draft 22/22 字节、21/21 校验和、6 组 SPDX/buildinfo、
+18 个 Go 1.26.10 程序、22 项 provenance 与 6 项 SPDX 签名通过；
+同一 ID `430515276` 于 `2026-11-01T15:17:23Z` 成为普通 Release／
+GitHub Latest。随后维护者报告无凭据重新下载 22/22 资产通过，
+GitHub API 另行独立核对身份与摘要，不代表重放本地 HTTP 下载。
+新版本原生 x86_64／ARM64、VPS、恢复、真实通知、长时间 soak
+均 **NOT RUN**；仍为 Alpha。
 
 <a id="alpha13-ordinary-release-and-latest-publication"></a>
 
@@ -197,11 +289,11 @@ complete the download set.
 
 <!-- current-release:start -->
 For the current published release, public DEB names are
-`noderampart_0.4.0-alpha.13_ARCH.deb`, with native version `0.4.0~alpha.13`.
-RPM names contain `0.4.0-0.alpha.14.fc43` or `0.4.0-0.alpha.14.fc44`;
+`noderampart_0.4.0-alpha.14_ARCH.deb`, with native version `0.4.0~alpha.14`.
+RPM names contain `0.4.0-0.alpha.15.fc43` or `0.4.0-0.alpha.15.fc44`;
 the source RPM uses Fedora 44. SBOM/buildinfo names append `.spdx.json` and
 `.buildinfo.json` to the exact public package filename. Checksums and
-attestations bind those filenames and bytes. The [current Release / Latest record](#alpha13-ordinary-release-and-latest-publication)
+attestations bind those filenames and bytes. The [current Release / Latest record](#alpha14-ordinary-release-and-latest-publication)
 identifies the hosted source, run and evidence scope.
 <!-- current-release:end -->
 
@@ -253,25 +345,25 @@ source you have reviewed; do not treat a value downloaded beside the package as
 independent evidence of the expected source.
 
 <!-- current-release:start -->
-The example selects published `v0.4.0-alpha.13`, whose reviewed source is
-`33ecc1539824c7a27b181f057b580b32b4058f32`. Confirm that identity against the
+The example selects published `v0.4.0-alpha.14`, whose reviewed source is
+`60adca24eea7a22694e688fd61b717dd1afe1fea`. Confirm that identity against the
 public source before using it as an expected value. Missing statements cannot
 pass verification; do not substitute another release's attestations.
 
 ```sh
 VERIFY_DIR=$(mktemp -d)
-gh release download v0.4.0-alpha.13 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
+gh release download v0.4.0-alpha.14 --repo littlesho/NodeRampart --dir "$VERIFY_DIR"
 cd "$VERIFY_DIR"
 sha256sum -c SHA256SUMS
 
-PACKAGE=noderampart_0.4.0-alpha.13_amd64.deb
-EXPECTED_COMMIT='33ecc1539824c7a27b181f057b580b32b4058f32'
+PACKAGE=noderampart_0.4.0-alpha.14_amd64.deb
+EXPECTED_COMMIT='60adca24eea7a22694e688fd61b717dd1afe1fea'
 
 # Verify the package's provenance against the intended repository/workflow/tag.
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.13 \
+  --source-ref refs/tags/v0.4.0-alpha.14 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
@@ -281,7 +373,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.13 \
+  --source-ref refs/tags/v0.4.0-alpha.14 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://spdx.dev/Document/v2.3 \
@@ -291,7 +383,7 @@ gh attestation verify "$PACKAGE" \
 gh attestation verify "$PACKAGE.spdx.json" \
   --repo littlesho/NodeRampart \
   --signer-workflow littlesho/NodeRampart/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.4.0-alpha.13 \
+  --source-ref refs/tags/v0.4.0-alpha.14 \
   --source-digest "$EXPECTED_COMMIT" \
   --signer-digest "$EXPECTED_COMMIT" \
   --predicate-type https://slsa.dev/provenance/v1 \
@@ -331,13 +423,13 @@ reviewed main commit and match `v$(cat VERSION)`; do not move an existing tag.
 <!-- current-release:start -->
 For the current published release, the exact asset set is 22 files:
 
-- `noderampart_0.4.0-alpha.13_amd64.deb` and `noderampart_0.4.0-alpha.13_arm64.deb`.
-- `noderampart-0.4.0-0.alpha.14.fc43.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.14.fc43.aarch64.rpm`,
-  `noderampart-0.4.0-0.alpha.14.fc44.x86_64.rpm`,
-  `noderampart-0.4.0-0.alpha.14.fc44.aarch64.rpm`.
+- `noderampart_0.4.0-alpha.14_amd64.deb` and `noderampart_0.4.0-alpha.14_arm64.deb`.
+- `noderampart-0.4.0-0.alpha.15.fc43.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.15.fc43.aarch64.rpm`,
+  `noderampart-0.4.0-0.alpha.15.fc44.x86_64.rpm`,
+  `noderampart-0.4.0-0.alpha.15.fc44.aarch64.rpm`.
 - Each of those six runtime filenames plus `.spdx.json` and `.buildinfo.json`.
-- `noderampart-0.4.0-0.alpha.14.fc44.src.rpm`.
+- `noderampart-0.4.0-0.alpha.15.fc44.src.rpm`.
 - `bootstrap.sh`, `release.json`, `SHA256SUMS`.
 
 <!-- current-release:end -->
