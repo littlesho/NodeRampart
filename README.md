@@ -9,22 +9,22 @@ NodeRampart watches your server in the background. It records events, builds dai
 ## Version status and validation scope
 
 <!-- current-release:start -->
-**[GitHub Latest: v0.4.0-alpha.13](https://github.com/littlesho/NodeRampart/releases/latest)** is the newest published ordinary GitHub Release (`draft=false`, `prerelease=false`). Product maturity remains **Alpha**. This security-maintenance release recompiles Debian/Fedora packages using a patched Go toolchain to address GO-2026-6809 / CVE-2026-111943 in `crypto/x509`; all earlier published assets remain frozen.
+**[GitHub Latest: v0.4.0-alpha.14](https://github.com/littlesho/NodeRampart/releases/latest)** is the newest published ordinary GitHub Release (`draft=false`, `prerelease=false`). Product maturity remains **Alpha**. This dependency-maintenance Alpha upgrades the SQLite driver and its matched runtime library, retaining the security-fixed Go toolchain and prior fixes; earlier published assets remain frozen.
 <!-- current-release:end -->
 
 | Validation | Result and scope |
 | --- | --- |
-| Alpha.13 CI | **PASS:** PR #61 16/16 (22/22 Checks), post-merge main 16/16 (18/18 Checks) and tag-triggered Release 17/17, all on attempt 1; Secrets, seven Fuzz targets, CodeQL, Debian/Fedora builds and `govulncheck` passed. |
-| Alpha.13 hosted Draft supply chain | **MAINTAINER-REPORTED PASS:** two fresh authenticated Draft downloads, 22/22 asset/API SHA256, 21/21 checksums, six SPDX/buildinfo pairs, 18 packaged Go 1.26.10 programs, 22 provenance and six SPDX attestations with source/signer constraints. |
-| Alpha.13 published asset distribution | **USER-REPORTED PASS (2026-10-21, UTC+8):** a fresh no-auth HTTP audit checked all 22 published asset bytes against API SHA256, 21/21 checksum entries, release.json/native inventory and two Latest API snapshots. Package installation and VPS runtime were NOT RUN. |
-| Native Debian 12/13 and Fedora 43/44 x86_64 | Limited first-install/SQLite/lifecycle PASS belongs to historical alpha.11 only; the newly built alpha.13 hosted packages were **NOT RUN** natively. |
-| Debian 12 normal durable journal ACK | Limited historical alpha.11 PASS; alpha.13 native ACK is **NOT RUN**. |
+| Alpha.14 CI | **PASS:** dependency PR #63 [CI 41196036783](https://github.com/littlesho/NodeRampart/actions/runs/41196036783), release PR #64 [CI 41213199179](https://github.com/littlesho/NodeRampart/actions/runs/41213199179) 16/16 (22/22 Checks), post-merge [main CI 41220580049](https://github.com/littlesho/NodeRampart/actions/runs/41220580049) 16/16 (18/18 Checks), and [tag Release 41296947030](https://github.com/littlesho/NodeRampart/actions/runs/41296947030) 17/17, each success on attempt 1 for its final reviewed commit. Original PR #64 failures are retained. |
+| Alpha.14 hosted Draft supply chain | **MAINTAINER-REPORTED PASS (2026-11-01, UTC+8):** fresh authenticated Draft v3 audit of 22/22 bytes/API SHA256, 21/21 checksums, six SPDX/buildinfo pairs, 18 packaged Go 1.26.10 programs, 22 provenance and six SPDX attestations bound to the frozen tag/source/signer. |
+| Alpha.14 public distribution | **USER-REPORTED PASS (2026-11-01, UTC+8):** a fresh unauthenticated audit downloaded all 22 published assets and checked their byte hashes against public API SHA256, all 21 manifest entries, exact tagged source and same Release ID. GitHub API independently confirmed the release/Latest identity and asset digests, not the local HTTP trace. |
+| Native Debian 12/13 and Fedora 43/44 x86_64 | Historical alpha.11 first-install/SQLite/lifecycle evidence does **not** qualify alpha.14 hosted binaries; **NOT RUN** on alpha.14. |
+| Debian 12 normal durable journal ACK | Limited historical alpha.11 PASS only; alpha.14 native ACK is **NOT RUN**. |
 
 **HISTORICAL USER-REPORTED PASS (alpha.11 only):** the maintainer reported anonymous VPS download/upgrade, retesting the original bug, licensed MaxMind City/ASN downloads, and GeoIP **YES save → full exit → new-process YES → systemd timer enabled**. Independent automated VPS logs were not collected.
 
-**NOT RUN for alpha.13:** native VPS upgrade/bug retest, x86_64 lifecycle/ACK retests, native ARM64, Fedora journal durable ACK/full recovery, long soak, third-party notification delivery and complete independent binary vulnerability scans. Historical alpha.11/alpha.12 evidence does not certify alpha.13 binaries; stable and production readiness remain unestablished. See the [alpha.13 publication record](docs/RELEASE_VERIFICATION.md#alpha13-ordinary-release-and-latest-publication) and [Alpha limitations](docs/ALPHA_LIMITATIONS.md).
+**NOT RUN for alpha.14:** native VPS upgrade/bug retest, x86_64 lifecycle/ACK retests, native ARM64, Fedora journal durable ACK/full recovery, long soak, third-party notification delivery and comprehensive independent binary vulnerability analysis. Prior alpha.11/12/13 evidence does not certify alpha.14 binaries; stable and production readiness remain unestablished. See the [alpha.14 publication record](docs/RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest-publication) and [Alpha limitations](docs/ALPHA_LIMITATIONS.md).
 
-**Security maintenance notice (2026-10-21):** existing alpha.12 packages retain Go 1.26.9, affected by [CVE-2026-111943 / GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809). The newly published alpha.13 binaries use Go 1.26.10. Prior release assets remain unchanged, and updating a server's Go compiler does not patch previously installed binaries.
+**Security maintenance notice (2026-10-21):** existing alpha.12 packages retain Go 1.26.9, affected by [CVE-2026-111943 / GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809). Alpha.13 introduced Go 1.26.10, which is retained by the newer alpha.14 binaries. Prior release assets remain unchanged, and updating a server's Go compiler does not patch previously installed binaries.
 
 Installation examples follow the newest published release. [Historical releases](https://github.com/littlesho/NodeRampart/releases), [release verification](docs/RELEASE_VERIFICATION.md) and [CHANGELOG](CHANGELOG.md) retain earlier versions and their original results.
 
@@ -71,15 +71,15 @@ The installer prints and fixes one selected Release for the whole invocation, ve
 ### Pin a reproducible release
 
 <!-- current-release:start -->
-Use `--version v0.4.0-alpha.13` to pin the current published release exactly. A pin does not query the default Release list or silently substitute another version. The alpha.13 bootstrap is a frozen source snapshot whose default can follow later published versions. **Pass the version explicitly** to keep this asset installation pinned to alpha.13:
+Use `--version v0.4.0-alpha.14` to pin the current published release exactly. A pin does not query the default Release list or silently substitute another version. The alpha.14 bootstrap is a frozen source snapshot whose default can follow later published versions. **Pass the version explicitly** to keep this asset installation pinned to alpha.14:
 
 ~~~bash
 INSTALL_DIR=$(mktemp -d)
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.13/bootstrap.sh \
+  https://github.com/littlesho/NodeRampart/releases/download/v0.4.0-alpha.14/bootstrap.sh \
   -o "$INSTALL_DIR/bootstrap.sh"
 less "$INSTALL_DIR/bootstrap.sh"
-sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.13 --no-setup
+sudo sh "$INSTALL_DIR/bootstrap.sh" --version v0.4.0-alpha.14 --no-setup
 sudo noderampart setup
 ~~~
 <!-- current-release:end -->
@@ -254,7 +254,7 @@ HTTPS heartbeat is an optional health-reporting feature alongside notification c
 
 GeoIP adds approximate country, city and ASN information through local databases. You can use already licensed MMDB files or download City and ASN through setup with your own [MaxMind GeoLite account](https://www.maxmind.com/en/geolite2/signup). Accept the [GeoLite terms](https://www.maxmind.com/en/geolite/eula) yourself; NodeRampart does not bundle the data or enroll on your behalf. GeoIP is optional.
 
-1. Run `sudo noderampart version` and `sudo noderampart status` to check the installed program, services and collection. For a pinned alpha.13 installation, expect version `0.4.0-alpha.13` and source commit `33ecc1539824c7a27b181f057b580b32b4058f32`.
+1. Run `sudo noderampart version` and `sudo noderampart status` to check the installed program, services and collection. For a pinned alpha.14 installation, expect version `0.4.0-alpha.14` and source commit `60adca24eea7a22694e688fd61b717dd1afe1fea`.
 2. In `sudo noderampart setup`, choose **Download local GeoIP (optional)**; in `sudo noderampart tui`, choose **Local GeoIP databases → Set up local GeoIP downloads**. Enter your own Account ID and License Key in the protected form, confirm the license terms, and download City and ASN. Inspect the update result and database age. Keep credentials out of chat, recordings and reports.
 3. To enable daily updates, open **tui → Local GeoIP databases → Daily GeoIP updates**, save **YES**, fully exit and reopen it in a new process. It should still show YES. Compare it with these read-only systemd queries:
 

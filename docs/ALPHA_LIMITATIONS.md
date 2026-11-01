@@ -2,9 +2,21 @@
 
 <!-- current-release:start -->
 The newest published product release is
-[v0.4.0-alpha.13](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.13),
+[v0.4.0-alpha.14](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.14),
 an ordinary GitHub Release selected as [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest). Product maturity remains Alpha.
 <!-- current-release:end -->
+
+## Alpha.14 distribution acceptance and outstanding native validation
+
+Published [alpha.14](RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest-publication) is ordinary GitHub Latest Release ID `430515276`, frozen source `60adca24eea7a22694e688fd61b717dd1afe1fea`, annotated tag object `310f4377c9f64cbe6ba6212dcf89ca438cc08690`. Final release PR #64 CI was 16/16 (22/22 Checks); merged main CI was 16/16 (18/18 Checks); tagged Release CI was 17/17 (all successful on first attempt for the final candidate). GitHub API independently confirms the same Draft/publication/Latest ID and 22 unchanged asset names, sizes and SHA256 digests.
+
+**Draft-first supply chain: MAINTAINER-REPORTED PASS (2026-11-01).** Fresh authenticated audit v3 reported 22/22 asset bytes/API SHA256, 21/21 checksums, six package SPDX/buildinfo pairs, 18 Go 1.26.10 program records, 22 provenance and six SPDX attestations. Earlier failed audit invocations were due to Draft-by-tag API lookup and PowerShell JSON date conversion, not Release asset failures; their evidence remains with the maintainer.
+
+**Post-publication anonymous audit: USER-REPORTED PASS (2026-11-01, UTC+8).** Independent fresh local no-auth HTTP downloads reported 22/22 asset byte/API SHA256 matches, 21/21 checksum matches and exact same Release ID/tag/source. Local network evidence is not checked into the repository; the independent GitHub API check verifies public identities/digests, not the actual local byte-download trace.
+
+**NOT RUN for alpha.14 hosted bytes:** native x86_64 first-install/upgrade/lifecycle/durable ACK, real ARM64 execution, VPS upgrade/GeoIP validation, Fedora journal fault recovery, sustained soak, third-party notification delivery and complete independent binary vulnerability review. Alpha.11 native and VPS PASS are historical and do not qualify alpha.14 for production.
+
+中文：alpha.14 已以相同 Release ID `430515276` 公布为普通 GitHub Release／Latest。维护者报告 Draft 22/22 字节、21/21 校验和、22 项 provenance、6 项 SPDX 验签 PASS，并在发布后报告无凭据 22/22 匿名实际下载 PASS；GitHub API 另外独立核实发行身份与资产摘要。新版本原生 x86_64／ARM64、VPS、完整恢复、真实通知和长时间 soak 均 **NOT RUN**，产品仍是 Alpha。
 
 ## Alpha.13 distribution acceptance and outstanding native validation
 

@@ -2,11 +2,11 @@
 
 <!-- current-release:start -->
 [简体中文](NOTIFICATION_CHANNELS.zh-CN.md). This guide targets the current published
-[v0.4.0-alpha.13](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.13).
+[v0.4.0-alpha.14](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.14).
 <!-- current-release:end -->
 
 These six native channels first shipped in alpha.8 and share the notification
-menu with the six other channels. See the [current Release/Latest validation scope](RELEASE_VERIFICATION.md#alpha11-ordinary-release-and-latest-promotion),
+menu with the six other channels. See the [current Release/Latest validation scope](RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest-publication),
 historical [feature acceptance](ALPHA8_ACCEPTANCE.md), [privacy](PRIVACY.md) and
 [user agreement](USER_AGREEMENT.md).
 
