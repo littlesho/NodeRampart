@@ -285,16 +285,18 @@ class ValidationTests(unittest.TestCase):
         helper = (REPO / "scripts/ci-install-pinned-go-fedora.sh").read_text()
         source_files = (REPO / "packaging/source-files.txt").read_text()
         for workflow in (ci, release):
-            self.assertEqual(workflow.count("go-version: 1.26.10"), 3)
+            self.assertEqual(workflow.count("go-version: 1.26.11"), 3)
             self.assertNotIn("go-version: 1.26.9", workflow)
+            self.assertNotIn("go-version: 1.26.10", workflow)
             self.assertEqual(workflow.count("sh ./scripts/ci-install-pinned-go-fedora.sh"), 1)
             self.assertEqual(workflow.count(
-                "test \"$(GOTOOLCHAIN=local go version)\" = 'go version go1.26.10 linux/amd64'"), 1)
+                "test \"$(GOTOOLCHAIN=local go version)\" = 'go version go1.26.11 linux/amd64'"), 1)
             rpm = workflow.split("container: registry.fedoraproject.org/fedora:", 1)[1]
             self.assertIn("GOTOOLCHAIN: local", rpm)
-        self.assertIn("go-version: 1.27.3", fuzz)
+        self.assertIn("go-version: 1.27.4", fuzz)
         self.assertNotIn("go-version: 1.27.1", fuzz)
-        self.assertIn("go1.26.10.linux-amd64.tar.gz", helper)
+        self.assertNotIn("go-version: 1.27.3", fuzz)
+        self.assertIn("go1.26.11.linux-amd64.tar.gz", helper)
         self.assertIn("ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5", helper)
         self.assertIn("sha256sum --check --status", helper)
         self.assertIn("--proto-redir '=https'", helper)
@@ -303,7 +305,7 @@ class ValidationTests(unittest.TestCase):
         # Package provenance must reject a binary compiled with the old
         # vulnerable standard library even if Go module scans are clean.
         sbom = (REPO / "scripts/release_sbom.py").read_text()
-        self.assertIn('binary.get("go_version") != "go1.26.10"', sbom)
+        self.assertIn('binary.get("go_version") != "go1.26.11"', sbom)
 
     def test_ci_and_release_share_same_commit_safety_and_metadata_gates(self):
         safety = (REPO / '.github/workflows/safety.yml').read_text()

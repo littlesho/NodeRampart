@@ -1514,7 +1514,7 @@ elif args[:1] not in (['diff'], ['ls-files']):
             arch = 'arm64' if any(part in name for part in ('arm64', 'aarch64')) else 'amd64'
             paths = ['usr/bin/' + binary for binary in ('noderampart', 'noderampartd', 'noderampart-sensor')]
             binaries = [{'path': path, 'sha256': 'a' * 64, 'elf_architecture': arch,
-                         'go_version': 'go1.26.10', 'build_settings': {'GOARCH': arch, 'GOOS': 'linux'}} for path in paths]
+                         'go_version': 'go1.26.11', 'build_settings': {'GOARCH': arch, 'GOOS': 'linux'}} for path in paths]
             (self.input / (name + '.buildinfo.json')).write_text(json.dumps({'format': 1, 'package': name,
                 'sha256': sha, 'architecture': arch, 'scope': scope, 'binaries': binaries,
                 'declared_build': {'version': '0.4.0-alpha.14', 'commit': self.env['COMMIT'], 'build_date': self.env['BUILD_DATE']}}))
