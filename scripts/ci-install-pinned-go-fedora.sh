@@ -13,9 +13,9 @@ set -eu
 for cmd in curl sha256sum tar mktemp; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "missing required command: $cmd" >&2; exit 1; }
 done
-archive=go1.26.10.linux-amd64.tar.gz
-expected=ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5
-install_dir=/opt/noderampart-verified-go-1.26.10
+archive=go1.26.11.linux-amd64.tar.gz
+expected=9849f4e04ee35303714e34fbc3ac8ab44ea3e448a95aa182f91e3b9b79c710ec
+install_dir=/opt/noderampart-verified-go-1.26.11
 [ ! -e "$install_dir" ] && [ ! -L "$install_dir" ] || {
   echo 'verified toolchain destination must not exist' >&2; exit 1;
 }
@@ -33,7 +33,7 @@ tar -xzf "$tmp/$archive" -C "$install_dir" --no-same-owner
 binary="$install_dir/go/bin/go"
 [ -x "$binary" ] || { echo 'verified Go binary missing' >&2; exit 1; }
 actual=$(GOTOOLCHAIN=local "$binary" version)
-[ "$actual" = 'go version go1.26.10 linux/amd64' ] || {
+[ "$actual" = 'go version go1.26.11 linux/amd64' ] || {
   echo "unexpected pinned compiler identity: $actual" >&2; exit 1;
 }
 printf '%s\n' "$install_dir/go/bin" >> "$GITHUB_PATH"
