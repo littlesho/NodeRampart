@@ -251,7 +251,7 @@ def validate_pair(package, spdx_path, buildinfo_path, commit, build_date):
     file_digests = {entry["fileName"]: [checksum.get("checksumValue") for checksum in entry.get("checksums", [])
                                       if checksum.get("algorithm") == "SHA256"] for entry in files}
     for binary in binaries:
-        if (binary.get("go_version") != "go1.26.10" or binary.get("elf_architecture") != arch or binary.get("build_settings", {}).get("GOARCH") != arch or
+        if (binary.get("go_version") != "go1.26.11" or binary.get("elf_architecture") != arch or binary.get("build_settings", {}).get("GOARCH") != arch or
                 binary.get("build_settings", {}).get("GOOS") != "linux" or
                 not re.fullmatch(r"[0-9a-f]{64}", binary.get("sha256", ""))):
             raise ValueError("binary inspection architecture/digest mismatch")
