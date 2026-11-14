@@ -38,7 +38,7 @@ jobs:
         run: ./scripts/release-metadata.sh >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.10
+          go-version: 1.26.11
           cache: true
       - name: Required validation
         run: ./scripts/validate.sh
@@ -58,7 +58,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.10
+          go-version: 1.26.11
           cache: true
       - name: Build and inspect Debian package
         env:
@@ -74,7 +74,7 @@ jobs:
           dpkg-deb -x "$PACKAGE" "$CHECK_DIR"
           for binary in noderampart noderampartd noderampart-sensor; do
             go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "GOARCH=$RELEASE_ARCH"
-            go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "go1.26.10"
+            go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "go1.26.11"
           done
           test -x "$CHECK_DIR/usr/libexec/noderampart/manage-remove"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -100,7 +100,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Install verified upstream Go 1.26.10 (Fedora)
+      - name: Install verified upstream Go 1.26.11 (Fedora)
         run: sh ./scripts/ci-install-pinned-go-fedora.sh
       - name: Build and inspect Fedora package
         env:
@@ -110,7 +110,7 @@ jobs:
           BUILD_DATE: ${{ needs.validate.outputs.build_date }}
           GOTOOLCHAIN: local
         run: |
-          test "$(GOTOOLCHAIN=local go version)" = 'go version go1.26.10 linux/amd64'
+          test "$(GOTOOLCHAIN=local go version)" = 'go version go1.26.11 linux/amd64'
           go mod download
           go mod verify
           ./scripts/build-release.sh --rpm "$RELEASE_ARCH"
@@ -122,7 +122,7 @@ jobs:
           rpm2cpio "$PACKAGE" | (cd "$CHECK_DIR" && cpio -id --quiet --no-absolute-filenames './usr/bin/*' './usr/libexec/noderampart/*')
           for binary in noderampart noderampartd noderampart-sensor; do
             go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "GOARCH=$RELEASE_ARCH"
-            go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "go1.26.10"
+            go version -m "$CHECK_DIR/usr/bin/$binary" | grep -F "go1.26.11"
           done
           test -x "$CHECK_DIR/usr/libexec/noderampart/manage-remove"
           python3 scripts/test-packaging.py
@@ -148,7 +148,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.10
+          go-version: 1.26.11
           cache: true
       - name: Install package inspection tools
         run: sudo apt-get update && sudo apt-get install -y rpm
