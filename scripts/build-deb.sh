@@ -12,6 +12,8 @@ VERSION=$(tr -d '\n' < "$PROJECT_DIR/VERSION")
 ARCH=${ARCH:-$(dpkg --print-architecture)}
 case "$VERSION" in *[!0-9A-Za-z.+~-]*) echo "invalid package version" >&2; exit 1;; esac
 case "$VERSION" in
+  0.4.0-alpha.15) echo "0.4.0-alpha.15 is intentionally skipped" >&2; exit 1;;
+  *-alpha.16) VERSION=${VERSION%-alpha.16}~alpha.16;;
   *-alpha.14) VERSION=${VERSION%-alpha.14}~alpha.14;;
   *-alpha.13) VERSION=${VERSION%-alpha.13}~alpha.13;;
   *-alpha.12) VERSION=${VERSION%-alpha.12}~alpha.12;;

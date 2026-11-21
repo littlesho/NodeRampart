@@ -985,7 +985,7 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
 
     def test_public_alpha_suffix_native_versions_keep_release_order(self):
         native_versions = []
-        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9', '.10', '.11', '.12', '.13', '.14'):
+        for suffix in ('', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9', '.10', '.11', '.12', '.13', '.14', '.16'):
             with self.subTest(suffix=suffix):
                 version = '0.4.0-alpha' + suffix
                 self.write(self.project / 'VERSION', version + '\n')
@@ -1009,21 +1009,35 @@ if ok then emit('RESULT\\tOK') else emit('RESULT\\tBLOCKED\\t' .. tostring(messa
                 result = subprocess.run([shutil.which('dpkg'), '--compare-versions', previous, 'lt', current], check=False)
                 self.assertEqual(result.returncode, 0)
 
-    def test_rpm_candidate_alpha14_matches_native_spec_and_rejects_next_unknown(self):
-        self.prepare_rpm_source("0.4.0-alpha.14")
+    def test_rpm_candidate_alpha16_matches_native_spec_and_rejects_next_unknown(self):
+        self.prepare_rpm_source("0.4.0-alpha.16")
         result = self.run_script("scripts/build-rpm.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
         spec = (self.lab / "rpm-spec").read_text()
-        self.assertIn("Release:        0.alpha.15%{?dist}\n", spec)
-        self.assertIn("%global noderampart_version 0.4.0-alpha.14\n", spec)
+        self.assertIn("Release:        0.alpha.17%{?dist}\n", spec)
+        self.assertIn("%global noderampart_version 0.4.0-alpha.16\n", spec)
         self.assertEqual(len([row for row in self.commands() if row[0] == "rpmbuild"]), 1)
         (self.lab / "commands.jsonl").unlink()
-        self.write(self.project / "VERSION", "0.4.0-alpha.15\n")
+        self.write(self.project / "VERSION", "0.4.0-alpha.17\n")
         result = self.run_script("scripts/build-rpm.sh")
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("through alpha.14", result.stderr)
+        self.assertIn("alpha.15 skipped", result.stderr)
+        (self.lab / "commands.jsonl").unlink(missing_ok=True)
+        self.write(self.project / "VERSION", "0.4.0-alpha.15\n")
+        skipped = self.run_script("scripts/build-rpm.sh")
+        self.assertNotEqual(skipped.returncode, 0)
+        self.assertIn("alpha.15 skipped", skipped.stderr)
         self.assertFalse(any(row[0] in ("rpmbuild", "tar") or row[:2] == ["go", "mod"]
                              for row in self.commands()))
+        self.assertFalse(any(row[0] in ("rpmbuild", "tar") or row[:2] == ["go", "mod"]
+                             for row in self.commands()))
+
+    def test_alpha15_is_not_a_debian_release_candidate(self):
+        self.write(self.project / 'VERSION', '0.4.0-alpha.15\n')
+        result = self.run_script('scripts/build-deb.sh')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('intentionally skipped', result.stderr)
+        self.assertFalse(any(row[0] == 'dpkg-deb' for row in self.commands()))
 
     def test_rpm_source_package_retains_build_provenance(self):
         self.env.update(COMMIT="c84af25a7261", BUILD_DATE="2026-09-09T00:00:00Z")
