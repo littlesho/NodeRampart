@@ -42,21 +42,23 @@
   prior alpha.6 acceptance does not certify the new package bytes.
 
 <!-- current-release:start -->
-## `v0.4.0-alpha.14` — current published alpha
+## `v0.4.0-alpha.16` — current published alpha
 
-- Alpha.14 is a dependency-maintenance Release upgrading the SQLite driver and matched libc, retaining the security-fixed Go toolchain and checksum-verified Fedora compiler. Draft and anonymous asset audits passed; native runtime/soak tests remain NOT RUN and product maturity remains Alpha.
-- GeoIP setup and daily-update forms read the actual timer enablement on each
-  opening. Terminal regression tests and journal-test synchronization are updated,
-  alongside the pinned Go dependency graph; see the [changelog](../CHANGELOG.md).
-- Twelve optional notification channels through the shared terminal menu,
-  including four official-account channels with persistent consent/cost controls.
-- Trusted SSH records with absent unit metadata, durable-ACK recovery and
-  allowlisted SSH/GeoIP diagnostics; updater privilege-drop/readiness and guarded
-  unit migration fixes. Config/API/sensor/DB remain 1/1/5/14; upgrade CLI/daemon
-  together. Identity-aware sensor receipt diagnosis and early RPM installation
-  conflict checks remain included; see the [publication scope](RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest-publication).
-- Current install and verification examples track this published release; the
-  maintained bootstrap resolves future published versions when actively invoked.
+- Alpha.16 is a maintenance Release incorporating Go toolchain security updates,
+  SQLite driver and compatible libc, and SHA-pinned CI action upgrades.
+  Alpha.15 was deliberately skipped; published alpha.14 assets stay immutable.
+  Draft and independent public-distribution audits passed. Native runtime and
+  soak tests remain NOT RUN; product maturity remains Alpha.
+- Twelve optional notification channels remain supported through the shared
+  terminal management menu, including four official-account channels with
+  opt-in and consent/cost controls. No new blocking/mitigation function is
+  implied by the maintenance release.
+- Trusted SSH and GeoIP collection, update/readiness fixes and schema 14 are
+  retained. Configuration/control API, sensor protocol and database schema
+  remain 1/5/14 as applicable; upgrade CLI and daemon together.
+- The exact source, package versions and release-audit scope are in the
+  [publication record](RELEASE_VERIFICATION.md#alpha16-ordinary-release-and-latest-publication).
+  The maintained bootstrap selects published releases when invoked.
 <!-- current-release:end -->
 
 ## `v0.5.0-beta`

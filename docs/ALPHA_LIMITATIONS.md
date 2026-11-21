@@ -2,13 +2,25 @@
 
 <!-- current-release:start -->
 The newest published product release is
-[v0.4.0-alpha.14](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.14),
-an ordinary GitHub Release selected as [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest). Product maturity remains Alpha.
+[v0.4.0-alpha.16](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.16),
+an ordinary GitHub Release selected as [GitHub Latest](https://github.com/littlesho/NodeRampart/releases/latest). Alpha.15 was deliberately skipped. Product maturity remains **Alpha**, not production-ready.
 <!-- current-release:end -->
 
-## Alpha.14 distribution acceptance and outstanding native validation
+## Alpha.16 distribution acceptance and outstanding native validation
 
-Published [alpha.14](RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest-publication) is ordinary GitHub Latest Release ID `430515276`, frozen source `60adca24eea7a22694e688fd61b717dd1afe1fea`, annotated tag object `310f4377c9f64cbe6ba6212dcf89ca438cc08690`. Final release PR #64 CI was 16/16 (22/22 Checks); merged main CI was 16/16 (18/18 Checks); tagged Release CI was 17/17 (all successful on first attempt for the final candidate). GitHub API independently confirms the same Draft/publication/Latest ID and 22 unchanged asset names, sizes and SHA256 digests.
+Published [alpha.16](RELEASE_VERIFICATION.md#alpha16-ordinary-release-and-latest-publication) is ordinary GitHub Latest Release ID `453688398`, with frozen source `2abbfd7b65d44359c096d61537cd5fa2431d3c83` and annotated unsigned Tag object `11f664a7f8fd6279828dcaa99ca930b2eb79a852`. The original PR #71 candidate CI failure `44896258340` is retained. Corrected PR CI passed 16/16 (22/22 Checks), post-merge main CI passed 16/16 (18/18 Checks), and Tag Release CI passed 17/17 (all Attempt 1 on their final reviewed sources). Alpha.15 has no Tag or Release; the Fedora `0.alpha.17` RPM suffix belongs to product alpha.16.
+
+**Draft supply chain: MAINTAINER-REPORTED PASS (2026-11-21, UTC+8).** Fresh v3 authenticated audit reported 22/22 downloaded asset bytes/API SHA256, 21/21 checksum entries, six native package identities/SPDX/buildinfo pairs, 18 packaged Go 1.26.11 program records, 22/22 build provenance and 6/6 SPDX signatures with exact source/signer bindings. Earlier read-only v1/v2 audit failures reflected Draft-by-tag API 404 and PowerShell JSON date parsing; those failed attempts remain recorded. The same Draft Release ID was promoted without replacing any asset.
+
+**Post-publication anonymous audit: USER-REPORTED PASS (2026-11-21, UTC+8).** Fresh no-credentials HTTP downloads verified 22/22 public asset bytes against API SHA256, all 21 manifest hashes, the fixed Tag/commit and unchanged Release ID. Independent GitHub API checks confirm Latest/public identities and asset digests; local download bytes were not independently replayed by these API checks.
+
+**NOT RUN for alpha.16 hosted bytes:** native Debian 12/13 and Fedora 43/44 x86_64 first-install/upgrade/lifecycle/durable ACK, real ARM64 execution, real VPS/GeoIP upgrade regression, Fedora journal fault recovery, long soak, live third-party notification delivery and a comprehensive independent binary vulnerability review. Alpha.11–14 evidence is historical, not a substitute for this release's runtime tests.
+
+中文：alpha.16 已以相同 Release ID `453688398` 公布为普通 GitHub Release／Latest；alpha.15 明确跳过。维护者报告 Draft 22/22 字节、21/21 校验和、22 项 provenance、6 项 SPDX 验签 PASS，并报告发布后无凭据 22/22 匿名下载 PASS；GitHub API 独立核对公开发行身份和摘要，不代表重放维护者本地字节下载。真实原生 x86_64／ARM64、VPS、完整恢复、第三方通知及长时间 soak 均 **NOT RUN**；产品仍是 Alpha。
+
+## Historical alpha.14 distribution acceptance and outstanding native validation
+
+Published [alpha.14](RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest-publication) was selected as ordinary GitHub Latest on 2026-11-01 (since superseded). Historical Release ID `430515276`, frozen source `60adca24eea7a22694e688fd61b717dd1afe1fea`, annotated tag object `310f4377c9f64cbe6ba6212dcf89ca438cc08690`. Final release PR #64 CI was 16/16 (22/22 Checks); merged main CI was 16/16 (18/18 Checks); tagged Release CI was 17/17 (all successful on first attempt for the final candidate). GitHub API independently confirms the same Draft/publication/Latest ID and 22 unchanged asset names, sizes and SHA256 digests.
 
 **Draft-first supply chain: MAINTAINER-REPORTED PASS (2026-11-01).** Fresh authenticated audit v3 reported 22/22 asset bytes/API SHA256, 21/21 checksums, six package SPDX/buildinfo pairs, 18 Go 1.26.10 program records, 22 provenance and six SPDX attestations. Earlier failed audit invocations were due to Draft-by-tag API lookup and PowerShell JSON date conversion, not Release asset failures; their evidence remains with the maintainer.
 
@@ -16,7 +28,7 @@ Published [alpha.14](RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest
 
 **NOT RUN for alpha.14 hosted bytes:** native x86_64 first-install/upgrade/lifecycle/durable ACK, real ARM64 execution, VPS upgrade/GeoIP validation, Fedora journal fault recovery, sustained soak, third-party notification delivery and complete independent binary vulnerability review. Alpha.11 native and VPS PASS are historical and do not qualify alpha.14 for production.
 
-中文：alpha.14 已以相同 Release ID `430515276` 公布为普通 GitHub Release／Latest。维护者报告 Draft 22/22 字节、21/21 校验和、22 项 provenance、6 项 SPDX 验签 PASS，并在发布后报告无凭据 22/22 匿名实际下载 PASS；GitHub API 另外独立核实发行身份与资产摘要。新版本原生 x86_64／ARM64、VPS、完整恢复、真实通知和长时间 soak 均 **NOT RUN**，产品仍是 Alpha。
+中文（历史记录）：alpha.14 曾以相同 Release ID `430515276` 公布为普通 GitHub Release／Latest。维护者报告 Draft 22/22 字节、21/21 校验和、22 项 provenance、6 项 SPDX 验签 PASS，并在发布后报告无凭据 22/22 匿名实际下载 PASS；GitHub API 另外独立核实发行身份与资产摘要。新版本原生 x86_64／ARM64、VPS、完整恢复、真实通知和长时间 soak 均 **NOT RUN**，产品仍是 Alpha。
 
 ## Alpha.13 distribution acceptance and outstanding native validation
 

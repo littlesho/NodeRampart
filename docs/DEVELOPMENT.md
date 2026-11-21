@@ -118,10 +118,12 @@ numbering is independent of the project prerelease index. Use each build script'
 reported output path; ordinary validation/package builds create no tag or Release.
 
 <!-- current-release:start -->
-The current published release is `v0.4.0-alpha.14`, with public DEB filename
-`noderampart_0.4.0-alpha.14_ARCH.deb`, Debian internal `0.4.0~alpha.14`, and RPM
-`0.4.0-0.alpha.15.fc43/fc44`. Its permanent source is
-`60adca24eea7a22694e688fd61b717dd1afe1fea`; see the [hosted promotion record](RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest-publication).
+The current published release is `v0.4.0-alpha.16`, with public DEB filename
+`noderampart_0.4.0-alpha.16_ARCH.deb`, Debian internal `0.4.0~alpha.16`,
+and RPM `0.4.0-0.alpha.17.fc43/fc44`. Its permanent source is
+`2abbfd7b65d44359c096d61537cd5fa2431d3c83`; see the [hosted publication record](RELEASE_VERIFICATION.md#alpha16-ordinary-release-and-latest-publication).
+Alpha.15 was intentionally skipped: its product Tag/Release do not exist,
+and native RPM `0.alpha.17` is alpha.16's package version.
 <!-- current-release:end -->
 
 Same-source local runtime evidence and final hosted-byte evidence are separate.
@@ -132,7 +134,7 @@ normal durable ACK passed. Fedora native durable ACK, complete journal fault
 recovery, native ARM64, long soak and the 18-program independent binary
 vulnerability scans remain NOT RUN. VPS anonymous upgrade, bug retest, licensed
 City/ASN download and the YES-save/new-process/timer-enabled loop are
-USER-REPORTED PASS, not independent automated VPS logs. That alpha.11 Release was selected as GitHub Latest at its promotion, but has been superseded by alpha.12, alpha.13 and alpha.14. Historical native evidence does not certify alpha.14 hosted bytes; their native/lifecycle and long-soak validation remain NOT RUN. See the historical promotion record for the original acceptance scope and Pre-release waiver.
+USER-REPORTED PASS, not independent automated VPS logs. That alpha.11 Release was selected as GitHub Latest at its promotion, but has been superseded by alpha.12, alpha.13, alpha.14 and alpha.16. Historical native evidence does not certify alpha.16 hosted bytes; their native/lifecycle and long-soak validation remain NOT RUN. See the historical promotion record for the original acceptance scope and Pre-release waiver.
 Local/CI artifacts do not inherit release provenance by sharing a version or
 source tree. [LATEST_RELEASE](../LATEST_RELEASE) records the current documentation
 pin; the maintained bootstrap resolves public Releases online independently of
@@ -177,7 +179,7 @@ applies this pin to PR/main CI and future release safety checks. Ordinary tests,
 race, coverage, Ubuntu builds and release validation retain Go 1.26.11; Fedora
 jobs install a SHA256-verified upstream Go 1.26.11 toolchain before compilation,
 not relying on the lagging distro golang RPM. The actual RPM binaries must
-report Go 1.26.11 via Go build metadata. Previously published alpha.12 and alpha.14 release assets are immutable and retain their original toolchains. In particular, alpha.14 was built using Go 1.26.10; updating main cannot patch those bytes. Each fuzz job mutates inputs for
+report Go 1.26.11 via Go build metadata. Previously published alpha.12 and alpha.14 release assets are immutable and retain their original toolchains (alpha.14 used Go 1.26.10). The new alpha.16 published bytes were built with Go 1.26.11. Updating main cannot retroactively patch any published asset. Each fuzz job mutates inputs for
 30 seconds with two workers, a two-minute command timeout and a ten-minute job
 budget. Run one locally with an isolated Go 1.27.4 binary on `PATH`:
 
