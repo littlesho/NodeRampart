@@ -3,9 +3,9 @@
 [English](OFFICIAL_NOTIFICATION_CHANNELS.md) · [第一批六个渠道](NOTIFICATION_CHANNELS.zh-CN.md) · [隐私政策](PRIVACY.md) · [用户协议](USER_AGREEMENT.md)
 
 <!-- current-release:start -->
-本指南面向最新公开版 **[v0.4.0-alpha.14](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.14)**，
+本指南面向最新公开版 **[v0.4.0-alpha.16](https://github.com/littlesho/NodeRampart/releases/tag/v0.4.0-alpha.16)**，
 已设为普通 GitHub Release／[Latest](https://github.com/littlesho/NodeRampart/releases/latest)。
-产品成熟度仍为 **Alpha**；参见[发布与验收范围](RELEASE_VERIFICATION.md#alpha14-ordinary-release-and-latest-publication)。
+alpha.15 已明确跳过。产品成熟度仍为 **Alpha**；参见[发布与验收范围](RELEASE_VERIFICATION.md#alpha16-ordinary-release-and-latest-publication)。
 <!-- current-release:end -->
 
 本版包含 `qqbot`、`line`、`twilio_sms`、
