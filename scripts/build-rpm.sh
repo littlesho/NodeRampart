@@ -29,6 +29,7 @@ case "$COMMIT" in unknown) ;; ''|*[!0-9a-f]*) echo "invalid build commit" >&2; e
 case "$BUILD_DATE" in ''|*[!0-9TZ:+.-]*) echo "invalid build date" >&2; exit 1;; esac
 FULL_VERSION=$(tr -d '\n' < "$PROJECT_DIR/VERSION")
 case "$FULL_VERSION" in
+  [0-9]*-alpha.16) RPM_VERSION=${FULL_VERSION%-alpha.16}; RPM_RELEASE=0.alpha.17;;
   [0-9]*-alpha.14) RPM_VERSION=${FULL_VERSION%-alpha.14}; RPM_RELEASE=0.alpha.15;;
   [0-9]*-alpha.13) RPM_VERSION=${FULL_VERSION%-alpha.13}; RPM_RELEASE=0.alpha.14;;
   [0-9]*-alpha.12) RPM_VERSION=${FULL_VERSION%-alpha.12}; RPM_RELEASE=0.alpha.13;;
@@ -44,7 +45,7 @@ case "$FULL_VERSION" in
   [0-9]*-alpha.2) RPM_VERSION=${FULL_VERSION%-alpha.2}; RPM_RELEASE=0.alpha.3;;
   [0-9]*-alpha.1) RPM_VERSION=${FULL_VERSION%-alpha.1}; RPM_RELEASE=0.alpha.2;;
   [0-9]*-alpha) RPM_VERSION=${FULL_VERSION%-alpha}; RPM_RELEASE=0.alpha.1;;
-  *) echo "VERSION must use X.Y.Z-alpha or X.Y.Z-alpha.1 through alpha.14" >&2; exit 1 ;;
+  *) echo "VERSION must use X.Y.Z-alpha or alpha.1 through alpha.14, or alpha.16 (alpha.15 skipped)" >&2; exit 1 ;;
 esac
 case "$RPM_VERSION" in
   ''|*[!0-9.]*) echo "RPM version must contain only digits and dots" >&2; exit 1 ;;
